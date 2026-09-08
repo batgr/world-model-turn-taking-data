@@ -5,6 +5,17 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv
+# Data
+data/
+*.parquet
+
+# Generated reports/artifacts
+reports/
+
+# OS
+.DS_Store

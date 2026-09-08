@@ -1,0 +1,43 @@
+root: ${oc.env:EGO_DATA_ROOT,/Volumes/PortableSSD/data}
+
+paths:
+  raw: ${root}/raw
+  interim: ${root}/interim
+  validated: ${root}/validated
+  processed: ${root}/processed
+  model_ready: ${root}/model_ready
+  reports: ${root}/reports
+
+datasets:
+  ego4d:
+    raw: ${paths.raw}/Ego4D/v2/annotations
+    interim: ${paths.interim}/ego4d/annotations
+    validated: ${paths.validated}/ego4d
+    processed: ${paths.processed}/ego4d
+    model_ready: ${paths.model_ready}/ego4d
+    reports: ${paths.reports}/ego4d
+    files:
+      av_train: av_train.json
+      av_val: av_val.json
+      av: av.parquet
+      clips_clean: clips_clean.parquet
+      persons_clean: persons_clean.parquet
+      tracking_paths_clean: tracking_paths_clean.parquet
+      voice_segments_clean: voice_segments_clean.parquet
+      transcriptions_clean: transcriptions_clean.parquet
+      social_segments_talking_clean: social_segments_talking_clean.parquet
+      social_segments_looking_clean: social_segments_looking_clean.parquet
+      tracks_clean: tracks_clean.parquet
+
+  egocom:
+    raw: ${paths.raw}/EgoCom/annotations
+    interim: ${paths.interim}/egocom/annotations
+    validated: ${paths.validated}/egocom
+    processed: ${paths.processed}/egocom
+    model_ready: ${paths.model_ready}/egocom
+    reports: ${paths.reports}/egocom
+    files:
+      video_info: video_info.csv
+      ground_truth: ground_truth_transcriptions.csv
+      ground_truth_clean: ground_truth_clean.parquet
+      video_info_clean: video_info_clean.parquet
