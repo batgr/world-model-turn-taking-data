@@ -41,3 +41,7 @@ datasets:
       ground_truth: ground_truth_transcriptions.csv
       ground_truth_clean: ground_truth_clean.parquet
       video_info_clean: video_info_clean.parquet
+
+manifest:
+  compute_checksum: false
+  output: ${paths.reports}/manifest/raw_manifest.parquet
