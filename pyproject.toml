@@ -9,10 +9,12 @@ dependencies = [
     "matplotlib>=3.11.1",
     "omegaconf>=2.3.1",
     "pandas>=3.0.5",
+    "pandera[pandas]>=0.33.1",
     "pyarrow>=25.0.0",
     "pytest>=9.1.1",
     "pyyaml>=6.0.3",
     "seaborn>=0.13.2",
+    "skimpy>=0.0.21",
 ]
 
 [build-system]

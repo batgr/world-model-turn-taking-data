@@ -1,6 +1,7 @@
-from pathlib import Path
-from collections.abc import Iterator, Mapping
 import hashlib
+from collections.abc import Iterator
+from pathlib import Path
+
 import pandas as pd
 
 FILE_TYPE_BY_EXTENSION = {

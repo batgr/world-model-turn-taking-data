@@ -18,3 +18,5 @@ reports/
 
 # OS
 .DS_Store
+
+outputs/
