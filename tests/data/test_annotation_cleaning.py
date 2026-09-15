@@ -8,6 +8,7 @@ from conv_wm.data.datasets.ego4d_cleaning import (
     TRANSCRIPTION_COLUMNS,
     VOICE_COLUMNS,
     clean_annotation_tables,
+    extract_annotation_tables,
 )
 from conv_wm.data.datasets.egocom_cleaning import clean_ground_truth
 
@@ -169,3 +170,23 @@ def test_required_field_accounting_assigns_each_row_once():
         "missing_required_field:identity": 2,
         "missing_required_field:start": 1,
     }
+
+
+def test_null_nested_annotation_collection_is_structurally_empty():
+    tables = extract_annotation_tables(
+        [
+            {
+                "clips": [
+                    {
+                        "clip_uid": "clip-1",
+                        "persons": [],
+                        "transcriptions": None,
+                        "social_segments_talking": None,
+                        "social_segments_looking": None,
+                    }
+                ]
+            }
+        ]
+    )
+
+    assert all(table.empty for table in tables.values())

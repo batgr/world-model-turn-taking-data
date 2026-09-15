@@ -18,6 +18,7 @@ from conv_wm.data.annotations import (
     EntityReference,
     MediaReference,
     ReferenceKind,
+    Severity,
     TemporalFields,
     TemporalOrigin,
     TimeUnit,
@@ -108,12 +109,12 @@ EGO4D_VOICE_SEGMENTS_SCHEMA = pa.DataFrameSchema(
         "clip_uid": pa.Column(str, nullable=False),
         "start_time": pa.Column(float, nullable=False),
         "end_time": pa.Column(float, nullable=False),
-        "start_frame": pa.Column(float, nullable=False),
-        "end_frame": pa.Column(float, nullable=False),
+        "start_frame": pa.Column(int, nullable=False),
+        "end_frame": pa.Column(int, nullable=False),
         "video_start_time": pa.Column(float, nullable=False),
         "video_end_time": pa.Column(float, nullable=False),
-        "video_start_frame": pa.Column(float, nullable=False),
-        "video_end_frame": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(int, nullable=False),
+        "video_end_frame": pa.Column(int, nullable=False),
         "person_id": pa.Column(str, nullable=False),
     },
     strict=True,
@@ -129,9 +130,9 @@ EGO4D_TRANSCRIPTIONS_SCHEMA = pa.DataFrameSchema(
         "end_time_sec": pa.Column(float, nullable=False),
         "person_id": pa.Column(str, nullable=False),
         "video_start_time": pa.Column(float, nullable=False),
-        "video_start_frame": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(int, nullable=False),
         "video_end_time": pa.Column(float, nullable=False),
-        "video_end_frame": pa.Column(float, nullable=False),
+        "video_end_frame": pa.Column(int, nullable=False),
     },
     strict=True,
     name="ego4d_transcriptions_clean",
@@ -261,13 +262,16 @@ _CLIP_DURATION_BOUNDS = DurationBounds(
 )
 
 
-def _person_ref(person_column: str, *unknown: str) -> EntityReference:
+def _person_ref(
+    person_column: str, *unknown: str, severity: Severity = Severity.ERROR
+) -> EntityReference:
     return EntityReference(
         kind=ReferenceKind.PARTICIPANT,
         columns=("clip_uid", person_column),
         target_source="persons",
         target_columns=("clip_uid", "person_id"),
         unknown_values=unknown,
+        severity=severity,
     )
 
 
@@ -358,11 +362,18 @@ ANNOTATIONS = AnnotationSpec(
             dimensions=("speech", "addressee"),
             provenance=AnnotationProvenance.HUMAN_OBSERVED,
             temporal=_CLIP_SECONDS,
-            entity_references=(_CLIP_REF, _person_ref("person", "-1")),
+            entity_references=(
+                _CLIP_REF,
+                _person_ref("person", "-1", severity=Severity.WARNING),
+            ),
             bounds=_CLIP_DURATION_BOUNDS,
             value_fields=("target", "is_at_me"),
             known_limitations=(
                 "`target` is release-defined nullable payload and is never imputed.",
+                (
+                    "Two retained rows name source person IDs absent from the clip's "
+                    "persons collection; this is reported as a warning, not rewritten."
+                ),
                 (
                     "Addressee information is asymmetric with respect to the camera "
                     "wearer; population statistics, rather than an invented target, "
@@ -455,6 +466,7 @@ ANNOTATIONS = AnnotationSpec(
             left_key_columns=("clip_uid", "person_id"),
             right_key_columns=("clip_uid", "person_id"),
             overlap_tolerance=0.5,
+            excluded_key_values=("-1",),
             description=(
                 "Diagnostic ±0.5 s overlap expansion only; it does not alter source "
                 "timestamps or define a canonical matching tolerance."

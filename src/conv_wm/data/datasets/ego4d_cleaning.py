@@ -64,6 +64,15 @@ TRANSCRIPTION_REQUIRED = TRANSCRIPTION_COLUMNS
 SOCIAL_REQUIRED = tuple(column for column in SOCIAL_COLUMNS if column != "target")
 
 
+def _collection(owner: Mapping[str, Any], key: str) -> list[Any]:
+    value = owner.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise TypeError(f"Ego4D {key} must be a JSON array or null")
+    return value
+
+
 def iter_json_array(path: Path, key: str) -> Iterator[dict[str, Any]]:
     """Stream objects from a top-level JSON array without loading the release at once."""
     decoder = json.JSONDecoder()
@@ -121,15 +130,15 @@ def extract_annotation_tables(
         "social_segments_looking": [],
     }
     for video in videos:
-        for clip_value in video.get("clips", []):
+        for clip_value in _collection(video, "clips"):
             if not isinstance(clip_value, Mapping):
                 raise TypeError("Ego4D clips must be JSON objects")
             clip = clip_value
             clip_uid = clip.get("clip_uid")
-            for person_value in clip.get("persons", []):
+            for person_value in _collection(clip, "persons"):
                 if not isinstance(person_value, Mapping):
                     raise TypeError("Ego4D persons must be JSON objects")
-                for segment_value in person_value.get("voice_segments", []):
+                for segment_value in _collection(person_value, "voice_segments"):
                     if not isinstance(segment_value, Mapping):
                         raise TypeError("Ego4D voice segments must be JSON objects")
                     segment = dict(segment_value)
@@ -141,7 +150,7 @@ def extract_annotation_tables(
                 "social_segments_talking",
                 "social_segments_looking",
             ):
-                for annotation_value in clip.get(source_name, []):
+                for annotation_value in _collection(clip, source_name):
                     if not isinstance(annotation_value, Mapping):
                         raise TypeError(
                             f"Ego4D {source_name} entries must be JSON objects"

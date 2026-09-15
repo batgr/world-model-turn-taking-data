@@ -91,12 +91,12 @@ def valid_ego4d_tables():
                 "clip_uid": ["clip-1"],
                 "start_time": [0.0],
                 "end_time": [1.0],
-                "start_frame": [0.0],
-                "end_frame": [30.0],
+                "start_frame": [0],
+                "end_frame": [30],
                 "video_start_time": [10.0],
                 "video_end_time": [11.0],
-                "video_start_frame": [300.0],
-                "video_end_frame": [330.0],
+                "video_start_frame": [300],
+                "video_end_frame": [330],
                 "person_id": ["0"],
             }
         ),
@@ -108,9 +108,9 @@ def valid_ego4d_tables():
                 "end_time_sec": [1.0],
                 "person_id": ["-1"],
                 "video_start_time": [10.0],
-                "video_start_frame": [300.0],
+                "video_start_frame": [300],
                 "video_end_time": [11.0],
-                "video_end_frame": [330.0],
+                "video_end_frame": [330],
             }
         ),
         "social_segments_talking_clean": pd.DataFrame(

@@ -669,14 +669,23 @@ def _covered_mask(
         other = right_groups.get(key)
         if other is None:
             continue
-        starts = other["_start"].to_numpy()
-        ends = other["_end"].to_numpy()
-        for index, (start, end) in zip(
-            group.index, zip(group["_start"], group["_end"], strict=True), strict=True
-        ):
-            covered[index] = bool(
-                np.any((starts < end + tolerance) & (ends > start - tolerance))
+        order = np.argsort(other["_start"].to_numpy())
+        starts = other["_start"].to_numpy()[order]
+        maximum_ends = np.maximum.accumulate(other["_end"].to_numpy()[order])
+        positions = (
+            np.searchsorted(
+                starts,
+                group["_end"].to_numpy() + tolerance,
+                side="left",
             )
+            - 1
+        )
+        candidates = positions >= 0
+        group_covered = np.zeros(len(group), dtype=bool)
+        group_covered[candidates] = maximum_ends[positions[candidates]] > (
+            group["_start"].to_numpy()[candidates] - tolerance
+        )
+        covered[group.index.to_numpy()] = group_covered
     return covered
 
 
