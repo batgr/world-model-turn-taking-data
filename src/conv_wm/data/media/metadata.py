@@ -1,9 +1,73 @@
+"""Container/stream metadata of media files and the typed row boundary."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
 import pandas as pd
 
 from conv_wm.data.media.ffprobe import probe_media
+
+
+@dataclass(frozen=True)
+class MediaFileInfo:
+    """Stream facts of one media file, read once from the media metadata table.
+
+    Audits receive this object instead of a pandas row so that a renamed column
+    fails loudly at the boundary (``from_row``) rather than deep in analysis.
+    """
+
+    dataset: str
+    relative_path: str
+    audio_codec: str
+    audio_sample_rate_hz: int
+    audio_time_base: str
+    audio_duration_sec: float
+    video_codec: str
+    video_avg_frame_rate: float
+    video_time_base: str
+    video_duration_sec: float
+
+    @classmethod
+    def from_row(cls, row: Mapping[str, object]) -> MediaFileInfo:
+        """Build from one row of the media metadata table (dict-like access)."""
+        return cls(
+            dataset=str(row["dataset"]),
+            relative_path=str(row["relative_path"]),
+            audio_codec=str(row["audio_codec"]),
+            audio_sample_rate_hz=int(row["audio_sample_rate_hz"]),  # type: ignore[call-overload]
+            audio_time_base=str(row["audio_time_base"]),
+            audio_duration_sec=float(row["audio_duration_sec"]),  # type: ignore[arg-type]
+            video_codec=str(row["video_codec"]),
+            video_avg_frame_rate=float(row["video_avg_frame_rate"]),  # type: ignore[arg-type]
+            video_time_base=str(row["video_time_base"]),
+            video_duration_sec=float(row["video_duration_sec"]),  # type: ignore[arg-type]
+        )
+
+
+MEDIA_FILE_INFO_COLUMNS: tuple[str, ...] = (
+    "dataset",
+    "relative_path",
+    "audio_codec",
+    "audio_sample_rate_hz",
+    "audio_time_base",
+    "audio_duration_sec",
+    "video_codec",
+    "video_avg_frame_rate",
+    "video_time_base",
+    "video_duration_sec",
+)
+
+
+def media_files(metadata: pd.DataFrame) -> list[MediaFileInfo]:
+    """Typed rows of a media metadata table; raises on missing columns."""
+    missing = set(MEDIA_FILE_INFO_COLUMNS) - set(metadata.columns)
+    if missing:
+        raise ValueError(f"Media metadata table is missing columns: {sorted(missing)}")
+    return [MediaFileInfo.from_row(row) for row in metadata.to_dict(orient="records")]
 
 
 def extract_media_metadata(
@@ -39,18 +103,21 @@ def extract_media_metadata(
 
 
 def derive_media_qc(metadata: pd.DataFrame) -> pd.DataFrame:
+    """Add boolean ``qc_*`` columns: probe success, stream presence, positive durations."""
     qc = metadata.copy()
-
-    qc["qc_probe_ok"] = qc["probe_ok"]
-
+    qc["qc_probe_ok"] = qc["probe_ok"].fillna(False).astype(bool)
+    for column in (
+        "n_video_streams",
+        "n_audio_streams",
+        "video_duration_sec",
+        "audio_duration_sec",
+    ):
+        if column not in qc.columns:
+            qc[column] = float("nan")
     qc["qc_has_video"] = qc["n_video_streams"].fillna(0) >= 1
-
     qc["qc_has_audio"] = qc["n_audio_streams"].fillna(0) >= 1
-
     qc["qc_positive_video_duration"] = qc["video_duration_sec"].fillna(0) > 0
-
     qc["qc_positive_audio_duration"] = qc["audio_duration_sec"].fillna(0) > 0
-
     return qc
 
 

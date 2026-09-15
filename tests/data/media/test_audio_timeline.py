@@ -1,17 +1,50 @@
 import pandas as pd
 import pytest
 
-from conv_wm.data.media.audio_timeline import (
-    analyze_audio_packet_timeline,
-    analyze_audio_timeline,
+from conv_wm.data.media.audio import (
+    AudioFileTimelineRecord,
+    AudioTimelineParameters,
+    TimelineStatus,
+    analyze_audio_packets,
+    decoded_frame_continuity,
     effective_audio_bounds,
     extract_skip_samples,
     summarize_decoded_sample_counts,
 )
 
 
+def analyze_audio_packet_timeline(
+    packets: list[dict],
+    *,
+    sample_rate_hz: int,
+    time_base: str,
+    reference_decoded_samples: int,
+    **overrides: float,
+) -> tuple[dict, pd.DataFrame]:
+    """Run the typed analysis and return (flat file row, events frame)."""
+    parameters = AudioTimelineParameters(
+        reference_decoded_samples=reference_decoded_samples, **overrides
+    )
+    file = AudioFileTimelineRecord(
+        dataset="test",
+        relative_path="test.mp4",
+        audio_codec="aac",
+        sample_rate_hz=sample_rate_hz,
+        time_base=time_base,
+        audio_duration_sec=0.0,
+        video_avg_frame_rate=30.0,
+        reference_decoded_samples_source="test",
+        probe_ok=True,
+        probe_error=None,
+        timeline_status=TimelineStatus.MEASURED,
+        parameters=parameters,
+    )
+    result = analyze_audio_packets(packets, file=file)
+    return result.file.to_row(), result.events_frame()
+
+
 def test_empty_audio_timeline_is_insufficient():
-    result = analyze_audio_timeline(
+    result = decoded_frame_continuity(
         pd.DataFrame(),
         sample_rate_hz=48000,
         time_base="1/48000",
@@ -51,7 +84,7 @@ def test_continuous_audio_timeline():
         }
     )
 
-    result = analyze_audio_timeline(
+    result = decoded_frame_continuity(
         frames,
         sample_rate_hz=48000,
         time_base="1/48000",
@@ -78,7 +111,7 @@ def test_audio_gap_is_detected():
         }
     )
 
-    result = analyze_audio_timeline(
+    result = decoded_frame_continuity(
         frames,
         sample_rate_hz=48000,
         time_base="1/48000",
@@ -106,7 +139,7 @@ def test_audio_overlap_is_detected():
         }
     )
 
-    result = analyze_audio_timeline(
+    result = decoded_frame_continuity(
         frames,
         sample_rate_hz=48000,
         time_base="1/48000",
@@ -462,7 +495,7 @@ def test_decoded_sample_reference_uses_mode_and_reports_960_frames():
 
     result = summarize_decoded_sample_counts(frames)
 
-    assert result["reference_decoded_samples"] == 1024
-    assert result["decoded_sample_count_distribution"] == {"960": 1, "1024": 3}
-    assert result["n_non_reference_decoded_frames"] == 1
-    assert result["n_960_sample_frames"] == 1
+    assert result.reference_decoded_samples == 1024
+    assert result.distribution == {"960": 1, "1024": 3}
+    assert result.n_non_reference_decoded_frames == 1
+    assert result.n_960_sample_frames == 1
