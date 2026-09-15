@@ -22,6 +22,7 @@ from conv_wm.data.annotations import (
     TemporalOrigin,
     TimeUnit,
 )
+from conv_wm.data.datasets.ego4d_cleaning import build_annotation_cleaning
 from conv_wm.data.datasets.spec import (
     AudioInterpretation,
     DatasetSpec,
@@ -149,7 +150,7 @@ EGO4D_SOCIAL_SEGMENTS_TALKING_SCHEMA = pa.DataFrameSchema(
         "video_start_frame": pa.Column(int, nullable=False),
         "video_end_frame": pa.Column(int, nullable=False),
         "person": pa.Column(str, nullable=False),
-        "target": pa.Column(str, nullable=False),
+        "target": pa.Column(str, nullable=True),
         "is_at_me": pa.Column(bool, nullable=False),
     },
     strict=True,
@@ -162,13 +163,15 @@ EGO4D_SOCIAL_SEGMENTS_LOOKING_SCHEMA = pa.DataFrameSchema(
         "clip_uid": pa.Column(str, nullable=False),
         "start_time": pa.Column(float, nullable=False),
         "end_time": pa.Column(float, nullable=False),
-        "start_frame": pa.Column(float, nullable=False),
-        "end_frame": pa.Column(float, nullable=False),
+        "start_frame": pa.Column(int, nullable=False),
+        "end_frame": pa.Column(int, nullable=False),
         "video_start_time": pa.Column(float, nullable=False),
         "video_end_time": pa.Column(float, nullable=False),
-        "video_start_frame": pa.Column(float, nullable=False),
-        "video_end_frame": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(int, nullable=False),
+        "video_end_frame": pa.Column(int, nullable=False),
         "person": pa.Column(str, nullable=False),
+        "target": pa.Column(str, nullable=True),
+        "is_at_me": pa.Column(bool, nullable=False),
     },
     strict=True,
     name="ego4d_social_segments_looking_clean",
@@ -359,13 +362,18 @@ ANNOTATIONS = AnnotationSpec(
             bounds=_CLIP_DURATION_BOUNDS,
             value_fields=("target", "is_at_me"),
             known_limitations=(
-                "`target` semantics are taken from the release and not constrained here.",
+                "`target` is release-defined nullable payload and is never imputed.",
+                (
+                    "Addressee information is asymmetric with respect to the camera "
+                    "wearer; population statistics, rather than an invented target, "
+                    "describe unavailable explicit targets."
+                ),
             ),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",
             name="social_segments_looking",
-            description="Intervals where looking-at-me annotation exists; labels live elsewhere.",
+            description="Looking-at-camera-wearer intervals from the social annotation.",
             scope=AnnotationScope.TEMPORAL_INTERVAL,
             load=parquet_table("ego4d", "interim", "social_segments_looking_clean"),
             dimensions=("gaze",),
@@ -373,10 +381,8 @@ ANNOTATIONS = AnnotationSpec(
             temporal=_CLIP_SECONDS,
             entity_references=(_CLIP_REF, _person_ref("person", "-1")),
             bounds=_CLIP_DURATION_BOUNDS,
-            known_limitations=(
-                "Empty in the current interim snapshot.",
-                "Gaze labels are distributed as separate per-frame CSV files, not in this table.",
-            ),
+            value_fields=("target", "is_at_me"),
+            known_limitations=("`target` is nullable throughout the current release.",),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",
@@ -434,12 +440,50 @@ ANNOTATIONS = AnnotationSpec(
             description="Independent speech annotations; asymmetric coverage is expected.",
         ),
         CrossSourceComparison(
+            name="voice_segments_vs_transcriptions_known_speakers",
+            left_source="voice_segments",
+            right_source="transcriptions",
+            left_key_columns=("clip_uid", "person_id"),
+            right_key_columns=("clip_uid", "person_id"),
+            excluded_key_values=("-1",),
+            description="Strict overlap after excluding the unknown-speaker sentinel.",
+        ),
+        CrossSourceComparison(
+            name="voice_segments_vs_transcriptions_relaxed",
+            left_source="voice_segments",
+            right_source="transcriptions",
+            left_key_columns=("clip_uid", "person_id"),
+            right_key_columns=("clip_uid", "person_id"),
+            overlap_tolerance=0.5,
+            description=(
+                "Diagnostic ±0.5 s overlap expansion only; it does not alter source "
+                "timestamps or define a canonical matching tolerance."
+            ),
+        ),
+        CrossSourceComparison(
+            name="voice_segments_vs_transcriptions_clip_level",
+            left_source="voice_segments",
+            right_source="transcriptions",
+            left_key_columns=("clip_uid",),
+            right_key_columns=("clip_uid",),
+            description="Clip-level diagnostic that ignores speaker assignment.",
+        ),
+        CrossSourceComparison(
             name="voice_segments_vs_social_talking",
             left_source="voice_segments",
             right_source="social_segments_talking",
             left_key_columns=("clip_uid", "person_id"),
             right_key_columns=("clip_uid", "person"),
             description="Talking segments carry addressee labels for a subset of speech.",
+        ),
+        CrossSourceComparison(
+            name="voice_segments_vs_social_talking_with_target",
+            left_source="voice_segments",
+            right_source="social_segments_talking",
+            left_key_columns=("clip_uid", "person_id"),
+            right_key_columns=("clip_uid", "person"),
+            right_required_non_null=("target",),
+            description="Same comparison restricted to rows with an explicit target.",
         ),
     ),
 )
@@ -539,6 +583,7 @@ EGO4D = DatasetSpec(
     description="Ego4D v2 audio-visual diarization benchmark clips (video_540ss).",
     structure=STRUCTURE,
     annotations=ANNOTATIONS,
+    annotation_cleaner=build_annotation_cleaning,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),
         extra_decode_cases=systematic_profile_cases,

@@ -14,17 +14,18 @@ from conv_wm.data.annotations import (
     EntityReference,
     MediaReference,
     ReferenceKind,
-    Severity,
     TemporalFields,
     TemporalOrigin,
     TimeUnit,
 )
+from conv_wm.data.datasets.egocom_cleaning import build_annotation_cleaning
 from conv_wm.data.datasets.spec import (
     DatasetSpec,
     RelationSpec,
     StructuralSpec,
     TableSpec,
     csv_table,
+    parquet_table,
 )
 
 EGOCOM_VIDEO_INFO_SCHEMA = pa.DataFrameSchema(
@@ -70,6 +71,46 @@ EGOCOM_GROUND_TRUTH_SCHEMA = pa.DataFrameSchema(
 )
 
 
+EGOCOM_VIDEO_INFO_CLEAN_SCHEMA = pa.DataFrameSchema(
+    {
+        "video_id": pa.Column(int, nullable=False, unique=True),
+        "conversation_id": pa.Column(str, nullable=False),
+        "video_speaker_id": pa.Column(int, nullable=False),
+        "num_speakers": pa.Column(int, nullable=False, checks=Check.gt(0)),
+        "speaker_name": pa.Column(str, nullable=True),
+        "speaker_gender": pa.Column(str, nullable=True),
+        "duration_seconds": pa.Column(int, nullable=False, checks=Check.gt(0)),
+        "word_count": pa.Column(int, nullable=True),
+        "speaker_is_host": pa.Column(bool, nullable=True),
+        "tokenized_words": pa.Column(str, nullable=True),
+        "native_speaker": pa.Column(bool, nullable=True),
+        "video_name": pa.Column(str, nullable=False),
+        "background_fan": pa.Column(bool, nullable=True),
+        "background_music": pa.Column(bool, nullable=True),
+        "cid": pa.Column(str, nullable=True),
+        "split": pa.Column(
+            str, nullable=False, checks=Check.isin(["train", "val", "test"])
+        ),
+    },
+    strict=True,
+    name="egocom_video_info_clean",
+)
+
+
+EGOCOM_GROUND_TRUTH_CLEAN_SCHEMA = pa.DataFrameSchema(
+    {
+        "source_row": pa.Column(int, nullable=False, unique=True),
+        "conversation_id": pa.Column(str, nullable=False),
+        "speaker_id": pa.Column(int, nullable=False),
+        "startTime": pa.Column(float, nullable=True),
+        "endTime": pa.Column(float, nullable=True),
+        "word": pa.Column(str, nullable=True),
+    },
+    strict=True,
+    name="egocom_ground_truth_clean",
+)
+
+
 STRUCTURE = StructuralSpec(
     tables=(
         TableSpec(
@@ -84,6 +125,18 @@ STRUCTURE = StructuralSpec(
             load=csv_table("egocom", "raw", "ground_truth"),
             description="Word-level transcript with per-word timing per conversation part.",
         ),
+        TableSpec(
+            name="video_info_clean",
+            schema=EGOCOM_VIDEO_INFO_CLEAN_SCHEMA,
+            load=parquet_table("egocom", "interim", "video_info_clean"),
+            description="Source-faithful POV metadata with one derived split column.",
+        ),
+        TableSpec(
+            name="ground_truth_clean",
+            schema=EGOCOM_GROUND_TRUTH_CLEAN_SCHEMA,
+            load=parquet_table("egocom", "interim", "ground_truth_clean"),
+            description="All source transcript tokens with nullable timing preserved.",
+        ),
     ),
     relations=(
         RelationSpec(
@@ -91,6 +144,13 @@ STRUCTURE = StructuralSpec(
             child_table="ground_truth_transcriptions",
             child_columns=("conversation_id",),
             parent_table="video_info",
+            parent_columns=("conversation_id",),
+        ),
+        RelationSpec(
+            name="ground_truth_clean_conversation_id_in_video_info_clean",
+            child_table="ground_truth_clean",
+            child_columns=("conversation_id",),
+            parent_table="video_info_clean",
             parent_columns=("conversation_id",),
         ),
     ),
@@ -106,7 +166,7 @@ ANNOTATIONS = AnnotationSpec(
                 "and recording conditions."
             ),
             scope=AnnotationScope.PARTICIPANT_INTERACTION,
-            load=csv_table("egocom", "raw", "video_info"),
+            load=parquet_table("egocom", "interim", "video_info_clean"),
             dimensions=(
                 "participant_traits",
                 "recording_conditions",
@@ -136,7 +196,7 @@ ANNOTATIONS = AnnotationSpec(
             name="ground_truth_transcriptions",
             description="Word-level transcript per conversation part; punctuation tokens are untimed.",
             scope=AnnotationScope.TEMPORAL_INTERVAL,
-            load=csv_table("egocom", "raw", "ground_truth"),
+            load=parquet_table("egocom", "interim", "ground_truth_clean"),
             dimensions=("speech", "transcript"),
             provenance=AnnotationProvenance.HUMAN_OBSERVED,
             temporal=TemporalFields(
@@ -153,15 +213,6 @@ ANNOTATIONS = AnnotationSpec(
                     target_source="video_info",
                     target_columns=("conversation_id",),
                 ),
-                # Recorded participants are the only participant table EgoCom ships;
-                # a speaker without a recording is a documented caveat, not a defect.
-                EntityReference(
-                    kind=ReferenceKind.PARTICIPANT,
-                    columns=("conversation_id", "speaker_id"),
-                    target_source="video_info",
-                    target_columns=("conversation_id", "video_speaker_id"),
-                    severity=Severity.WARNING,
-                ),
             ),
             bounds=DurationBounds(
                 source="video_info",
@@ -169,14 +220,17 @@ ANNOTATIONS = AnnotationSpec(
                 target_key_columns=("conversation_id",),
                 duration_column="duration_seconds",
             ),
+            identity=("source_row",),
             value_fields=("word",),
             known_limitations=(
-                "About half of the rows are untimed tokens (punctuation, empty words).",
+                (
+                    "About half of the rows are untimed tokens; they include formatting, "
+                    "lexical material, and annotation markers."
+                ),
                 "Timestamps are relative to the conversation part, not to the 20-minute video.",
                 (
-                    "Seven two-speaker conversations (13 parts, 13,512 rows, 9,007 non-empty "
-                    "words) attribute speech to speaker 3, who has neither a recording on "
-                    "disk nor a participant record; the identity of that speaker is unresolved."
+                    "video_info enumerates available participant POVs, not every audible "
+                    "participant; speech without an own POV is valid annotation."
                 ),
             ),
         ),
@@ -188,4 +242,5 @@ EGOCOM = DatasetSpec(
     description="EgoCom multi-person egocentric conversations (240p, 20-minute videos).",
     structure=STRUCTURE,
     annotations=ANNOTATIONS,
+    annotation_cleaner=build_annotation_cleaning,
 )

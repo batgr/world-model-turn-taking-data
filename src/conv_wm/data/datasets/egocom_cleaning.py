@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -30,7 +31,10 @@ GROUND_TRUTH_OPTIONAL = ("startTime", "endTime", "word")
 
 
 def clean_ground_truth(
-    source: pd.DataFrame, *, source_path: Path = Path("ground_truth_transcriptions.csv")
+    source: pd.DataFrame,
+    *,
+    video_info: pd.DataFrame | None = None,
+    source_path: Path = Path("ground_truth_transcriptions.csv"),
 ) -> CleanedAnnotationTable:
     """Preserve timed and untimed source tokens without grouping or text mutation."""
     source_columns = tuple(
@@ -39,7 +43,7 @@ def clean_ground_truth(
     require_source_columns(
         source, source_columns, dataset="egocom", name="ground_truth"
     )
-    ordered = source.loc[:, source_columns].copy()
+    ordered = cast(pd.DataFrame, source.loc[:, list(source_columns)]).copy()
     ordered.insert(0, "source_row", np.arange(len(ordered), dtype=np.int64))
     cleaned, removed = remove_rows_missing_required_fields(
         ordered, GROUND_TRUTH_REQUIRED
@@ -48,6 +52,36 @@ def clean_ground_truth(
     start_only = cleaned["startTime"].notna() & cleaned["endTime"].isna()
     untimed = cleaned["startTime"].isna() & cleaned["endTime"].isna()
     nonblank_word = cleaned["word"].fillna("").astype(str).str.strip().ne("")
+    statistics = {
+        "fully_timed_rows": int(timed.sum()),
+        "start_only_rows": int(start_only.sum()),
+        "fully_untimed_rows": int(untimed.sum()),
+        "nonblank_fully_untimed_rows": int((untimed & nonblank_word).sum()),
+        "nonblank_start_only_rows": int((start_only & nonblank_word).sum()),
+    }
+    if video_info is not None:
+        require_source_columns(
+            video_info,
+            ("conversation_id", "video_speaker_id"),
+            dataset="egocom",
+            name="video_info",
+        )
+        available_povs = set(
+            video_info.loc[:, ["conversation_id", "video_speaker_id"]].itertuples(
+                index=False, name=None
+            )
+        )
+        has_own_pov = [
+            key in available_povs
+            for key in cleaned.loc[:, ["conversation_id", "speaker_id"]].itertuples(
+                index=False, name=None
+            )
+        ]
+        n_with_pov = sum(has_own_pov)
+        statistics |= {
+            "participant_has_own_pov_true_rows": int(n_with_pov),
+            "participant_has_own_pov_false_rows": int(len(has_own_pov) - n_with_pov),
+        }
     return CleanedAnnotationTable(
         dataset="egocom",
         name="ground_truth",
@@ -68,13 +102,7 @@ def clean_ground_truth(
             "add zero-based source_row to preserve source sequence",
             "preserve one output row per source row; do not aggregate equal intervals",
         ),
-        statistics={
-            "fully_timed_rows": int(timed.sum()),
-            "start_only_rows": int(start_only.sum()),
-            "fully_untimed_rows": int(untimed.sum()),
-            "nonblank_fully_untimed_rows": int((untimed & nonblank_word).sum()),
-            "nonblank_start_only_rows": int((start_only & nonblank_word).sum()),
-        },
+        statistics=statistics,
     )
 
 
@@ -89,15 +117,20 @@ def clean_video_info(
         dataset="egocom",
         name="video_info",
     )
-    selected = source.loc[
-        :, [column for column in source.columns if column not in split_columns]
-    ].copy()
-    split_flags = source.loc[:, split_columns]
-    if not bool(split_flags.sum(axis=1).eq(1).all()):
+    selected = cast(
+        pd.DataFrame,
+        source.loc[
+            :, [column for column in source.columns if column not in split_columns]
+        ],
+    ).copy()
+    split_flags = cast(pd.DataFrame, source.loc[:, list(split_columns)])
+    split_array = split_flags.to_numpy(dtype=bool)
+    if not bool(np.equal(split_array.sum(axis=1), 1).all()):
         raise ValueError(
             "egocom/video_info: exactly one split flag must be true per row"
         )
-    selected["split"] = split_flags.idxmax(axis=1).astype("category")
+    labels = np.asarray(split_columns)[split_array.argmax(axis=1)]
+    selected["split"] = pd.Series(labels, index=selected.index, dtype="string")
     required = (
         "video_id",
         "conversation_id",
@@ -137,9 +170,12 @@ def build_annotation_cleaning(cfg: DictConfig) -> list[CleanedAnnotationTable]:
     """Load EgoCom CSV sources and derive the two maintained interim tables."""
     video_path = get_path(cfg, "egocom", "raw", "video_info")
     ground_truth_path = get_path(cfg, "egocom", "raw", "ground_truth")
+    video_info = pd.read_csv(video_path)
     return [
-        clean_video_info(pd.read_csv(video_path), source_path=video_path),
+        clean_video_info(video_info, source_path=video_path),
         clean_ground_truth(
-            pd.read_csv(ground_truth_path), source_path=ground_truth_path
+            pd.read_csv(ground_truth_path),
+            video_info=video_info,
+            source_path=ground_truth_path,
         ),
     ]

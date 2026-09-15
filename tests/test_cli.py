@@ -44,6 +44,14 @@ def test_help_lists_every_audit(capsys):
         assert name in out
 
 
+def test_clean_help_lists_annotation_cleaning(capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(["clean", "--help"])
+
+    assert exit_info.value.code == 0
+    assert "annotations" in capsys.readouterr().out
+
+
 def test_missing_prerequisite_exits_1_and_names_the_producing_command(tmp_path, capsys):
     code = cli.main(["--config", str(_config(tmp_path)), "audit", "sync"])
 

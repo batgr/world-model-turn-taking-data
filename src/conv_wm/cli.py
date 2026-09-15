@@ -109,6 +109,17 @@ def _audit_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
     return EXIT_OK if outputs.valid else EXIT_AUDIT_FAILED
 
 
+def _clean_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
+    from conv_wm.data.cleaning import (
+        format_annotation_cleaning_summary,
+        run_annotation_cleaning,
+    )
+
+    outputs = run_annotation_cleaning(cfg)
+    print(format_annotation_cleaning_summary(outputs))
+    return EXIT_OK
+
+
 AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
     AuditCommand(
         "manifest", "inventory every file below the raw root", _audit_manifest
@@ -169,6 +180,14 @@ def build_parser() -> argparse.ArgumentParser:
                 help="parallel ffprobe workers (default 4)",
             )
         sub.set_defaults(handler=command.run)
+    clean = subparsers.add_parser(
+        "clean", help="derive source-faithful tables with approved transformations"
+    )
+    clean_subparsers = clean.add_subparsers(dest="clean", required=True)
+    clean_annotations = clean_subparsers.add_parser(
+        "annotations", help="clean registered annotation sources into interim tables"
+    )
+    clean_annotations.set_defaults(handler=_clean_annotations)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
     return parser
@@ -196,7 +215,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (MissingPrerequisiteError, FFprobeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_FAILURE
-    except (FileNotFoundError, ValueError, KeyError) as exc:
+    except (FileNotFoundError, TypeError, ValueError, KeyError) as exc:
         print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return EXIT_FAILURE
 
