@@ -174,9 +174,9 @@ ANNOTATIONS = AnnotationSpec(
                 "About half of the rows are untimed tokens (punctuation, empty words).",
                 "Timestamps are relative to the conversation part, not to the 20-minute video.",
                 (
-                    "Six two-speaker conversations (13 parts) attribute words to speaker 3, "
-                    "who has neither a recording nor a participant record; the identity of "
-                    "that speaker is unresolved."
+                    "Seven two-speaker conversations (13 parts, 13,512 rows, 9,007 non-empty "
+                    "words) attribute speech to speaker 3, who has neither a recording on "
+                    "disk nor a participant record; the identity of that speaker is unresolved."
                 ),
             ),
         ),

@@ -88,13 +88,16 @@ voice segment are unresolved.
 | Source | Scope | Rows | Caveats found |
 | --- | --- | ---: | --- |
 | `video_info` | participant × interaction | 175 | `duration_seconds` is a declared integer, not the measured stream length; every `video_name` resolves to a media file |
-| `ground_truth_transcriptions` | interval (word) | 359,536 | 177,573 timed rows (49.4 %; punctuation and empty tokens are untimed, declared nullable); no interval ends beyond the declared part duration (last word ends 0.2–3.7 s before it); 19,627 zero-duration words; **13,512 words in 13 conversation parts (6 physical conversations) are attributed to speaker 3 although `num_speakers = 2` and no recording exists for that speaker** |
+| `ground_truth_transcriptions` | interval (word) | 359,536 | 177,573 timed rows (49.4 %; punctuation and empty tokens are untimed, declared nullable); no interval ends beyond the declared part duration (last word ends 0.2–3.7 s before it); 19,627 zero-duration words; **13,512 transcript rows (9,007 non-empty words, 7,022 timed) in 13 conversation parts of 7 physical conversations are attributed to speaker 3, although `num_speakers = 2` and no `person_3` recording exists on disk** |
 
 The speaker-3 case is the one unresolved semantic anomaly of the corpus. It is
 recorded as a `warning` (participant reference to `video_info`, the only
-participant table EgoCom ships) with a known limitation; whether speaker 3 is
-an unrecorded third participant or a non-participant voice must be decided
-downstream, not by the audit.
+participant table EgoCom ships) with a known limitation. Speaker 3 speaks
+throughout each affected conversation alongside speakers 1 and 2 (for example
+7,652 / 4,019 / 3,037 tokens in `day_5__con_1`), so it is a third voice present
+in the room; whether it is an unrecorded participant (making `num_speakers = 2`
+wrong) or a non-participant must be decided downstream, not by the audit.
+Verified independently from the raw CSV files and the media inventory.
 
 ## Unresolved semantics
 
