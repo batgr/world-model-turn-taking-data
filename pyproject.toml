@@ -1,22 +1,28 @@
 [project]
 name = "conv_wm"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Reproducible data audits for a multimodal conversational world model"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "hydra-core>=1.3.6",
-    "matplotlib>=3.11.1",
     "omegaconf>=2.3.1",
     "pandas>=3.0.5",
     "pandera[pandas]>=0.33.1",
     "pyarrow>=25.0.0",
-    "pytest>=9.1.1",
+]
+
+[project.optional-dependencies]
+# Exploration only: the maintained implementation never imports these.
+notebooks = [
+    "matplotlib>=3.11.1",
     "pyyaml>=6.0.3",
     "seaborn>=0.13.2",
     "skimpy>=0.0.21",
     "tqdm>=4.70.0",
 ]
+
+[project.scripts]
+conv-wm = "conv_wm.cli:main"
 
 [build-system]
 requires = ["hatchling"]
