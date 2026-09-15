@@ -1,0 +1,171 @@
+from pathlib import Path
+
+import pandas as pd
+
+from conv_wm.data.cleaning import remove_rows_missing_required_fields
+from conv_wm.data.datasets.ego4d_cleaning import (
+    SOCIAL_COLUMNS,
+    TRANSCRIPTION_COLUMNS,
+    VOICE_COLUMNS,
+    clean_annotation_tables,
+)
+from conv_wm.data.datasets.egocom_cleaning import clean_ground_truth
+
+
+def _voice_row(**overrides):
+    row = {
+        "clip_uid": "clip-1",
+        "start_time": 0.0,
+        "end_time": 1.0,
+        "start_frame": 0,
+        "end_frame": 30,
+        "video_start_time": 10.0,
+        "video_end_time": 11.0,
+        "video_start_frame": 300,
+        "video_end_frame": 330,
+        "person_id": "1",
+    }
+    row.update(overrides)
+    return row
+
+
+def _transcription_row(**overrides):
+    row = {
+        "clip_uid": "clip-1",
+        "transcription": "hello",
+        "start_time_sec": 0.0,
+        "end_time_sec": 1.0,
+        "person_id": "1",
+        "video_start_time": 10.0,
+        "video_start_frame": 300,
+        "video_end_time": 11.0,
+        "video_end_frame": 330,
+    }
+    row.update(overrides)
+    return row
+
+
+def _social_row(**overrides):
+    row = {
+        "clip_uid": "clip-1",
+        "start_time": 0.0,
+        "end_time": 1.0,
+        "start_frame": 0,
+        "end_frame": 30,
+        "video_start_time": 10.0,
+        "video_end_time": 11.0,
+        "video_start_frame": 300,
+        "video_end_frame": 330,
+        "person": "1",
+        "target": "0",
+        "is_at_me": True,
+    }
+    row.update(overrides)
+    return row
+
+
+def _clean_ego4d(*, talking, looking=None, voice=None, transcriptions=None):
+    sources = {
+        "voice_segments": pd.DataFrame.from_records(
+            voice or [_voice_row()], columns=VOICE_COLUMNS
+        ),
+        "transcriptions": pd.DataFrame.from_records(
+            transcriptions or [_transcription_row()], columns=TRANSCRIPTION_COLUMNS
+        ),
+        "social_segments_talking": pd.DataFrame.from_records(
+            talking, columns=SOCIAL_COLUMNS
+        ),
+        "social_segments_looking": pd.DataFrame.from_records(
+            looking or [_social_row()], columns=SOCIAL_COLUMNS
+        ),
+    }
+    return {result.name: result for result in clean_annotation_tables(sources)}
+
+
+def test_talking_nullable_target_false_label_and_unknown_person_survive():
+    results = _clean_ego4d(
+        talking=[_social_row(person="-1", target=None, is_at_me=False)]
+    )
+
+    talking = results["social_segments_talking"]
+
+    assert len(talking.table) == 1
+    assert talking.table.loc[0, "person"] == "-1"
+    assert pd.isna(talking.table.loc[0, "target"])
+    assert not bool(talking.table.loc[0, "is_at_me"])
+    assert talking.rows_removed == 0
+    assert (
+        talking.to_summary(Path("out.parquet"))[
+            "rows_retained_with_nullable_optional_fields"
+        ]
+        == 1
+    )
+
+
+def test_talking_missing_required_time_is_removed_and_accounted():
+    results = _clean_ego4d(
+        talking=[_social_row(start_time=None), _social_row(target=None)]
+    )
+
+    talking = results["social_segments_talking"]
+
+    assert len(talking.table) == 1
+    assert talking.removed_by_reason == {"missing_required_field:start_time": 1}
+    talking.validate_accounting()
+
+
+def test_looking_preserves_nullable_payload_and_removes_missing_identity():
+    results = _clean_ego4d(
+        talking=[_social_row()],
+        looking=[_social_row(target=None, is_at_me=False), _social_row(person=None)],
+    )
+
+    looking = results["social_segments_looking"]
+
+    assert len(looking.table) == 1
+    assert "target" in looking.table
+    assert "is_at_me" in looking.table
+    assert looking.removed_by_reason == {"missing_required_field:person": 1}
+
+
+def test_voice_and_transcription_keep_valid_unknown_identity():
+    results = _clean_ego4d(
+        talking=[_social_row()],
+        voice=[_voice_row(person_id="-1")],
+        transcriptions=[_transcription_row(person_id="-1")],
+    )
+
+    assert results["voice_segments"].table.loc[0, "person_id"] == "-1"
+    assert results["transcriptions"].table.loc[0, "person_id"] == "-1"
+
+
+def test_egocom_ground_truth_preserves_untimed_and_optional_null_rows():
+    source = pd.DataFrame(
+        {
+            "conversation_id": ["c1", "c1", "c1"],
+            "speaker_id": [1, 3, 3],
+            "startTime": [0.0, None, 1.0],
+            "endTime": [0.5, None, None],
+            "word": ["hello", "untimed", None],
+        }
+    )
+
+    result = clean_ground_truth(source)
+
+    assert len(result.table) == len(source)
+    assert result.table["source_row"].tolist() == [0, 1, 2]
+    assert result.table.loc[1, "speaker_id"] == 3
+    assert result.rows_removed == 0
+    result.validate_accounting()
+
+
+def test_required_field_accounting_assigns_each_row_once():
+    table = pd.DataFrame({"identity": [None, None, "ok"], "start": [None, 0.0, None]})
+
+    cleaned, reasons = remove_rows_missing_required_fields(table, ("identity", "start"))
+
+    assert cleaned.empty
+    assert reasons == {
+        "missing_required_field:identity": 2,
+        "missing_required_field:start": 1,
+    }

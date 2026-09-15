@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pandera.pandas as pa
@@ -18,6 +19,9 @@ from conv_wm.config import Stage, get_path
 from conv_wm.data.annotations.spec import EMPTY_ANNOTATIONS, AnnotationSpec
 from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
+
+if TYPE_CHECKING:
+    from conv_wm.data.cleaning import CleanedAnnotationTable
 
 TableLoader = Callable[[DictConfig], pd.DataFrame]
 """Load one table of a dataset from the configured paths."""
@@ -93,6 +97,9 @@ DecodeCaseSelector = Callable[[pd.DataFrame], list[DecodeValidationCase]]
 SummarySectionBuilder = Callable[[pd.DataFrame, pd.DataFrame], Mapping[str, object]]
 """Given this dataset's file table and decode validation table, build a summary section."""
 
+AnnotationCleaner = Callable[[DictConfig], list["CleanedAnnotationTable"]]
+"""Validate source annotations and return explicitly derived interim tables."""
+
 
 @dataclass(frozen=True)
 class AudioInterpretation:
@@ -117,6 +124,8 @@ class DatasetSpec:
     """Structural contracts; ``None`` when the dataset has no tabular annotations."""
     annotations: AnnotationSpec = EMPTY_ANNOTATIONS
     """Annotation-source semantics submitted to the annotation integrity audit."""
+    annotation_cleaner: AnnotationCleaner | None = None
+    """Dataset-specific rules called by the generic annotation-cleaning command."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:
