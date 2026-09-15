@@ -201,13 +201,18 @@ class SourceIntegrityReport:
 
 @dataclass(frozen=True)
 class CrossSourceResult:
-    """Interval overlap agreement between two sources per shared entity key."""
+    """Exact interval identity and overlap agreement per shared entity key."""
 
     name: str
     left_source: str
     right_source: str
     n_left: int
     n_right: int
+    left_exact_identity_fraction: float
+    """Fraction of left intervals exactly present in the right source."""
+    right_exact_identity_fraction: float
+    n_left_exact: int
+    n_right_exact: int
     left_covered_fraction: float
     """Fraction of left intervals overlapping at least one right interval."""
     right_covered_fraction: float
@@ -216,6 +221,7 @@ class CrossSourceResult:
     n_shared_keys: int
     n_left_only_keys: int
     n_right_only_keys: int
+    overlap_tolerance: float
     description: str = ""
 
     def to_row(self) -> dict[str, Any]:
@@ -628,9 +634,21 @@ def _media_relation(spec: AnnotationSourceSpec) -> dict[str, Any] | None:
 
 
 def _interval_frame(
-    table: pd.DataFrame, spec: AnnotationSourceSpec, key_columns: tuple[str, ...]
+    table: pd.DataFrame,
+    spec: AnnotationSourceSpec,
+    key_columns: tuple[str, ...],
+    *,
+    required_non_null: tuple[str, ...] = (),
+    excluded_key_values: tuple[str, ...] = (),
 ) -> pd.DataFrame:
     assert spec.temporal is not None and spec.temporal.end is not None
+    selected = pd.Series(True, index=table.index)
+    for column in (*key_columns, *required_non_null):
+        selected &= table[column].notna()
+    if excluded_key_values:
+        for column in key_columns:
+            selected &= ~table[column].astype(str).isin(excluded_key_values)
+    table = table.loc[selected]
     frame = pd.DataFrame(
         {
             "_key": _join_keys(table, key_columns),
@@ -641,7 +659,9 @@ def _interval_frame(
     return frame.dropna().reset_index(drop=True)
 
 
-def _covered_mask(left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray:
+def _covered_mask(
+    left: pd.DataFrame, right: pd.DataFrame, *, tolerance: float
+) -> np.ndarray:
     """For each left interval, whether any right interval with the same key overlaps it."""
     covered = np.zeros(len(left), dtype=bool)
     right_groups = {key: group for key, group in right.groupby("_key")}
@@ -654,8 +674,27 @@ def _covered_mask(left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray:
         for index, (start, end) in zip(
             group.index, zip(group["_start"], group["_end"], strict=True), strict=True
         ):
-            covered[index] = bool(np.any((starts < end) & (ends > start)))
+            covered[index] = bool(
+                np.any((starts < end + tolerance) & (ends > start - tolerance))
+            )
     return covered
+
+
+def _exact_mask(left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray:
+    """For each left interval, whether its key and bounds occur exactly on the right."""
+    right_intervals = set(
+        right.loc[:, ["_key", "_start", "_end"]].itertuples(index=False, name=None)
+    )
+    return np.fromiter(
+        (
+            interval in right_intervals
+            for interval in left.loc[:, ["_key", "_start", "_end"]].itertuples(
+                index=False, name=None
+            )
+        ),
+        dtype=bool,
+        count=len(left),
+    )
 
 
 def compare_sources(
@@ -665,11 +704,29 @@ def compare_sources(
     left: pd.DataFrame,
     right: pd.DataFrame,
 ) -> CrossSourceResult:
-    """Interval overlap coverage in both directions per shared entity key."""
-    left_frame = _interval_frame(left, left_spec, comparison.left_key_columns)
-    right_frame = _interval_frame(right, right_spec, comparison.right_key_columns)
-    left_covered = _covered_mask(left_frame, right_frame)
-    right_covered = _covered_mask(right_frame, left_frame)
+    """Exact-identity and interval-overlap coverage in both directions."""
+    left_frame = _interval_frame(
+        left,
+        left_spec,
+        comparison.left_key_columns,
+        required_non_null=comparison.left_required_non_null,
+        excluded_key_values=comparison.excluded_key_values,
+    )
+    right_frame = _interval_frame(
+        right,
+        right_spec,
+        comparison.right_key_columns,
+        required_non_null=comparison.right_required_non_null,
+        excluded_key_values=comparison.excluded_key_values,
+    )
+    left_exact = _exact_mask(left_frame, right_frame)
+    right_exact = _exact_mask(right_frame, left_frame)
+    left_covered = _covered_mask(
+        left_frame, right_frame, tolerance=comparison.overlap_tolerance
+    )
+    right_covered = _covered_mask(
+        right_frame, left_frame, tolerance=comparison.overlap_tolerance
+    )
     left_keys = set(left_frame["_key"])
     right_keys = set(right_frame["_key"])
     return CrossSourceResult(
@@ -678,6 +735,14 @@ def compare_sources(
         right_source=comparison.right_source,
         n_left=len(left_frame),
         n_right=len(right_frame),
+        left_exact_identity_fraction=float(left_exact.mean())
+        if len(left_frame)
+        else math.nan,
+        right_exact_identity_fraction=float(right_exact.mean())
+        if len(right_frame)
+        else math.nan,
+        n_left_exact=int(left_exact.sum()),
+        n_right_exact=int(right_exact.sum()),
         left_covered_fraction=float(left_covered.mean())
         if len(left_frame)
         else math.nan,
@@ -689,5 +754,6 @@ def compare_sources(
         n_shared_keys=len(left_keys & right_keys),
         n_left_only_keys=len(left_keys - right_keys),
         n_right_only_keys=len(right_keys - left_keys),
+        overlap_tolerance=comparison.overlap_tolerance,
         description=comparison.description,
     )

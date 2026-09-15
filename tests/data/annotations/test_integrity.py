@@ -212,6 +212,49 @@ def test_cross_source_overlap_coverage_is_directional():
     assert result.n_left_only_keys == 1
 
 
+def test_cross_source_exact_identity_is_generic_and_directional():
+    left_spec = _spec(name="left")
+    right_spec = _spec(name="right")
+    left = pd.DataFrame(
+        {
+            "clip": ["a", "a", "a"],
+            "person": ["1", "1", "-1"],
+            "start": [0.0, 2.0, 4.0],
+            "end": [1.0, 3.0, 5.0],
+            "payload": ["x", "x", "x"],
+        }
+    )
+    right = pd.DataFrame(
+        {
+            "clip": ["a", "a", "a"],
+            "person": ["1", "1", "-1"],
+            "start": [0.0, 2.25, 4.0],
+            "end": [1.0, 3.25, 5.0],
+            "payload": ["yes", None, "yes"],
+        }
+    )
+    comparison = CrossSourceComparison(
+        "left_vs_right",
+        "left",
+        "right",
+        ("clip", "person"),
+        ("clip", "person"),
+        overlap_tolerance=0.5,
+        excluded_key_values=("-1",),
+        right_required_non_null=("payload",),
+    )
+
+    result = compare_sources(comparison, left_spec, right_spec, left, right)
+
+    assert result.n_left == 2
+    assert result.n_right == 1
+    assert result.left_exact_identity_fraction == pytest.approx(0.5)
+    assert result.right_exact_identity_fraction == pytest.approx(1.0)
+    assert result.left_covered_fraction == pytest.approx(0.5)
+    assert result.right_covered_fraction == pytest.approx(1.0)
+    assert result.overlap_tolerance == 0.5
+
+
 def test_annotation_spec_rejects_unknown_reference_targets():
     with pytest.raises(ValueError, match="unknown"):
         AnnotationSpec(

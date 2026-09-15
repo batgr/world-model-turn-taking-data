@@ -200,6 +200,18 @@ class CrossSourceComparison:
     left_key_columns: tuple[str, ...]
     right_key_columns: tuple[str, ...]
     description: str = ""
+    overlap_tolerance: float = 0.0
+    """Diagnostic expansion around each interval in the sources' shared time unit."""
+    excluded_key_values: tuple[str, ...] = ()
+    """Sentinel values omitted from either side, for example an unknown identity."""
+    left_required_non_null: tuple[str, ...] = ()
+    """Optional source fields that must be populated on selected left rows."""
+    right_required_non_null: tuple[str, ...] = ()
+    """Optional source fields that must be populated on selected right rows."""
+
+    def __post_init__(self) -> None:
+        if self.overlap_tolerance < 0:
+            raise ValueError("Cross-source overlap tolerance cannot be negative.")
 
 
 @dataclass(frozen=True)
