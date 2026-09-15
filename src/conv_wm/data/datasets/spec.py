@@ -15,6 +15,7 @@ import pandera.pandas as pa
 from omegaconf import DictConfig
 
 from conv_wm.config import Stage, get_path
+from conv_wm.data.annotations.spec import EMPTY_ANNOTATIONS, AnnotationSpec
 from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 
@@ -114,6 +115,8 @@ class DatasetSpec:
     description: str = ""
     structure: StructuralSpec | None = None
     """Structural contracts; ``None`` when the dataset has no tabular annotations."""
+    annotations: AnnotationSpec = EMPTY_ANNOTATIONS
+    """Annotation-source semantics submitted to the annotation integrity audit."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:

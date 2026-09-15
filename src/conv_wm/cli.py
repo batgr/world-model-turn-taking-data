@@ -97,6 +97,17 @@ def _audit_sync(cfg: DictConfig, _: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _audit_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
+    from conv_wm.data.audits.annotations import (
+        format_annotation_summary,
+        run_annotation_audit,
+    )
+
+    outputs = run_annotation_audit(cfg)
+    print(format_annotation_summary(outputs))
+    return EXIT_OK if outputs.valid else EXIT_AUDIT_FAILED
+
+
 AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
     AuditCommand(
         "manifest", "inventory every file below the raw root", _audit_manifest
@@ -121,6 +132,11 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         "sync",
         "technical A/V alignment from stream metadata (needs media)",
         _audit_sync,
+    ),
+    AuditCommand(
+        "annotations",
+        "annotation integrity of registered datasets (needs media)",
+        _audit_annotations,
     ),
 )
 
@@ -162,7 +178,10 @@ def _list_datasets(_: DictConfig, __: argparse.Namespace) -> int:
 
     for spec in datasets.iter_specs():
         tables = len(spec.structure.tables) if spec.structure else 0
-        print(f"{spec.name}: {spec.description} [{tables} tables]")
+        sources = len(spec.annotations.sources)
+        print(
+            f"{spec.name}: {spec.description} [{tables} tables, {sources} annotation sources]"
+        )
     return EXIT_OK
 
 

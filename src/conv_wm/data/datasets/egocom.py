@@ -5,6 +5,20 @@ from __future__ import annotations
 import pandera.pandas as pa
 from pandera import Check
 
+from conv_wm.data.annotations import (
+    AnnotationProvenance,
+    AnnotationScope,
+    AnnotationSourceSpec,
+    AnnotationSpec,
+    DurationBounds,
+    EntityReference,
+    MediaReference,
+    ReferenceKind,
+    Severity,
+    TemporalFields,
+    TemporalOrigin,
+    TimeUnit,
+)
 from conv_wm.data.datasets.spec import (
     DatasetSpec,
     RelationSpec,
@@ -82,8 +96,96 @@ STRUCTURE = StructuralSpec(
     ),
 )
 
+ANNOTATIONS = AnnotationSpec(
+    sources=(
+        AnnotationSourceSpec(
+            dataset="egocom",
+            name="video_info",
+            description=(
+                "One participant's recording of one conversation part, with speaker traits "
+                "and recording conditions."
+            ),
+            scope=AnnotationScope.PARTICIPANT_INTERACTION,
+            load=csv_table("egocom", "raw", "video_info"),
+            dimensions=(
+                "participant_traits",
+                "recording_conditions",
+                "interaction_structure",
+            ),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            identity=("video_id",),
+            media_reference=MediaReference(columns=("video_name",)),
+            value_fields=(
+                "conversation_id",
+                "cid",
+                "video_speaker_id",
+                "num_speakers",
+                "speaker_gender",
+                "speaker_is_host",
+                "native_speaker",
+                "background_fan",
+                "background_music",
+                "duration_seconds",
+            ),
+            known_limitations=(
+                "`duration_seconds` is an integer declared duration, not the measured stream length.",
+            ),
+        ),
+        AnnotationSourceSpec(
+            dataset="egocom",
+            name="ground_truth_transcriptions",
+            description="Word-level transcript per conversation part; punctuation tokens are untimed.",
+            scope=AnnotationScope.TEMPORAL_INTERVAL,
+            load=csv_table("egocom", "raw", "ground_truth"),
+            dimensions=("speech", "transcript"),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            temporal=TemporalFields(
+                start="startTime",
+                end="endTime",
+                unit=TimeUnit.SECONDS,
+                origin=TemporalOrigin.INTERACTION_START,
+                nullable=True,
+            ),
+            entity_references=(
+                EntityReference(
+                    kind=ReferenceKind.INTERACTION,
+                    columns=("conversation_id",),
+                    target_source="video_info",
+                    target_columns=("conversation_id",),
+                ),
+                # Recorded participants are the only participant table EgoCom ships;
+                # a speaker without a recording is a documented caveat, not a defect.
+                EntityReference(
+                    kind=ReferenceKind.PARTICIPANT,
+                    columns=("conversation_id", "speaker_id"),
+                    target_source="video_info",
+                    target_columns=("conversation_id", "video_speaker_id"),
+                    severity=Severity.WARNING,
+                ),
+            ),
+            bounds=DurationBounds(
+                source="video_info",
+                key_columns=("conversation_id",),
+                target_key_columns=("conversation_id",),
+                duration_column="duration_seconds",
+            ),
+            value_fields=("word",),
+            known_limitations=(
+                "About half of the rows are untimed tokens (punctuation, empty words).",
+                "Timestamps are relative to the conversation part, not to the 20-minute video.",
+                (
+                    "Six two-speaker conversations (13 parts) attribute words to speaker 3, "
+                    "who has neither a recording nor a participant record; the identity of "
+                    "that speaker is unresolved."
+                ),
+            ),
+        ),
+    ),
+)
+
 EGOCOM = DatasetSpec(
     name="egocom",
     description="EgoCom multi-person egocentric conversations (240p, 20-minute videos).",
     structure=STRUCTURE,
+    annotations=ANNOTATIONS,
 )

@@ -1,0 +1,53 @@
+"""Annotation-source specifications and generic integrity checks."""
+
+from conv_wm.data.annotations.integrity import (
+    Anomaly,
+    CrossSourceResult,
+    ReferenceIntegrityResult,
+    SourceIntegrityReport,
+    TemporalIntegrityResult,
+    audit_source,
+    compare_sources,
+    failed_source,
+)
+from conv_wm.data.annotations.spec import (
+    EMPTY_ANNOTATIONS,
+    AnnotationProvenance,
+    AnnotationScope,
+    AnnotationSourceSpec,
+    AnnotationSpec,
+    CrossSourceComparison,
+    DurationBounds,
+    EntityReference,
+    MediaReference,
+    ReferenceKind,
+    Severity,
+    TemporalFields,
+    TemporalOrigin,
+    TimeUnit,
+)
+
+__all__ = [
+    "EMPTY_ANNOTATIONS",
+    "AnnotationProvenance",
+    "AnnotationScope",
+    "AnnotationSourceSpec",
+    "AnnotationSpec",
+    "Anomaly",
+    "CrossSourceComparison",
+    "CrossSourceResult",
+    "DurationBounds",
+    "EntityReference",
+    "MediaReference",
+    "ReferenceIntegrityResult",
+    "ReferenceKind",
+    "Severity",
+    "SourceIntegrityReport",
+    "TemporalFields",
+    "TemporalIntegrityResult",
+    "TemporalOrigin",
+    "TimeUnit",
+    "audit_source",
+    "compare_sources",
+    "failed_source",
+]

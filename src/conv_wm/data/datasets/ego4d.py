@@ -8,6 +8,20 @@ import pandas as pd
 import pandera.pandas as pa
 from pandera import Check
 
+from conv_wm.data.annotations import (
+    AnnotationProvenance,
+    AnnotationScope,
+    AnnotationSourceSpec,
+    AnnotationSpec,
+    CrossSourceComparison,
+    DurationBounds,
+    EntityReference,
+    MediaReference,
+    ReferenceKind,
+    TemporalFields,
+    TemporalOrigin,
+    TimeUnit,
+)
 from conv_wm.data.datasets.spec import (
     AudioInterpretation,
     DatasetSpec,
@@ -219,6 +233,218 @@ STRUCTURE = StructuralSpec(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Annotation semantics
+# ---------------------------------------------------------------------------
+
+_CLIP_REF = EntityReference(
+    kind=ReferenceKind.CLIP,
+    columns=("clip_uid",),
+    target_source="clips",
+    target_columns=("clip_uid",),
+)
+_CLIP_SECONDS = TemporalFields(
+    start="start_time",
+    end="end_time",
+    unit=TimeUnit.SECONDS,
+    origin=TemporalOrigin.CLIP_START,
+)
+_CLIP_DURATION_BOUNDS = DurationBounds(
+    source="clips",
+    key_columns=("clip_uid",),
+    target_key_columns=("clip_uid",),
+    start_column="clip_start_sec",
+    end_column="clip_end_sec",
+)
+
+
+def _person_ref(person_column: str, *unknown: str) -> EntityReference:
+    return EntityReference(
+        kind=ReferenceKind.PARTICIPANT,
+        columns=("clip_uid", person_column),
+        target_source="persons",
+        target_columns=("clip_uid", "person_id"),
+        unknown_values=unknown,
+    )
+
+
+ANNOTATIONS = AnnotationSpec(
+    sources=(
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="clips",
+            description="Benchmark clips cut from full videos; the clip timeline starts at 0.",
+            scope=AnnotationScope.CLIP,
+            load=parquet_table("ego4d", "interim", "clips_clean"),
+            dimensions=("clip_structure",),
+            provenance=AnnotationProvenance.DETERMINISTIC_DERIVED,
+            identity=("clip_uid",),
+            temporal=TemporalFields(
+                start="video_start_sec",
+                end="video_end_sec",
+                unit=TimeUnit.SECONDS,
+                origin=TemporalOrigin.MEDIA_START,
+                out_of_bounds_tolerance=1.0,
+            ),
+            media_reference=MediaReference(columns=("video_uid",)),
+            bounds=DurationBounds(
+                source="media",
+                key_columns=("video_uid",),
+                target_key_columns=("relative_path",),
+            ),
+            value_fields=("split", "clip_start_sec", "clip_end_sec"),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="persons",
+            description="Participants of a clip; person 0 is the camera wearer.",
+            scope=AnnotationScope.PARTICIPANT,
+            load=parquet_table("ego4d", "interim", "persons_clean"),
+            dimensions=("participant",),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            identity=("clip_uid", "person_id"),
+            entity_references=(_CLIP_REF,),
+            value_fields=("is_camera_wearer",),
+            known_limitations=(
+                "The camera wearer has no face track and no looking annotation.",
+            ),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="voice_segments",
+            description="Per-person voice activity intervals on the clip timeline.",
+            scope=AnnotationScope.TEMPORAL_INTERVAL,
+            load=parquet_table("ego4d", "interim", "voice_segments_clean"),
+            dimensions=("speech",),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            temporal=_CLIP_SECONDS,
+            entity_references=(_CLIP_REF, _person_ref("person_id")),
+            bounds=_CLIP_DURATION_BOUNDS,
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="transcriptions",
+            description="Transcribed utterances on the clip timeline, speaker may be unknown.",
+            scope=AnnotationScope.TEMPORAL_INTERVAL,
+            load=parquet_table("ego4d", "interim", "transcriptions_clean"),
+            dimensions=("speech", "transcript"),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            temporal=TemporalFields(
+                start="start_time_sec",
+                end="end_time_sec",
+                unit=TimeUnit.SECONDS,
+                origin=TemporalOrigin.CLIP_START,
+            ),
+            entity_references=(_CLIP_REF, _person_ref("person_id", "-1")),
+            bounds=_CLIP_DURATION_BOUNDS,
+            value_fields=("transcription",),
+            known_limitations=(
+                (
+                    "Transcriptions and voice segments are independent annotations; "
+                    "join them by temporal overlap and person, never by equal timestamps."
+                ),
+                "Some clips have no transcription at all.",
+            ),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="social_segments_talking",
+            description="Who talks to whom: speaker, target and whether the wearer is addressed.",
+            scope=AnnotationScope.TEMPORAL_INTERVAL,
+            load=parquet_table("ego4d", "interim", "social_segments_talking_clean"),
+            dimensions=("speech", "addressee"),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            temporal=_CLIP_SECONDS,
+            entity_references=(_CLIP_REF, _person_ref("person", "-1")),
+            bounds=_CLIP_DURATION_BOUNDS,
+            value_fields=("target", "is_at_me"),
+            known_limitations=(
+                "`target` semantics are taken from the release and not constrained here.",
+            ),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="social_segments_looking",
+            description="Intervals where looking-at-me annotation exists; labels live elsewhere.",
+            scope=AnnotationScope.TEMPORAL_INTERVAL,
+            load=parquet_table("ego4d", "interim", "social_segments_looking_clean"),
+            dimensions=("gaze",),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            temporal=_CLIP_SECONDS,
+            entity_references=(_CLIP_REF, _person_ref("person", "-1")),
+            bounds=_CLIP_DURATION_BOUNDS,
+            known_limitations=(
+                "Empty in the current interim snapshot.",
+                "Gaze labels are distributed as separate per-frame CSV files, not in this table.",
+            ),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="tracking_paths",
+            description="Face tracks of a person within a clip (one row per track).",
+            scope=AnnotationScope.PARTICIPANT,
+            load=parquet_table("ego4d", "interim", "tracking_paths_clean"),
+            dimensions=("person_tracking",),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            identity=("clip_uid", "person_id", "track_id"),
+            entity_references=(_CLIP_REF, _person_ref("person_id")),
+            value_fields=("unmapped_frames_count",),
+        ),
+        AnnotationSourceSpec(
+            dataset="ego4d",
+            name="tracks",
+            description="Per-frame face boxes of each track, on the clip frame index.",
+            scope=AnnotationScope.POINT_EVENT,
+            load=parquet_table("ego4d", "interim", "tracks_clean"),
+            dimensions=("person_tracking",),
+            provenance=AnnotationProvenance.HUMAN_OBSERVED,
+            identity=("clip_uid", "person_id", "track_id", "clip_frame"),
+            temporal=TemporalFields(
+                start="clip_frame",
+                end=None,
+                unit=TimeUnit.FRAMES,
+                origin=TemporalOrigin.CLIP_START,
+            ),
+            entity_references=(
+                _CLIP_REF,
+                EntityReference(
+                    kind=ReferenceKind.PARTICIPANT,
+                    columns=("clip_uid", "person_id", "track_id"),
+                    target_source="tracking_paths",
+                    target_columns=("clip_uid", "person_id", "track_id"),
+                ),
+            ),
+            bounds=DurationBounds(
+                source="clips",
+                key_columns=("clip_uid",),
+                target_key_columns=("clip_uid",),
+                start_column="clip_start_frame",
+                end_column="clip_end_frame",
+            ),
+            value_fields=("x", "y", "width", "height", "video_frame"),
+        ),
+    ),
+    comparisons=(
+        CrossSourceComparison(
+            name="voice_segments_vs_transcriptions",
+            left_source="voice_segments",
+            right_source="transcriptions",
+            left_key_columns=("clip_uid", "person_id"),
+            right_key_columns=("clip_uid", "person_id"),
+            description="Independent speech annotations; asymmetric coverage is expected.",
+        ),
+        CrossSourceComparison(
+            name="voice_segments_vs_social_talking",
+            left_source="voice_segments",
+            right_source="social_segments_talking",
+            left_key_columns=("clip_uid", "person_id"),
+            right_key_columns=("clip_uid", "person"),
+            description="Talking segments carry addressee labels for a subset of speech.",
+        ),
+    ),
+)
+
+
 STITCH_PERIOD_SEC = 300.0
 """Ego4D recordings are joined every 300 s; audio events cluster on that grid."""
 
@@ -312,6 +538,7 @@ EGO4D = DatasetSpec(
     name="ego4d",
     description="Ego4D v2 audio-visual diarization benchmark clips (video_540ss).",
     structure=STRUCTURE,
+    annotations=ANNOTATIONS,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),
         extra_decode_cases=systematic_profile_cases,
