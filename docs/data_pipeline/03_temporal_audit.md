@@ -117,8 +117,9 @@ compensation window (`dropout_min_residual_in_window_samples`).
 
 ### Population results
 
-The four-worker full scan processed 20,779,635 packets in 2,411.48 seconds
-(40 minutes 11.48 seconds). All 369 files probed successfully. Timestamp and
+The four-worker full packet scan of all 369 files takes about 42 minutes on
+the external SSD (`conv-wm audit audio`, provenance commit `4b94928`). All 369
+files probed successfully. Timestamp and
 duration coverage are 100%, all PTS sequences are strictly monotonic, and the
 packet clock has zero gaps, zero overlaps, and a maximum absolute packet-timeline
 error of zero samples.
