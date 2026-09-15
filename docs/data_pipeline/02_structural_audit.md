@@ -1,9 +1,9 @@
-# Phase A2: structural audit
+# Structural validation
 
 ## Objective
 
-A2 verifies that annotation tables have the expected shape and relationships before
-later processing. It checks enforceable structural contracts; it does not assess
+Structural validation verifies that annotation tables have the expected shape and
+relationships before later processing. It checks enforceable structural contracts; it does not assess
 whether media streams or annotations are correctly aligned in time.
 
 Profiling and validation serve different purposes:
@@ -15,8 +15,11 @@ Profiling and validation serve different purposes:
 
 ## Inputs and checks
 
-The audit reads the raw EgoCom `video_info.csv` and
-`ground_truth_transcriptions.csv` tables, plus these Ego4D interim tables:
+Each registered dataset declares its tables and relations in a
+`StructuralSpec` (`conv_wm/data/datasets/<name>.py`); the generic orchestration
+(`conv_wm.data.audits.structural`) validates whatever is declared. EgoCom
+declares the raw `video_info.csv` and `ground_truth_transcriptions.csv` tables;
+Ego4D declares these interim tables:
 
 - `clips_clean`
 - `persons_clean`
@@ -48,18 +51,22 @@ unconstrained rather than inferred from the current snapshot.
 From the repository root:
 
 ```bash
-uv run python -m conv_wm.data.audits.run_structural
+uv run conv-wm audit structure
 ```
 
-The command prints a concise PASS/FAIL summary and writes the machine-readable
-report to `${paths.reports}/structural/structural_audit.json`.
+The command prints a concise PASS/FAIL summary, exits with code 2 on FAIL and
+writes the machine-readable report to
+`${paths.reports}/structural/structural_audit.json` (`datasets.<name>.tables`
+and `datasets.<name>.relations`, plus provenance).
 
 ## Deliberate exclusions and limitations
 
-A2 does not check FPS, frame or audio timestamps, ordering of start/end fields,
-seconds-to-frame consistency, A/V synchronization, drift, or resampling. It also
-does not judge transcript content or scientific suitability. An empty table can
-therefore pass when its columns and dtypes satisfy its contract; this currently
-applies to `social_segments_looking_clean`.
+Structural validation does not check FPS, frame or audio timestamps, ordering
+of start/end fields, seconds-to-frame consistency, A/V synchronization, drift,
+or resampling. It also does not judge transcript content or scientific
+suitability. An empty table can therefore pass when its columns and dtypes
+satisfy its contract; this currently applies to `social_segments_looking_clean`.
 
-The next stage is phase B, the temporal/media audit.
+Temporal semantics are covered by the temporal audits
+([`03_temporal_audit.md`](03_temporal_audit.md)) and by annotation integrity
+([`05_annotation_audit.md`](05_annotation_audit.md)).

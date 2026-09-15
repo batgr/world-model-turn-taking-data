@@ -1,19 +1,37 @@
-# Phase B: temporal and media audit
+# Temporal and media audits
 
 ## Objective and scope
 
-Phase B establishes the timestamp semantics needed for later annotation validation
-and multimodal sampling. It measures media structure and records quality-control
-flags; it does not alter raw media, resample streams, or correct timestamps.
+The media metadata, video timeline and audio timeline audits establish the
+timestamp semantics needed for annotation integrity and multimodal sampling.
+They measure media structure and record quality-control flags; they do not
+alter raw media, resample streams or correct timestamps. The technical A/V
+alignment audit is documented in [`04_synchronization.md`](04_synchronization.md).
 
-The audit covers all 369 media files: 194 Ego4D and 175 EgoCom. B1, B2, B3, B4,
-and the B6 temporal contract are complete. Cross-view synchronization (B5) is
-deferred because the initial architecture does not consume multiple camera views
-simultaneously.
+The audits cover all 369 media files: 194 Ego4D and 175 EgoCom. Cross-view
+synchronization is deferred because the initial architecture does not consume
+multiple camera views simultaneously.
 
-## B1: media metadata
+Run them with `conv-wm audit media`, `conv-wm audit video` and
+`conv-wm audit audio` (implementation: `conv_wm.data.audits.media_metadata`,
+`conv_wm.data.audits.video_timeline`, `conv_wm.data.audits.audio_timeline`;
+measurements: `conv_wm.data.media`).
 
-`run_media_metadata` probed all 369 files successfully. Every file has one video
+## Downstream temporal constraint
+
+> Long Ego4D audio cannot in general be assigned absolute time by naïvely
+> concatenating decoded PCM and using `sample_index / sample_rate`.
+
+Native PTS is the only temporal authority. The audio timeline audit measures,
+per file, how far concatenated PCM drifts from native PTS
+(`final_cumulative_pcm_drift_ms`, up to 1.33 s in this corpus) and where the
+largest transient offset occurs (`max_abs_cumulative_pcm_drift_time_sec`).
+Any downstream audio loader must either follow PTS or apply the documented
+per-file offsets; final model-time resampling is not part of this pipeline.
+
+## Media metadata audit
+
+`conv-wm audit media` probed all 369 files successfully. Every file has one video
 stream and one AAC audio stream. Ego4D has 66 files at 32 kHz, 10 at 44.1 kHz,
 and 118 at 48 kHz; all 175 EgoCom files use 44.1 kHz. Video is 30 FPS except for
 two 60 FPS EgoCom files. Container, video, and audio start timestamps are exactly
@@ -32,11 +50,15 @@ Reports:
 - `${paths.reports}/temporal/media_metadata/media_metadata.parquet`
 - `${paths.reports}/temporal/media_metadata/summary.json`
 
-## B2: video timeline
+## Video timeline audit
 
-The population audit sampled start, middle, and end regions. All 369 files and all
-1,103 successfully probed windows were compatible with constant-frame-rate timing;
-there were no sampled suspects. A targeted full-frame validation covered 18 files:
+The population audit samples the start, middle and end of every stream plus
+one 10-second window centred on each boundary the dataset declares (Ego4D:
+every 300 s), so deterministic joins cannot escape a start/middle/end sample.
+All 369 files and all 2,186 probed windows (1,083 of them boundary windows)
+were compatible with constant-frame-rate timing; there were no sampled
+suspects. The 300 s stitch grid that shapes the Ego4D audio timeline leaves
+no trace on the video timeline. A targeted full-frame validation covered 18 files:
 14 Ego4D files, including all 12 uncommon 544-pixel-wide files, and four EgoCom
 files, including both 60 FPS files. All 18 full scans were also CFR-compatible.
 That validation took 17 minutes 23 seconds.
@@ -53,9 +75,9 @@ Reports:
 
 The targeted full-scan evidence is retained in
 `notebooks/02_temporal_media_audit.ipynb` and was not repeated because the stable
-source and tests revealed no B2 defect.
+source and tests revealed no video timeline defect.
 
-## B3: audio packet and decoded-PCM timelines
+## Audio timeline audit
 
 ### Measurement model
 
@@ -116,7 +138,7 @@ population and must be revalidated if another codec or AAC regime is added.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Ego4D 32 kHz | 66 | 65 | 0 | 65 | 65 | 55 | 0 | 10 | 58,624 samples / 1,832.000 ms |
 | Ego4D 44.1 kHz | 10 | 10 | 0 | 10 | 9 | 0 | 0 | 7 | 6,205 samples / 140.703 ms |
-| Ego4D 48 kHz | 118 | 63 | 5 | 58 | 58 | 0 | 14 | 11 | 4,800 samples / 100.000 ms |
+| Ego4D 48 kHz | 118 | 63 | 5 | 58 | 58 | 0 | 17 | 8 | 4,800 samples / 100.000 ms |
 | EgoCom 44.1 kHz | 175 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 samples / 0 ms |
 
 Across Ego4D, 138 files have at least one non-1,024-sample PTS increment, 133
@@ -214,8 +236,8 @@ All 369 files report zero discard-padding samples.
   are 1.06--11.12 ms.
 - **Other PCM timestamp variation.** Ninety-two significant episodes do not
   meet the dropout, cadence, stitch-grid, or early codec-boundary definitions.
-  They remain explicit measurements and important Stage-G inputs rather than
-  being silently corrected or excluded in Phase B.
+  They remain explicit measurements and inputs to the temporal representation
+  rather than being silently corrected or excluded here.
 
 The authoritative event table therefore has 424 rows: 225 stitch
 discontinuities, 74 audio dropouts, 16 compensated-cadence episodes, 17 early
@@ -223,7 +245,7 @@ codec-boundary events, and 92 other PCM timestamp variations. It contains no
 cumulative-offset peak rows; cumulative drift magnitude and its native timestamp
 (`max_abs_cumulative_pcm_drift_time_sec`) are file-level fields.
 
-The earlier decoded start/middle/end audit remains provenance, not the B3
+The earlier decoded start/middle/end audit remains provenance, not the
 authority. Its 143 Ego4D `gap_or_overlap` windows mixed bounded jitter, priming,
 stitch events, and other variations; a sampled `continuous` verdict could also
 miss fixed boundaries. The full packet audit plus targeted decoding supersedes
@@ -236,6 +258,25 @@ Reports:
 - `${paths.reports}/temporal/audio_timeline/audio_packet_timeline_summary.json`
 - `${paths.reports}/temporal/audio_timeline/audio_decode_validation.parquet`
 - `${paths.reports}/temporal/audio_timeline/audio_decode_validation_summary.json`
+
+Event rows carry the interpretation context in generic columns:
+`nearest_known_boundary_index`, `nearest_known_boundary_time_sec`,
+`distance_to_known_boundary_sec`, `known_boundary_tolerance_sec`,
+`near_known_boundary`, `early_boundary_tolerance_sec`,
+`has_early_boundary_context`. The boundary grid itself is declared by the
+dataset (`DatasetSpec.audio.known_boundary_grid`) and recorded under
+`parameters.datasets` in the summary.
+
+### Unresolved behaviour
+
+- The physical cause of the dense 44.1 kHz cadence and of the sparse −5-sample
+  steps is unknown; both are measured, neither is corrected.
+- Whether the 74 persistent dropouts are audible silence, duplicated content or
+  pure timestamp jumps cannot be decided from packets; decoded frames stay
+  nominal, so the discrepancy is between clocks, not inside the PCM.
+- AAC priming is handled by FFmpeg 7.1; the reported `skip_samples`, the
+  17 early codec-boundary events and `-read_intervals` behaviour must be
+  re-validated when FFmpeg changes (see `provenance.ffprobe_version`).
 
 The older sampled outputs in the same directory are retained for provenance.
 
@@ -253,28 +294,31 @@ The audio runner performs complete packet scans and a small deterministic target
 decode. Four workers were retained after an eight-file benchmark improved from
 69.29 seconds sequentially to about 28 seconds.
 
-## B6: temporal contract
+## Temporal contract
 
-The following rules are binding inputs to later pipeline stages:
+The following rules are binding inputs to later capabilities (temporal
+representation, model-ready packaging):
 
-- Raw media is immutable; Phase B reports measurements and never rewrites media.
+- Raw media is immutable; the temporal audits report measurements and never
+  rewrite media.
 - Native video PTS and native audio PTS are the temporal sources of truth.
-- Phase C must validate annotation timestamps against these media timelines.
+- Annotation integrity validates annotation timestamps against these media
+  timelines (see [`05_annotation_audit.md`](05_annotation_audit.md)).
 - Never reconstruct video time solely as `frame_index / FPS`.
 - Long-file Ego4D PCM must not be aligned using naive
-  `sample_index / sample_rate`; Stage G must preserve or reconstruct the mapping
-  from decoded samples to native audio PTS.
+  `sample_index / sample_rate`; the temporal representation must preserve or
+  reconstruct the mapping from decoded samples to native audio PTS.
 - Preserve discontinuities and expose masks or timestamp-aware segment boundaries
   to downstream consumers. Do not interpolate across them automatically.
 - Do not apply a global A/V offset or fine drift correction without supporting
   evidence.
-- Resampling, if required by a model, occurs in Stage G and must preserve the
-  mapping to native PTS.
+- Resampling, if required by a model, happens in the temporal representation and
+  must preserve the mapping to native PTS.
 - Cross-view synchronization and perceptual/content-level A/V synchronization are
   deferred.
 
-No file is excluded by Phase B: all probes succeeded and the anomalies are
-representable with timestamps and masks. The unresolved risk is downstream code
-that concatenates decoded PCM and assigns time from sample index alone; Stage G
-must consume the B3 file/event reports or derive equivalent timestamp-aware
-segments.
+No file is excluded: all probes succeeded and the anomalies are representable
+with timestamps and masks. The unresolved risk is downstream code that
+concatenates decoded PCM and assigns time from sample index alone; the temporal
+representation must consume the audio timeline file/event reports or derive
+equivalent timestamp-aware segments.

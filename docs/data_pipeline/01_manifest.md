@@ -25,7 +25,11 @@ The first directory below raw/ is interpreted as the dataset name.
 
 ## Output
 
-${paths.reports}/manifest/raw_manifest.parquet
+- `${paths.reports}/manifest/raw_manifest.parquet`
+- `${paths.reports}/manifest/summary.json` (file counts and sizes by dataset
+  and file type, checksum flag, provenance)
+
+Run with `uv run conv-wm audit manifest`.
 
 ## Schema
 
@@ -97,9 +101,10 @@ Core implementation:
 src/conv_wm/data/manifest.py
 ```
 
-Hydra entry point:
+Audit orchestration and compatibility wrapper:
 
 ```code
+src/conv_wm/data/audits/manifest.py
 src/conv_wm/data/build_manifest.py
 ```
 
