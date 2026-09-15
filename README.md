@@ -35,6 +35,7 @@ uv run conv-wm audit video         # video timeline cadence (needs media)
 uv run conv-wm audit audio         # audio packet and PCM-vs-PTS timelines (needs media)
 uv run conv-wm audit sync          # technical A/V alignment (needs media)
 uv run conv-wm audit annotations   # annotation integrity contracts (needs media)
+uv run conv-wm clean annotations   # source-faithful derived annotation tables
 uv run conv-wm datasets            # registered datasets
 ```
 

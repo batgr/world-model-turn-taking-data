@@ -1,121 +1,95 @@
 # Annotation integrity
 
-## Objective
+## Objective and architecture
 
-Determine whether each annotation source is semantically, temporally,
-relationally and referentially trustworthy enough for later derivation and
-analysis. The audit does not derive labels, does not decide training targets
-and does not correct anything: it detects, classifies and documents.
+Annotation integrity determines whether each declared source is structurally,
+temporally, relationally, and referentially usable. It detects and reports; it
+does not correct. Run:
 
-Run with `uv run conv-wm audit annotations` (implementation:
-`conv_wm.data.audits.annotations`; checks: `conv_wm.data.annotations`;
-declarations: `conv_wm.data.datasets.<name>.ANNOTATIONS`). The media metadata
-table is a prerequisite because bounds use measured stream durations.
+```bash
+uv run conv-wm audit annotations
+```
 
-## Architecture
+Each dataset declares typed `AnnotationSourceSpec` objects: scope, temporal
+coordinates, identity, media/entity references, bounds, payload fields,
+provenance, and known limitations. Generic checks cover finite and ordered
+timestamps, bounds, duplicate identities, references, and declared
+cross-source comparisons. Exact interval identity and directional temporal
+overlap are both reported. A comparison can declaratively exclude a sentinel,
+require populated payload, or apply a diagnostic overlap expansion without
+changing either source.
 
-Every dataset declares its sources with typed `AnnotationSourceSpec` objects:
+Outputs below `${paths.reports}/annotations/` are:
 
-| Declaration | Meaning |
-| --- | --- |
-| `scope` | what one row describes: point event, temporal interval, clip, video, interaction, participant, participant × interaction, sequence/global |
-| `temporal` | start/end columns, unit (seconds, milliseconds, frames, samples), origin (media, clip, interaction, absolute), nullability, tolerance |
-| `media_reference` | columns naming a media file, and how a media path maps to that key |
-| `entity_references` | columns that must exist in another source (clip, interaction, participant), with declared "unknown" sentinels such as `-1` |
-| `bounds` | which referenced duration the timestamps are compared with (a table's duration or start/end columns, or the measured media duration) |
-| `identity` | columns that identify a row (duplicates are errors) |
-| `value_fields` | payload columns preserved with their native meaning |
-| `provenance`, `confidence_field` | how the values came to exist and, when present, a per-row confidence |
-| `known_limitations` | facts about the source that no check can establish |
+- `annotation_integrity.json`, the full source contract and results;
+- `annotation_sources.parquet`, `annotation_anomalies.parquet`, and
+  `annotation_cross_source.parquet`, flat report tables.
 
-Generic checks then run without knowing the dataset: finite timestamps,
-`start <= end`, duration distribution, negative starts, bounds against the
-referenced duration, duplicate identities, dangling media and entity
-references, and — for declared `CrossSourceComparison`s — directional
-interval-overlap coverage per shared entity key. Each finding is an
-`Anomaly` with a severity fixed by the declaration: `error` blocks downstream
-use, `warning` is a documented caveat, `info` records an expected property.
-A negative timestamp is never automatically invalid.
+Every source is kept separate. Corrections belong to
+[`06_cleaning.md`](06_cleaning.md), and downstream media-domain intersection
+belongs to temporal projection.
 
-Outputs below `${paths.reports}/annotations/`:
+## Regenerated corpus findings
 
-- `annotation_integrity.json` — the contract: per dataset and source, its
-  identity, scope, temporal coordinate system, media and entity relations,
-  validated constraints, anomalies with counts, known limitations, validity and
-  `downstream_suitability` (`usable`, `usable_with_caveats`, `blocked`);
-- `annotation_sources.parquet`, `annotation_anomalies.parquet`,
-  `annotation_cross_source.parquet` — the same as flat tables.
+The annotation audit passes after maintained cleaning. Sources with documented
+warnings remain usable with caveats.
 
-Sources are not merged into one universal table; each keeps its own columns
-and semantics.
+| Dataset/source | Rows | Relevant findings |
+| --- | ---: | --- |
+| Ego4D clips | 439 | 10 slightly negative video starts; all media references resolve. |
+| Ego4D persons | 3,231 | Camera wearer has no face track. |
+| Ego4D voice | 40,383 | 260 clip-bound overshoots; five zero-duration intervals. |
+| Ego4D transcriptions | 39,191 | 2,630 unknown speakers; 351 clip-bound overshoots. |
+| Ego4D talking | 43,172 | 2,791 unknown speakers; two concrete source person IDs do not occur in the clip persons table; 378 clip-bound overshoots. |
+| Ego4D looking | 10,211 | 61 clip-bound overshoots; current payload is uniformly target-null/false. |
+| Ego4D tracking paths | 38,242 | No integrity warning. |
+| Ego4D tracks | 5,523,640 | 490 boxes extend beyond the declared clip frame range. |
+| EgoCom video info | 175 | Available POV metadata; every media reference resolves. |
+| EgoCom ground truth | 359,536 | 177,230 fully timed rows and 343 start-only rows; nullable timing is source-defined. |
 
-## Findings on the audited corpus
+Small negative starts, overshoots, and out-of-range frames are diagnostics, not
+destructive-cleaning instructions.
 
-All 10 declared sources pass (no error-severity anomaly); every one is
-`usable_with_caveats` except `tracking_paths`, which is `usable`.
+## Cross-source evidence
 
-### Ego4D (8 sources, clip timeline)
+All rates below were recomputed from the regenerated Parquet files. “Left” and
+“right” preserve the order shown.
 
-| Source | Scope | Rows | Caveats found |
-| --- | --- | ---: | --- |
-| `clips` | clip | 439 | 10 clips start at `video_start_sec = -0.0013 s` (one 768-tick rounding); clip durations 298.6–300.1 s; every `video_uid` resolves to a media file |
-| `persons` | participant | 3,231 | camera wearer (person 0) has no face track and no looking annotation |
-| `voice_segments` | interval | 40,383 | 260 intervals end up to 1.025 s beyond the clip duration (median overshoot 30 ms); 5 zero-duration intervals |
-| `transcriptions` | interval | 39,191 | 351 intervals overshoot (max 1.025 s); 2,630 rows carry the unknown speaker `-1`; some clips have no transcription |
-| `social_segments_talking` | interval | 12,453 | 97 intervals overshoot (max 1.025 s); 22 rows with speaker `-1`; `target` semantics unconstrained |
-| `social_segments_looking` | interval | 0 | empty in the interim snapshot; gaze labels are shipped as separate per-frame files |
-| `tracking_paths` | participant | 38,242 | none |
-| `tracks` | point event (frames) | 5,523,640 | 490 boxes in 14 clips lie up to 40 frames beyond the clip's last frame |
+| Comparison | Left rows | Right rows | Exact left / right | Overlap left / right |
+| --- | ---: | ---: | ---: | ---: |
+| voice ↔ transcription, person-level | 40,383 | 39,191 | 85.5% / 88.1% | 86.7% / 89.3% |
+| voice ↔ known-speaker transcription | 40,383 | 36,561 | 85.5% / 94.4% | 86.7% / 95.8% |
+| voice ↔ known-speaker transcription, diagnostic ±0.5 s | 40,383 | 36,561 | 85.5% / 94.4% | 87.1% / 97.1% |
+| voice ↔ transcription, clip-level | 40,383 | 39,191 | 87.0% / 89.6% | 95.7% / 97.2% |
+| voice ↔ all talking | 40,383 | 43,172 | 97.9% / 91.6% | 99.4% / 93.3% |
+| voice ↔ talking with explicit target | 40,383 | 12,453 | 29.8% / 96.7% | 30.6% / 99.6% |
 
-No dangling clip or participant reference anywhere in Ego4D.
+Exact identity means equal shared entity key, start, and end. Voice and
+transcription are still independent annotations and should be joined by
+compatible identity plus overlap, not forced timestamp equality. The relaxed
+comparison is diagnostic only. Short uncovered voice intervals remain valid:
+their median duration is 0.965 s, compared with 1.340 s across all voice
+intervals.
 
-Cross-source agreement (interval overlap per `clip_uid` × person):
+The corrected talking population shows that talking is largely a re-annotation
+of voice. The old 30.6% apparent talking coverage was caused by first deleting
+target-null rows; it now correctly describes only the explicit-target subset.
 
-| Comparison | Left covered | Right covered | Shared keys | Left-only | Right-only |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `voice_segments` vs `transcriptions` | 86.7 % (5,381 uncovered) | 89.3 % (4,183 uncovered) | 1,988 | 83 | 278 |
-| `voice_segments` vs `social_segments_talking` | 30.6 % (28,011 uncovered) | 99.6 % (52 uncovered) | 1,122 | 949 | 11 |
+## EgoCom participant versus POV semantics
 
-Voice activity and transcription are independent annotations with asymmetric
-coverage in both directions; they must be joined by overlap and person, never
-by equal timestamps. Talking segments (who talks to whom) cover only 30.6 % of
-voice activity while 99.6 % of them fall inside voice activity: addressee
-labels exist for a subset of speech, and the 52 talking segments outside any
-voice segment are unresolved.
+`video_info` enumerates available recordings/camera wearers. It is not a
+complete participant registry. Ground-truth vocal activity can therefore name
+a participant without that participant having an own POV. The 13,512 such rows
+are valid, retained, and reported only as `participant_has_own_pov=False` in
+the cleaning diagnostic. They do not produce a dangling-participant anomaly.
 
-### EgoCom (2 sources, conversation-part timeline)
+## Unresolved source semantics
 
-| Source | Scope | Rows | Caveats found |
-| --- | --- | ---: | --- |
-| `video_info` | participant × interaction | 175 | `duration_seconds` is a declared integer, not the measured stream length; every `video_name` resolves to a media file |
-| `ground_truth_transcriptions` | interval (word) | 359,536 | 177,573 timed rows (49.4 %; punctuation and empty tokens are untimed, declared nullable); no interval ends beyond the declared part duration (last word ends 0.2–3.7 s before it); 19,627 zero-duration words; **13,512 transcript rows (9,007 non-empty words, 7,022 timed) in 13 conversation parts of 7 physical conversations are attributed to speaker 3, although `num_speakers = 2` and no `person_3` recording exists on disk** |
-
-The speaker-3 case is the one unresolved semantic anomaly of the corpus. It is
-recorded as a `warning` (participant reference to `video_info`, the only
-participant table EgoCom ships) with a known limitation. Speaker 3 speaks
-throughout each affected conversation alongside speakers 1 and 2 (for example
-7,652 / 4,019 / 3,037 tokens in `day_5__con_1`), so it is a third voice present
-in the room; whether it is an unrecorded participant (making `num_speakers = 2`
-wrong) or a non-participant must be decided downstream, not by the audit.
-Verified independently from the raw CSV files and the media inventory.
-
-## Unresolved semantics
-
-- Ego4D overshoots of up to 1.025 s beyond a 300 s clip: annotation bounds
-  extend slightly past the clip cut; consumers must clip or keep them
-  explicitly.
-- Ego4D `social_segments_talking.target` and EgoCom speaker 3: identities not
-  fully specified by the release.
-- Ego4D looking annotations: the interim table is empty; the per-frame label
-  files are not yet part of the pipeline.
-- Cross-source disagreement (uncovered voice segments, talking segments outside
-  voice activity) is reported, not adjudicated.
-
-## Provenance for later work
-
-Every source carries `provenance = human_observed` except `clips`
-(`deterministic_derived` from the benchmark release). No source has a
-confidence field. Derived, transferred, pseudo-labelled, clustered or
-model-inferred annotations must be added as new sources with their own
-provenance and confidence field, as the synthetic `moodlab` dataset in the
-tests demonstrates with `model_inferred` affect intervals.
+- Ego4D target null means only that an explicit target ID is unavailable; no
+  stronger class is inferred.
+- Two talking rows name concrete people absent from their clip person lists;
+  these are warned about but preserved.
+- Current looking rows are all `target=null` and `is_at_me=False`, despite the
+  benchmark's looking-at-me framing. The values are preserved without an
+  invented correction.
+- Cross-source mismatches are evidence to retain, not rows to delete.

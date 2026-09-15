@@ -50,14 +50,15 @@ pipeline covers the audits that make raw and interim data trustworthy:
 | Audio timeline audit | `conv-wm audit audio` | `temporal/audio_timeline/` |
 | A/V technical alignment | `conv-wm audit sync` | `temporal/av_sync/` |
 | Annotation integrity | `conv-wm audit annotations` | `annotations/` |
+| Targeted annotation cleaning | `conv-wm clean annotations` | `cleaning/annotations/summary.json` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;
 media reads the manifest. A missing prerequisite stops the command with the
 command that produces it. There is no other ordering constraint.
 
-Targeted cleaning, label/cue ontology, temporal representation and
-model-ready packaging are later capabilities (pages 06–09 are placeholders).
+Label/cue ontology, temporal representation and model-ready packaging are later
+capabilities (pages 08–09 remain placeholders).
 
 ## One entry point
 
@@ -65,6 +66,7 @@ model-ready packaging are later capabilities (pages 06–09 are placeholders).
 uv sync
 uv run conv-wm --help
 uv run conv-wm audit <capability> [--max-workers N]
+uv run conv-wm clean annotations
 uv run conv-wm datasets
 ```
 
@@ -81,6 +83,7 @@ modules remain as thin compatibility wrappers.
                     generic pipeline
         manifest · media · video · audio · sync
         structural validation · annotation integrity
+                  annotation cleaning
                           │ reads
           ┌───────────────┼────────────────┐
        EgoCom           Ego4D          <new dataset>
@@ -98,6 +101,7 @@ registry (`conv_wm.data.datasets.get(name)`):
 | --- | --- | --- |
 | `structure: StructuralSpec` | tables with Pandera schemas and loaders, relations between them | structural validation |
 | `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field, known limitations) and cross-source comparisons | annotation integrity |
+| `annotation_cleaner` | dataset-specific, explicitly validated minimal transformations | annotation cleaning |
 | `audio: AudioInterpretation` | a known boundary grid, extra decoded-validation windows, a dataset summary section | audio timeline audit (relabelling), video timeline audit (extra windows) |
 
 A dataset that is present on disk but not registered is still inventoried and

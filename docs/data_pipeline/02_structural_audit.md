@@ -18,7 +18,8 @@ Profiling and validation serve different purposes:
 Each registered dataset declares its tables and relations in a
 `StructuralSpec` (`conv_wm/data/datasets/<name>.py`); the generic orchestration
 (`conv_wm.data.audits.structural`) validates whatever is declared. EgoCom
-declares the raw `video_info.csv` and `ground_truth_transcriptions.csv` tables;
+declares the raw `video_info.csv` and `ground_truth_transcriptions.csv` tables
+plus their maintained source-faithful interim tables;
 Ego4D declares these interim tables:
 
 - `clips_clean`
@@ -42,9 +43,9 @@ The project-specific relation checks verify:
 - Tracking-path and voice-segment person keys reference `persons_clean`.
 - Track keys reference `tracking_paths_clean`.
 
-Transcription and social-segment speaker fields are not person foreign keys because
-the source uses `-1` for an unknown speaker. Social `target` semantics are also left
-unconstrained rather than inferred from the current snapshot.
+Transcription and social-segment speaker fields can use `-1` for an unknown
+speaker. Annotation integrity handles those semantic references; structural
+validation does not infer social `target` meaning.
 
 ## Run and output
 
@@ -64,8 +65,7 @@ and `datasets.<name>.relations`, plus provenance).
 Structural validation does not check FPS, frame or audio timestamps, ordering
 of start/end fields, seconds-to-frame consistency, A/V synchronization, drift,
 or resampling. It also does not judge transcript content or scientific
-suitability. An empty table can therefore pass when its columns and dtypes
-satisfy its contract; this currently applies to `social_segments_looking_clean`.
+suitability.
 
 Temporal semantics are covered by the temporal audits
 ([`03_temporal_audit.md`](03_temporal_audit.md)) and by annotation integrity
