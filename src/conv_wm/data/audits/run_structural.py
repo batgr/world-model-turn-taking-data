@@ -1,6 +1,5 @@
 """Command-line runner for the phase A2 structural audit."""
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -9,6 +8,7 @@ from conv_wm.config import get_path, load_config
 from conv_wm.data.audits.ego4d import audit_ego4d
 from conv_wm.data.audits.egocom import audit_egocom
 from conv_wm.data.schemas import EGO4D_SCHEMAS
+from conv_wm.reports import write_summary
 
 
 def build_structural_report(
@@ -38,8 +38,7 @@ def run_structural(config_path: str | Path | None = None) -> tuple[dict, Path]:
 
     report = build_structural_report(video_info, ground_truth, ego4d_tables)
     report_path = Path(cfg.paths.reports) / "structural" / "structural_audit.json"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    write_summary(report_path, report)
     return report, report_path
 
 

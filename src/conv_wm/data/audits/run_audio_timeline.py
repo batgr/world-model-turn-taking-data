@@ -18,6 +18,7 @@ from conv_wm.data.media.audio_timeline import (
     probe_audio_packets,
     summarize_decoded_sample_counts,
 )
+from conv_wm.reports import write_summary
 
 DRIFT_THRESHOLD_MS = 1.0
 # A positive PCM-clock step is an audio dropout only if its excess persists
@@ -82,6 +83,17 @@ EVENT_COLUMNS = [
     "early_boundary_tolerance_sec",
     "has_early_boundary_context",
 ]
+
+
+def audit_parameters() -> dict[str, object]:
+    """Settings that materially affect how the audio timeline report is read."""
+    return {
+        "drift_threshold_ms": DRIFT_THRESHOLD_MS,
+        "threshold_comparison": THRESHOLD_COMPARISON,
+        "compensation_window_sec": COMPENSATION_WINDOW_SEC,
+        "persistence_fraction": PERSISTENCE_FRACTION,
+        "decoded_sample_references": DECODED_SAMPLE_REFERENCES,
+    }
 
 
 def _decoded_sample_reference(codec: str) -> tuple[int, str]:
@@ -918,10 +930,7 @@ def main() -> None:
     decode_validation.to_parquet(decode_path, index=False)
 
     summary = build_packet_summary(files, events, decode_validation)
-    summary_path.write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_summary(summary_path, summary, parameters=audit_parameters())
     decode_summary = {
         "n_cases": len(decode_validation),
         "n_probe_ok": int(decode_validation["probe_ok"].sum()),
@@ -956,10 +965,7 @@ def main() -> None:
             ),
         },
     }
-    decode_summary_path.write_text(
-        json.dumps(decode_summary, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_summary(decode_summary_path, decode_summary, parameters=audit_parameters())
 
     print(f"files: {files_path}")
     print(f"events: {events_path}")

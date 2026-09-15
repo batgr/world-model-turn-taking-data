@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +10,7 @@ from conv_wm.data.media.video_timeline import (
     audit_sampled_video_timeline,
     probe_video_timestamps,
 )
+from conv_wm.reports import write_summary
 
 
 def main() -> None:
@@ -183,15 +183,7 @@ def main() -> None:
     }
 
     summary_path = output_dir / "summary.json"
-
-    summary_path.write_text(
-        json.dumps(
-            summary,
-            indent=2,
-            sort_keys=True,
-        ),
-        encoding="utf-8",
-    )
+    write_summary(summary_path, summary)
 
     print()
     print("Video timeline audit")

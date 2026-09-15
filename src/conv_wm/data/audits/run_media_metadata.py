@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +7,7 @@ import pandas as pd
 from conv_wm.config import load_config
 from conv_wm.data.media.ffprobe import FFprobeError
 from conv_wm.data.media.metadata import extract_media_metadata
+from conv_wm.reports import write_summary
 
 
 def main() -> None:
@@ -91,15 +91,7 @@ def main() -> None:
     }
 
     summary_path = output_dir / "summary.json"
-
-    summary_path.write_text(
-        json.dumps(
-            summary,
-            indent=2,
-            sort_keys=True,
-        ),
-        encoding="utf-8",
-    )
+    write_summary(summary_path, summary)
 
     for dataset, group in metadata.groupby("dataset"):
         print(dataset)

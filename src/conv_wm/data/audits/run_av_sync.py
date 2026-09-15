@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
 
 from conv_wm.config import load_config
 from conv_wm.data.media.av_sync import compute_av_sync_metadata
+from conv_wm.reports import write_summary
 
 
 def build_av_sync_summary(sync: pd.DataFrame) -> dict[str, object]:
@@ -62,10 +62,7 @@ def main() -> None:
     files_path = output_dir / "av_sync_files.parquet"
     summary_path = output_dir / "av_sync_summary.json"
     sync.to_parquet(files_path, index=False)
-    summary_path.write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_summary(summary_path, summary)
 
     print(f"files: {files_path}")
     print(f"summary: {summary_path}")
