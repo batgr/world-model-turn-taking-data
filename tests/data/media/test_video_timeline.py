@@ -41,7 +41,8 @@ def test_analyze_frame_timeline_cfr_is_consistent():
     assert result.to_row()["timeline_class"] == "cfr_consistent"
     assert result.to_row()["monotonic"] is True
     assert result.to_row()["n_duplicate_timestamps"] == 0
-    assert result.to_row()["max_delta_error_ticks"] <= 1.0
+    assert result.max_delta_error_ticks is not None
+    assert result.max_delta_error_ticks <= 1.0
 
 
 def test_analyze_frame_timeline_detects_dropped_frame():

@@ -33,11 +33,25 @@ packages = ["src/conv_wm"]
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.16.6",
 ]
 
+[tool.ruff.lint]
+# Public functions and methods of the maintained implementation document
+# their semantics, units and return values.
+extend-select = ["D102", "D103"]
+
 [tool.ruff.lint.per-file-ignores]
 # Notebooks are exploratory: per-file try/except loops and ad-hoc subprocess
 # wrappers are expected there. Undefined/redefined names stay enabled.
-"notebooks/**/*.ipynb" = ["BLE001", "PLW1510"]
+"notebooks/**/*.ipynb" = ["BLE001", "PLW1510", "D102", "D103"]
+# Test names are the documentation.
+"tests/**/*.py" = ["D102", "D103"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false

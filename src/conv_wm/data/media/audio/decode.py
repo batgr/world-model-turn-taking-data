@@ -17,6 +17,7 @@ import pandas as pd
 from conv_wm.data.media.audio.packets import ticks_to_samples
 from conv_wm.data.media.audio.probe import probe_audio_frames
 from conv_wm.data.media.audio.records import DecodedValidationRecord
+from conv_wm.data.media.audio.summary import regime
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ def summarize_decoded_sample_counts(frames: pd.DataFrame) -> DecodedSampleCounts
         n_decoded_frames=len(frames),
         n_valid_decoded_sample_counts=len(valid),
         reference_decoded_samples=reference,
-        distribution={str(int(value)): int(count) for value, count in counts.items()},
+        distribution={str(int(value)): int(count) for value, count in counts.items()},  # type: ignore[call-overload]
         n_non_reference_decoded_frames=int(valid.ne(reference).sum()),
         n_960_sample_frames=int(valid.eq(960).sum()),
     )
@@ -256,7 +257,8 @@ def select_decode_validation_cases(
             )
         )
 
-    for (dataset, rate), subset in valid.groupby(["dataset", "sample_rate_hz"]):
+    for key, subset in valid.groupby(["dataset", "sample_rate_hz"]):
+        dataset, rate = regime(key)
         ordered = subset.sort_values(
             [
                 "max_abs_cumulative_pcm_drift_samples",
@@ -265,7 +267,7 @@ def select_decode_validation_cases(
             ]
         )
         row = _first_row(ordered)
-        name = f"{dataset}_{int(rate)}_regime"
+        name = f"{dataset}_{rate}_regime"
         add(name, "dataset_sample_rate_regime", row)
         add(
             f"{name}_end",
@@ -317,7 +319,7 @@ def select_decode_validation_cases(
                     valid.loc[valid["relative_path"].eq(event["relative_path"])]
                 )
                 add(
-                    f"{category}_{dataset}_{int(rate)}",
+                    f"{category}_{dataset}_{rate}",
                     category,
                     row,
                     float(event["event_time_sec"]),

@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Hashable, Mapping
+from typing import Any, SupportsInt, cast
 
 import pandas as pd
 
 from conv_wm.data.media.audio.records import EventCategory
+from conv_wm.reports import JsonDict
+
+
+def regime(key: Hashable) -> tuple[str, int]:
+    """Typed ``(dataset, sample_rate_hz)`` from a two-column groupby key."""
+    dataset, rate = cast(tuple[object, SupportsInt], key)
+    return str(dataset), int(rate)
+
 
 QUANTILES: tuple[tuple[str, float], ...] = (
     ("min", 0.0),
@@ -32,7 +41,7 @@ def quantiles(series: pd.Series) -> dict[str, float]:
     return {name: float(values.quantile(q)) for name, q in QUANTILES}
 
 
-def dropout_section(valid: pd.DataFrame, dropouts: pd.DataFrame) -> dict[str, object]:
+def dropout_section(valid: pd.DataFrame, dropouts: pd.DataFrame) -> JsonDict:
     """Dropout burden for one group of files, keeping candidates and observations apart."""
     return {
         "n_files": int(valid["has_audio_dropout"].sum()),
@@ -61,10 +70,11 @@ def by_dataset_and_sample_rate(
     events: pd.DataFrame,
     *,
     threshold_comparison: str,
-) -> dict[str, dict[str, object]]:
+) -> dict[str, dict[str, Any]]:
     """Final-drift distributions and dropout burden per dataset and sample rate."""
-    result: dict[str, dict[str, object]] = {}
-    for (dataset, sample_rate), subset in files.groupby(["dataset", "sample_rate_hz"]):
+    result: dict[str, dict[str, Any]] = {}
+    for key, subset in files.groupby(["dataset", "sample_rate_hz"]):
+        dataset, sample_rate = regime(key)
         valid = subset.loc[subset["probe_ok"]]
         dropouts = (
             events.loc[
@@ -75,7 +85,7 @@ def by_dataset_and_sample_rate(
             if not events.empty
             else pd.DataFrame(columns=events.columns)
         )
-        result.setdefault(str(dataset), {})[str(int(sample_rate))] = {
+        result.setdefault(dataset, {})[str(sample_rate)] = {
             "n_files": len(subset),
             "n_probe_errors": int((~subset["probe_ok"]).sum()),
             "final_pcm_drift_ms_quantiles": quantiles(
@@ -98,9 +108,9 @@ def by_dataset_and_sample_rate(
     return result
 
 
-def dataset_overview(files: pd.DataFrame) -> dict[str, dict[str, object]]:
+def dataset_overview(files: pd.DataFrame) -> dict[str, JsonDict]:
     """Per-dataset counts of files, regimes and file-level flags."""
-    overview: dict[str, dict[str, object]] = {}
+    overview: dict[str, JsonDict] = {}
     for dataset, subset in files.groupby("dataset"):
         valid = subset.loc[subset["probe_ok"]]
         overview[str(dataset)] = {
@@ -170,7 +180,7 @@ def dataset_overview(files: pd.DataFrame) -> dict[str, dict[str, object]]:
     return overview
 
 
-INTERPRETATION: dict[str, object] = {
+INTERPRETATION: JsonDict = {
     "packet_clock_metric": "next_pts - current_pts - current_packet_duration",
     "pcm_clock_metric": "next_pts - current_pts - reference_decoded_samples",
     "temporal_source_of_truth": "native_pts",
@@ -196,8 +206,8 @@ def build_audio_timeline_summary(
     events: pd.DataFrame,
     *,
     threshold_comparison: str,
-    dataset_sections: Mapping[str, Mapping[str, object]] | None = None,
-) -> dict[str, object]:
+    dataset_sections: Mapping[str, Mapping[str, Any]] | None = None,
+) -> JsonDict:
     """Population summary; ``dataset_sections`` carries dataset-provided analyses."""
     stitch = (
         events.loc[events["event_category"].eq(EventCategory.STITCH_RELATED)]
@@ -220,8 +230,8 @@ def build_audio_timeline_summary(
         if not events.empty
         else {},
         "known_boundary_events_by_dataset_sample_rate": {
-            f"{dataset}/{int(rate)}": len(group)
-            for (dataset, rate), group in stitch.groupby(["dataset", "sample_rate_hz"])
+            "{}/{}".format(*regime(key)): len(group)
+            for key, group in stitch.groupby(["dataset", "sample_rate_hz"])
         },
         "dataset_sections": dict(dataset_sections or {}),
         "interpretation": INTERPRETATION,

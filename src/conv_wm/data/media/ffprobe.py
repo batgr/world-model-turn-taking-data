@@ -47,4 +47,5 @@ def probe_json(path: Path, arguments: list[str]) -> dict:
 
 
 def probe_media(path: Path) -> dict:
+    """Container ``format`` and per-stream metadata of one media file."""
     return probe_json(path, ["-show_format", "-show_streams"])

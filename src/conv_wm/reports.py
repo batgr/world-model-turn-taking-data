@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from conv_wm.provenance import ReportProvenance, collect_provenance
@@ -13,14 +15,17 @@ from conv_wm.provenance import ReportProvenance, collect_provenance
 SUMMARY_SCHEMA_VERSION = 1
 """Bumped when the top-level layout of summary files changes."""
 
+JsonDict = dict[str, Any]
+"""A JSON-serializable mapping; the honest type of nested report documents."""
+
 
 def write_summary(
     path: Path,
-    payload: Mapping[str, object],
+    payload: Mapping[str, Any],
     *,
-    parameters: Mapping[str, object] | None = None,
+    parameters: Mapping[str, Any] | None = None,
     provenance: ReportProvenance | None = None,
-) -> dict[str, object]:
+) -> JsonDict:
     """Write ``payload`` as a JSON summary stamped with execution provenance.
 
     The written document is ``payload`` plus three reserved keys:
@@ -31,7 +36,7 @@ def write_summary(
     reserved = {"provenance", "parameters", "summary_schema_version"} & set(payload)
     if reserved:
         raise ValueError(f"payload must not define reserved keys: {sorted(reserved)}")
-    document: dict[str, object] = {
+    document: JsonDict = {
         **payload,
         "summary_schema_version": SUMMARY_SCHEMA_VERSION,
         "provenance": (provenance or collect_provenance()).to_dict(),
@@ -55,7 +60,7 @@ def write_table(path: Path, table: pd.DataFrame) -> Path:
 
 def _json_default(value: object) -> object:
     """Serialize numpy scalars and paths that ``json`` does not handle natively."""
-    if hasattr(value, "item"):
+    if isinstance(value, np.generic):
         return value.item()
     if isinstance(value, Path):
         return str(value)

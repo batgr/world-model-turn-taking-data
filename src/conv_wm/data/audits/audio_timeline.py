@@ -72,9 +72,7 @@ class AudioTimelineOutputs:
         return self.output_dir / "audio_packet_timeline_summary.json"
 
 
-def parameters_for(
-    codec: str, **overrides: float
-) -> tuple[AudioTimelineParameters, str]:
+def parameters_for(codec: str) -> tuple[AudioTimelineParameters, str]:
     """Analysis parameters for ``codec`` plus the provenance of its decoded reference."""
     try:
         reference, source = DECODED_SAMPLE_REFERENCES[codec]
@@ -82,9 +80,7 @@ def parameters_for(
         raise ValueError(
             f"No validated decoded-sample reference for audio codec: {codec}"
         ) from exc
-    return AudioTimelineParameters(
-        reference_decoded_samples=reference, **overrides
-    ), source
+    return AudioTimelineParameters(reference_decoded_samples=reference), source
 
 
 def audit_audio_file(
@@ -198,13 +194,15 @@ def run_audio_timeline_audit(
     cases = select_decode_validation_cases(
         files, events, extra_cases=_dataset_decode_cases(files)
     )
-    files_by_path = files.set_index("relative_path")
+    file_rows: dict[str, pd.Series] = {
+        str(row["relative_path"]): row for _, row in files.iterrows()
+    }
     decode_validation = pd.DataFrame.from_records(
         [
             validate_decoded_window(
                 case,
                 path=paths.raw / case.relative_path,
-                file_row=files_by_path.loc[case.relative_path],
+                file_row=file_rows[case.relative_path],
             ).to_row()
             for case in cases
         ]

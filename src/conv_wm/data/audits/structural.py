@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from omegaconf import DictConfig
@@ -14,7 +15,7 @@ from conv_wm.data import datasets
 from conv_wm.data.audits.pandera import audit_dataframe
 from conv_wm.data.datasets.spec import DatasetSpec, StructuralSpec
 from conv_wm.data.validation import check_foreign_key
-from conv_wm.reports import write_summary
+from conv_wm.reports import JsonDict, write_summary
 
 REPORT_PATH = Path("structural") / "structural_audit.json"
 
@@ -27,7 +28,7 @@ class TableAuditResult:
     valid: bool
     shape: tuple[int, int]
     n_failures: int
-    failure_cases: list[dict[str, object]]
+    failure_cases: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,7 @@ class DatasetStructureResult:
     tables: list[TableAuditResult]
     relations: list[RelationAuditResult]
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> JsonDict:
         """JSON layout: ``tables`` and ``relations`` keyed by name."""
         return {
             "valid": self.valid,
@@ -64,7 +65,7 @@ class DatasetStructureResult:
         }
 
 
-def _without_name(mapping: dict[str, object]) -> dict[str, object]:
+def _without_name(mapping: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in mapping.items() if key != "name"}
 
 
@@ -78,12 +79,18 @@ def audit_dataset_structure(
     missing = {table.name for table in structure.tables} - set(tables)
     if missing:
         raise KeyError(f"{spec.name}: tables not loaded: {sorted(missing)}")
-    table_results = [
-        TableAuditResult(
-            name=table.name, **_pandera_result(tables[table.name], table.schema)
+    table_results = []
+    for table in structure.tables:
+        outcome = audit_dataframe(tables[table.name], table.schema)
+        table_results.append(
+            TableAuditResult(
+                name=table.name,
+                valid=outcome.valid,
+                shape=outcome.shape,
+                n_failures=outcome.n_failures,
+                failure_cases=outcome.failure_cases,
+            )
         )
-        for table in structure.tables
-    ]
     relation_results = []
     for relation in structure.relations:
         orphans = check_foreign_key(
@@ -109,16 +116,6 @@ def audit_dataset_structure(
     )
 
 
-def _pandera_result(table: pd.DataFrame, schema) -> dict[str, object]:
-    result = audit_dataframe(table, schema)
-    return {
-        "valid": bool(result["valid"]),
-        "shape": tuple(result["shape"]),  # type: ignore[arg-type]
-        "n_failures": int(result["n_failures"]),  # type: ignore[call-overload]
-        "failure_cases": list(result["failure_cases"]),  # type: ignore[call-overload]
-    }
-
-
 def load_structural_tables(
     structure: StructuralSpec, cfg: DictConfig
 ) -> dict[str, pd.DataFrame]:
@@ -131,7 +128,7 @@ class StructuralOutputs:
     """Report written by one run."""
 
     results: list[DatasetStructureResult]
-    report: dict[str, object]
+    report: JsonDict
     report_path: Path
 
     @property
@@ -140,7 +137,7 @@ class StructuralOutputs:
         return bool(self.report["valid"])
 
 
-def build_structural_report(results: list[DatasetStructureResult]) -> dict[str, object]:
+def build_structural_report(results: list[DatasetStructureResult]) -> JsonDict:
     """Combine per-dataset results into the report layout."""
     return {
         "audit_type": "structural_validation",

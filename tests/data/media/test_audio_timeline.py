@@ -19,11 +19,12 @@ def analyze_audio_packet_timeline(
     sample_rate_hz: int,
     time_base: str,
     reference_decoded_samples: int,
-    **overrides: float,
+    compensation_window_sec: float = 2.0,
 ) -> tuple[dict, pd.DataFrame]:
     """Run the typed analysis and return (flat file row, events frame)."""
     parameters = AudioTimelineParameters(
-        reference_decoded_samples=reference_decoded_samples, **overrides
+        reference_decoded_samples=reference_decoded_samples,
+        compensation_window_sec=compensation_window_sec,
     )
     file = AudioFileTimelineRecord(
         dataset="test",

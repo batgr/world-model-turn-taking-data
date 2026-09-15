@@ -67,7 +67,10 @@ def media_files(metadata: pd.DataFrame) -> list[MediaFileInfo]:
     missing = set(MEDIA_FILE_INFO_COLUMNS) - set(metadata.columns)
     if missing:
         raise ValueError(f"Media metadata table is missing columns: {sorted(missing)}")
-    return [MediaFileInfo.from_row(row) for row in metadata.to_dict(orient="records")]
+    return [
+        MediaFileInfo.from_row({str(key): value for key, value in row.items()})
+        for row in metadata.to_dict(orient="records")
+    ]
 
 
 def extract_media_metadata(
@@ -76,6 +79,7 @@ def extract_media_metadata(
     relative_path: str,
     path: Path,
 ) -> dict:
+    """Probe one file and return its normalized metadata row plus stream counts."""
     probe = probe_media(path)
 
     record = normalize_probe(
@@ -122,6 +126,7 @@ def derive_media_qc(metadata: pd.DataFrame) -> pd.DataFrame:
 
 
 def parse_fraction(value: str | None) -> float | None:
+    """Float value of an ffprobe rational such as ``"30000/1001"``; ``None`` if unset."""
     if value in (None, "0/0", "N/A"):
         return None
 
@@ -132,6 +137,7 @@ def get_stream(
     probe: dict,
     codec_type: str,
 ) -> dict | None:
+    """First stream of ``codec_type`` (``"video"``/``"audio"``) in a probe payload."""
     return next(
         (
             stream
@@ -147,6 +153,7 @@ def normalize_probe(
     relative_path: str,
     probe: dict,
 ) -> dict:
+    """Flatten container, first-video and first-audio stream facts into one row."""
     format_info = probe["format"]
 
     video = get_stream(probe, "video")
