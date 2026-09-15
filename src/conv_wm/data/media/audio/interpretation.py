@@ -192,14 +192,13 @@ def interpret_file(
             has_early_boundary_event=EventCategory.CODEC_BOUNDARY in categories,
             has_audio_dropout=bool(dropouts),
             audio_dropout_event_count=len(dropouts),
-            audio_dropout_packet_count=sum(event.n_steps for event in dropouts),
             max_audio_dropout_duration_ms=(
                 max(event.dropout_duration_ms for event in dropouts)
                 if dropouts
                 else 0.0
             ),
             total_audio_dropout_excess_ms=sum(
-                event.dropout_total_excess_ms for event in dropouts
+                event.dropout_duration_ms for event in dropouts
             ),
             has_compensated_timestamp_cadence=(
                 EventCategory.COMPENSATED_TIMESTAMP_CADENCE in categories

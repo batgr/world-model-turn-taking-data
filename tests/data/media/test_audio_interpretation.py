@@ -47,8 +47,6 @@ def _event(
         n_compensated_candidate_steps=0,
         dropout_duration_samples=nan,
         dropout_duration_ms=nan,
-        dropout_total_excess_samples=nan,
-        dropout_total_excess_ms=nan,
         dropout_min_residual_in_window_samples=nan,
         dropout_residual_at_window_end_samples=nan,
         dropout_window_truncated=False,
@@ -188,7 +186,6 @@ def test_dataset_rate_summary_reports_drift_quantiles_and_dropouts():
     }
     dropouts = section["audio_dropouts"]
     assert dropouts["n_events"] == 1
-    assert dropouts["n_persistent_steps"] == 1
     assert dropouts["n_candidate_steps"] == 41
     assert dropouts["n_compensated_candidate_steps"] == 40
     assert dropouts["n_files_with_compensated_cadence"] == 1

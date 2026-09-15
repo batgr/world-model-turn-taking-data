@@ -231,8 +231,6 @@ def packet_clock_events(
                 n_compensated_candidate_steps=0,
                 dropout_duration_samples=nan,
                 dropout_duration_ms=nan,
-                dropout_total_excess_samples=nan,
-                dropout_total_excess_ms=nan,
                 dropout_min_residual_in_window_samples=nan,
                 dropout_residual_at_window_end_samples=nan,
                 dropout_window_truncated=False,
@@ -316,10 +314,6 @@ def pcm_clock_events(
             n_compensated_candidate_steps=int((~persistent_mask[candidates]).sum()),
             dropout_duration_samples=float(dropout.get("excess", nan)),
             dropout_duration_ms=float(dropout.get("excess", nan))
-            * 1000.0
-            / sample_rate_hz,
-            dropout_total_excess_samples=float(dropout.get("excess", nan)),
-            dropout_total_excess_ms=float(dropout.get("excess", nan))
             * 1000.0
             / sample_rate_hz,
             dropout_min_residual_in_window_samples=float(

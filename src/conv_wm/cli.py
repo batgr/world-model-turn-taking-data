@@ -16,6 +16,7 @@ from omegaconf import DictConfig
 
 from conv_wm.config import DEFAULT_CONFIG_PATH, load_config
 from conv_wm.data.audits.errors import MissingPrerequisiteError
+from conv_wm.data.media.ffprobe import FFprobeError
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
@@ -192,7 +193,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         cfg = load_config(args.config)
         return int(args.handler(cfg, args))
-    except MissingPrerequisiteError as exc:
+    except (MissingPrerequisiteError, FFprobeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_FAILURE
     except (FileNotFoundError, ValueError, KeyError) as exc:

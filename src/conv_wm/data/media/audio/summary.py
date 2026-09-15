@@ -46,9 +46,6 @@ def dropout_section(valid: pd.DataFrame, dropouts: pd.DataFrame) -> JsonDict:
     return {
         "n_files": int(valid["has_audio_dropout"].sum()),
         "n_events": len(dropouts),
-        "n_persistent_steps": int(dropouts["n_steps"].sum())
-        if not dropouts.empty
-        else 0,
         "n_candidate_steps": int(valid["n_dropout_candidate_steps"].sum()),
         "n_compensated_candidate_steps": int(
             valid["n_compensated_candidate_steps"].sum()

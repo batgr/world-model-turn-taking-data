@@ -215,7 +215,6 @@ class AudioFileInterpretation:
     has_early_boundary_event: bool
     has_audio_dropout: bool
     audio_dropout_event_count: int
-    audio_dropout_packet_count: int
     max_audio_dropout_duration_ms: float
     total_audio_dropout_excess_ms: float
     has_compensated_timestamp_cadence: bool
@@ -234,7 +233,6 @@ class AudioFileInterpretation:
             has_early_boundary_event=False,
             has_audio_dropout=False,
             audio_dropout_event_count=0,
-            audio_dropout_packet_count=0,
             max_audio_dropout_duration_ms=0.0,
             total_audio_dropout_excess_ms=0.0,
             has_compensated_timestamp_cadence=False,
@@ -372,9 +370,8 @@ class AudioTimelineEvent:
     n_candidate_steps: int
     n_compensated_candidate_steps: int
     dropout_duration_samples: float
+    """Excess of the persistent step over the decoded reference (NaN otherwise)."""
     dropout_duration_ms: float
-    dropout_total_excess_samples: float
-    dropout_total_excess_ms: float
     dropout_min_residual_in_window_samples: float
     """Lowest drift relative to the pre-step baseline inside the window."""
     dropout_residual_at_window_end_samples: float
