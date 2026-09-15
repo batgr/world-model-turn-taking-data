@@ -1,32 +1,22 @@
-from pathlib import Path
+"""Compatibility wrapper; the maintained entry point is ``conv-wm audit manifest``."""
 
-import hydra
+from __future__ import annotations
+
 from omegaconf import DictConfig
 
-from conv_wm.data.manifest import build_manifest, save_manifest
+from conv_wm.config import load_config
+from conv_wm.data.audits.manifest import run_manifest_audit
 
 
 def run(cfg: DictConfig) -> None:
     """Build and persist the raw dataset manifest from configuration."""
-    manifest = build_manifest(
-        Path(cfg.paths.raw),
-        compute_checksum=cfg.manifest.compute_checksum,
-    )
-
-    save_manifest(
-        manifest,
-        Path(cfg.manifest.output),
-    )
+    run_manifest_audit(cfg)
 
 
-@hydra.main(
-    version_base=None,
-    config_path="../../../conf",
-    config_name="config",
-)
-def main(cfg: DictConfig) -> None:
-    """Hydra entry point for manifest generation."""
-    run(cfg)
+def main() -> None:
+    """Build the manifest with the default configuration."""
+    outputs = run_manifest_audit(load_config())
+    print(f"manifest: {outputs.manifest_path}")
 
 
 if __name__ == "__main__":

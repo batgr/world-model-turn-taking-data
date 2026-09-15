@@ -2,7 +2,7 @@ import pandas as pd
 import pandera.errors as pa_errors
 import pytest
 
-from conv_wm.data.schemas import EGO4D_CLIPS_SCHEMA
+from conv_wm.data.datasets.ego4d import EGO4D_CLIPS_SCHEMA
 
 
 def make_valid_clips() -> pd.DataFrame:

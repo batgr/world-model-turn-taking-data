@@ -5,11 +5,219 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pandera.pandas as pa
+from pandera import Check
 
-from conv_wm.data.datasets.spec import AudioInterpretation, DatasetSpec
+from conv_wm.data.datasets.spec import (
+    AudioInterpretation,
+    DatasetSpec,
+    RelationSpec,
+    StructuralSpec,
+    TableSpec,
+    parquet_table,
+)
 from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 from conv_wm.data.media.audio.summary import quantiles
+
+EGO4D_CLIPS_SCHEMA = pa.DataFrameSchema(
+    {
+        "split": pa.Column(str, nullable=False, checks=Check.isin(["train", "val"])),
+        "clip_uid": pa.Column(str, nullable=False, unique=True),
+        "source_clip_uid": pa.Column(str, nullable=False),
+        "video_uid": pa.Column(str, nullable=False),
+        "video_start_sec": pa.Column(float, nullable=False),
+        "video_end_sec": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(int, nullable=False),
+        "video_end_frame": pa.Column(int, nullable=False),
+        "clip_start_sec": pa.Column(int, nullable=False),
+        "clip_end_sec": pa.Column(float, nullable=False),
+        "clip_start_frame": pa.Column(int, nullable=False),
+        "clip_end_frame": pa.Column(int, nullable=False),
+    },
+    strict=True,
+    name="ego4d_clips_clean",
+)
+
+
+EGO4D_PERSONS_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "person_id": pa.Column(str, nullable=False),
+        "is_camera_wearer": pa.Column(bool, nullable=False),
+    },
+    unique=["clip_uid", "person_id"],
+    strict=True,
+    name="ego4d_persons_clean",
+)
+
+
+EGO4D_TRACKING_PATHS_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "person_id": pa.Column(str, nullable=False),
+        "track_id": pa.Column(str, nullable=False),
+        "unmapped_frames_count": pa.Column(
+            int,
+            nullable=False,
+            checks=Check.ge(0),
+        ),
+        "unmapped_frames": pa.Column(object, nullable=False),
+    },
+    unique=["clip_uid", "person_id", "track_id"],
+    strict=True,
+    name="ego4d_tracking_paths_clean",
+)
+
+
+EGO4D_TRACKS_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "person_id": pa.Column(str, nullable=False),
+        "track_id": pa.Column(str, nullable=False),
+        "x": pa.Column(float, nullable=False),
+        "y": pa.Column(float, nullable=False),
+        "width": pa.Column(float, nullable=False, checks=Check.gt(0)),
+        "height": pa.Column(float, nullable=False, checks=Check.gt(0)),
+        "clip_frame": pa.Column(int, nullable=False),
+        "video_frame": pa.Column(int, nullable=False),
+    },
+    unique=["clip_uid", "person_id", "track_id", "clip_frame"],
+    strict=True,
+    name="ego4d_tracks_clean",
+)
+
+
+EGO4D_VOICE_SEGMENTS_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "start_time": pa.Column(float, nullable=False),
+        "end_time": pa.Column(float, nullable=False),
+        "start_frame": pa.Column(float, nullable=False),
+        "end_frame": pa.Column(float, nullable=False),
+        "video_start_time": pa.Column(float, nullable=False),
+        "video_end_time": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(float, nullable=False),
+        "video_end_frame": pa.Column(float, nullable=False),
+        "person_id": pa.Column(str, nullable=False),
+    },
+    strict=True,
+    name="ego4d_voice_segments_clean",
+)
+
+
+EGO4D_TRANSCRIPTIONS_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "transcription": pa.Column(str, nullable=False),
+        "start_time_sec": pa.Column(float, nullable=False),
+        "end_time_sec": pa.Column(float, nullable=False),
+        "person_id": pa.Column(str, nullable=False),
+        "video_start_time": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(float, nullable=False),
+        "video_end_time": pa.Column(float, nullable=False),
+        "video_end_frame": pa.Column(float, nullable=False),
+    },
+    strict=True,
+    name="ego4d_transcriptions_clean",
+)
+
+
+EGO4D_SOCIAL_SEGMENTS_TALKING_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "start_time": pa.Column(float, nullable=False),
+        "end_time": pa.Column(float, nullable=False),
+        "start_frame": pa.Column(int, nullable=False),
+        "end_frame": pa.Column(int, nullable=False),
+        "video_start_time": pa.Column(float, nullable=False),
+        "video_end_time": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(int, nullable=False),
+        "video_end_frame": pa.Column(int, nullable=False),
+        "person": pa.Column(str, nullable=False),
+        "target": pa.Column(str, nullable=False),
+        "is_at_me": pa.Column(bool, nullable=False),
+    },
+    strict=True,
+    name="ego4d_social_segments_talking_clean",
+)
+
+
+EGO4D_SOCIAL_SEGMENTS_LOOKING_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "start_time": pa.Column(float, nullable=False),
+        "end_time": pa.Column(float, nullable=False),
+        "start_frame": pa.Column(float, nullable=False),
+        "end_frame": pa.Column(float, nullable=False),
+        "video_start_time": pa.Column(float, nullable=False),
+        "video_end_time": pa.Column(float, nullable=False),
+        "video_start_frame": pa.Column(float, nullable=False),
+        "video_end_frame": pa.Column(float, nullable=False),
+        "person": pa.Column(str, nullable=False),
+    },
+    strict=True,
+    name="ego4d_social_segments_looking_clean",
+)
+
+
+def _clip_relation(table: str, short: str) -> RelationSpec:
+    return RelationSpec(
+        name=f"{short}_clip_uid_in_clips",
+        child_table=table,
+        child_columns=("clip_uid",),
+        parent_table="clips_clean",
+        parent_columns=("clip_uid",),
+    )
+
+
+STRUCTURE = StructuralSpec(
+    tables=tuple(
+        TableSpec(
+            name=name, schema=schema, load=parquet_table("ego4d", "interim", name)
+        )
+        for name, schema in (
+            ("clips_clean", EGO4D_CLIPS_SCHEMA),
+            ("persons_clean", EGO4D_PERSONS_SCHEMA),
+            ("tracking_paths_clean", EGO4D_TRACKING_PATHS_SCHEMA),
+            ("tracks_clean", EGO4D_TRACKS_SCHEMA),
+            ("voice_segments_clean", EGO4D_VOICE_SEGMENTS_SCHEMA),
+            ("transcriptions_clean", EGO4D_TRANSCRIPTIONS_SCHEMA),
+            ("social_segments_talking_clean", EGO4D_SOCIAL_SEGMENTS_TALKING_SCHEMA),
+            ("social_segments_looking_clean", EGO4D_SOCIAL_SEGMENTS_LOOKING_SCHEMA),
+        )
+    ),
+    relations=(
+        _clip_relation("persons_clean", "persons"),
+        _clip_relation("tracking_paths_clean", "tracking_paths"),
+        _clip_relation("tracks_clean", "tracks"),
+        _clip_relation("voice_segments_clean", "voice_segments"),
+        _clip_relation("transcriptions_clean", "transcriptions"),
+        _clip_relation("social_segments_talking_clean", "social_talking"),
+        _clip_relation("social_segments_looking_clean", "social_looking"),
+        RelationSpec(
+            name="tracking_paths_person_in_persons",
+            child_table="tracking_paths_clean",
+            child_columns=("clip_uid", "person_id"),
+            parent_table="persons_clean",
+            parent_columns=("clip_uid", "person_id"),
+        ),
+        RelationSpec(
+            name="tracks_path_in_tracking_paths",
+            child_table="tracks_clean",
+            child_columns=("clip_uid", "person_id", "track_id"),
+            parent_table="tracking_paths_clean",
+            parent_columns=("clip_uid", "person_id", "track_id"),
+        ),
+        RelationSpec(
+            name="voice_segments_person_in_persons",
+            child_table="voice_segments_clean",
+            child_columns=("clip_uid", "person_id"),
+            parent_table="persons_clean",
+            parent_columns=("clip_uid", "person_id"),
+        ),
+    ),
+)
 
 STITCH_PERIOD_SEC = 300.0
 """Ego4D recordings are joined every 300 s; audio events cluster on that grid."""
@@ -103,6 +311,7 @@ def characterize_44100_regime(
 EGO4D = DatasetSpec(
     name="ego4d",
     description="Ego4D v2 audio-visual diarization benchmark clips (video_540ss).",
+    structure=STRUCTURE,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),
         extra_decode_cases=systematic_profile_cases,

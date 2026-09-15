@@ -1,3 +1,5 @@
+"""Container-timeline audio/video offsets derived from stream metadata."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -6,10 +8,11 @@ import pandas as pd
 def compute_av_sync_metadata(
     media_metadata: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Derive container-timeline A/V offsets from B1 stream metadata.
+    """Derive container-timeline A/V offsets from the media metadata table.
 
-    Duration differences are retained as measurements and are not interpreted as
-    perceptual synchronization failures.
+    Adds ``av_start_offset_sec`` (audio minus video start), stream end times,
+    ``av_end_delta_sec`` and its absolute value. Duration differences are
+    measurements, not perceptual synchronization failures.
     """
     required = {
         "audio_start_time_sec",

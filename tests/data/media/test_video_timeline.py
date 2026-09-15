@@ -6,6 +6,7 @@ import pytest
 
 from conv_wm.data.media.video_timeline import (
     analyze_frame_timeline,
+    known_boundaries_within,
     make_timeline_windows,
     probe_video_timestamps,
 )
@@ -25,9 +26,9 @@ def test_analyze_frame_timeline_empty_frames_is_insufficient_data():
         time_base=TIME_BASE,
     )
 
-    assert result["timeline_class"] == "insufficient_data"
-    assert result["n_frames"] == 0
-    assert result["timestamp_coverage"] == 0.0
+    assert result.to_row()["timeline_class"] == "insufficient_data"
+    assert result.to_row()["n_frames"] == 0
+    assert result.to_row()["timestamp_coverage"] == 0.0
 
 
 def test_analyze_frame_timeline_cfr_is_consistent():
@@ -37,10 +38,10 @@ def test_analyze_frame_timeline_cfr_is_consistent():
         time_base=TIME_BASE,
     )
 
-    assert result["timeline_class"] == "cfr_consistent"
-    assert result["monotonic"] is True
-    assert result["n_duplicate_timestamps"] == 0
-    assert result["max_delta_error_ticks"] <= 1.0
+    assert result.to_row()["timeline_class"] == "cfr_consistent"
+    assert result.to_row()["monotonic"] is True
+    assert result.to_row()["n_duplicate_timestamps"] == 0
+    assert result.to_row()["max_delta_error_ticks"] <= 1.0
 
 
 def test_analyze_frame_timeline_detects_dropped_frame():
@@ -52,8 +53,8 @@ def test_analyze_frame_timeline_detects_dropped_frame():
         time_base=TIME_BASE,
     )
 
-    assert result["timeline_class"] == "vfr_or_irregular"
-    assert result["delta_max_sec"] == pytest.approx(2 / FPS)
+    assert result.to_row()["timeline_class"] == "vfr_or_irregular"
+    assert result.to_row()["delta_max_sec"] == pytest.approx(2 / FPS)
 
 
 def test_analyze_frame_timeline_ignores_untimestamped_packets():
@@ -66,9 +67,9 @@ def test_analyze_frame_timeline_ignores_untimestamped_packets():
         time_base=TIME_BASE,
     )
 
-    assert result["n_frames"] == 11
-    assert result["n_timestamped"] == 10
-    assert result["timeline_class"] == "cfr_consistent"
+    assert result.to_row()["n_frames"] == 11
+    assert result.to_row()["n_timestamped"] == 10
+    assert result.to_row()["timeline_class"] == "cfr_consistent"
 
 
 def test_make_timeline_windows_short_video_is_single_window():
@@ -128,7 +129,7 @@ def test_probe_video_timestamps_returns_sorted_presentation_order(synthetic_vide
         time_base=TIME_BASE,
     )
 
-    assert result["timeline_class"] == "cfr_consistent"
+    assert result.to_row()["timeline_class"] == "cfr_consistent"
 
 
 def test_probe_video_timestamps_honours_read_intervals(synthetic_video):
@@ -143,3 +144,24 @@ def test_probe_video_timestamps_honours_read_intervals(synthetic_video):
 def test_probe_video_timestamps_raises_on_missing_file(tmp_path):
     with pytest.raises(RuntimeError, match="ffprobe failed"):
         probe_video_timestamps(tmp_path / "missing.mp4")
+
+
+def test_known_boundaries_add_windows_inside_the_stream():
+    windows = make_timeline_windows(
+        1000.0, window_sec=10.0, known_boundaries_sec=(300.0, 600.0, 900.0, 1200.0)
+    )
+
+    assert set(windows) == {
+        "start",
+        "middle",
+        "end",
+        "boundary_1",
+        "boundary_2",
+        "boundary_3",
+    }
+    assert windows["boundary_1"] == "295.000000%+10.000000"
+
+
+def test_known_boundaries_within_excludes_the_stream_end():
+    assert known_boundaries_within(900.0, period_sec=300.0) == (300.0, 600.0)
+    assert known_boundaries_within(1000.0, period_sec=None) == ()
