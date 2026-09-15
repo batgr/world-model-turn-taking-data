@@ -218,6 +218,8 @@ class CrossSourceResult:
     right_covered_fraction: float
     n_left_uncovered: int
     n_right_uncovered: int
+    left_uncovered_duration_quantiles: dict[str, float]
+    right_uncovered_duration_quantiles: dict[str, float]
     n_shared_keys: int
     n_left_only_keys: int
     n_right_only_keys: int
@@ -706,6 +708,23 @@ def _exact_mask(left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray:
     )
 
 
+def _duration_quantiles(frame: pd.DataFrame, selected: np.ndarray) -> dict[str, float]:
+    """Quantiles of selected interval durations in their declared source unit."""
+    duration = frame.loc[selected, "_end"] - frame.loc[selected, "_start"]
+    if duration.empty:
+        return {}
+    return {
+        name: float(duration.quantile(quantile))
+        for name, quantile in (
+            ("min", 0.0),
+            ("p05", 0.05),
+            ("median", 0.5),
+            ("p95", 0.95),
+            ("max", 1.0),
+        )
+    }
+
+
 def compare_sources(
     comparison: CrossSourceComparison,
     left_spec: AnnotationSourceSpec,
@@ -760,6 +779,12 @@ def compare_sources(
         else math.nan,
         n_left_uncovered=int((~left_covered).sum()),
         n_right_uncovered=int((~right_covered).sum()),
+        left_uncovered_duration_quantiles=_duration_quantiles(
+            left_frame, ~left_covered
+        ),
+        right_uncovered_duration_quantiles=_duration_quantiles(
+            right_frame, ~right_covered
+        ),
         n_shared_keys=len(left_keys & right_keys),
         n_left_only_keys=len(left_keys - right_keys),
         n_right_only_keys=len(right_keys - left_keys),

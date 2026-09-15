@@ -1,8 +1,14 @@
 from pathlib import Path
 
 import pandas as pd
+from omegaconf import OmegaConf
 
-from conv_wm.data.cleaning import remove_rows_missing_required_fields
+from conv_wm.data import datasets
+from conv_wm.data.cleaning import (
+    CleanedAnnotationTable,
+    remove_rows_missing_required_fields,
+    run_annotation_cleaning,
+)
 from conv_wm.data.datasets.ego4d_cleaning import (
     SOCIAL_COLUMNS,
     TRANSCRIPTION_COLUMNS,
@@ -11,6 +17,7 @@ from conv_wm.data.datasets.ego4d_cleaning import (
     extract_annotation_tables,
 )
 from conv_wm.data.datasets.egocom_cleaning import clean_ground_truth
+from conv_wm.data.datasets.spec import DatasetSpec
 
 
 def _voice_row(**overrides):
@@ -190,3 +197,52 @@ def test_null_nested_annotation_collection_is_structurally_empty():
     )
 
     assert all(table.empty for table in tables.values())
+
+
+def test_cleaning_orchestration_writes_accounted_table_and_report(tmp_path):
+    def cleaner(_):
+        return [
+            CleanedAnnotationTable(
+                dataset="synthetic",
+                name="events",
+                output_key="events_clean",
+                source_rows=2,
+                table=pd.DataFrame({"id": [1]}),
+                decision="CHANGE FILTER",
+                reason="one missing required identity",
+                required_fields=("id",),
+                optional_nullable_fields=(),
+                removed_by_reason={"missing_required_field:id": 1},
+                cleaning_rule="synthetic-v1",
+                source_paths=(tmp_path / "raw.csv",),
+            )
+        ]
+
+    reports = tmp_path / "reports"
+    cfg = OmegaConf.create(
+        {
+            "paths": {
+                stage: str(tmp_path / stage)
+                for stage in ("raw", "interim", "validated", "processed", "model_ready")
+            }
+            | {"reports": str(reports)},
+            "datasets": {
+                "synthetic": {
+                    "interim": str(tmp_path / "interim"),
+                    "files": {"events_clean": "events_clean.parquet"},
+                }
+            },
+        }
+    )
+    datasets.register(DatasetSpec(name="synthetic", annotation_cleaner=cleaner))
+    try:
+        outputs = run_annotation_cleaning(cfg, dataset_names=["synthetic"])
+    finally:
+        datasets.unregister("synthetic")
+
+    account = outputs.summary["datasets"]["synthetic"]["tables"]["events"]
+    assert account["source_rows"] == 2
+    assert account["output_rows"] == 1
+    assert account["rows_removed"] == 1
+    assert (tmp_path / "interim" / "events_clean.parquet").exists()
+    assert outputs.summary_path == reports / "cleaning" / "annotations" / "summary.json"

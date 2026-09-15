@@ -136,7 +136,8 @@ def build_annotation_summary(results: list[DatasetAnnotationResult]) -> JsonDict
                 "info": "expected property, recorded for completeness",
             },
             "cross_source_agreement": (
-                "interval overlap per shared entity; disagreement is reported, not judged"
+                "exact interval identity and directional overlap per shared entity; "
+                "disagreement is reported, not judged"
             ),
         },
     }
@@ -212,8 +213,10 @@ def format_annotation_summary(outputs: AnnotationOutputs) -> str:
             )
         for comparison in result.comparisons:
             lines.append(
-                f"  {comparison.name}: {comparison.left_source} covered "
-                f"{comparison.left_covered_fraction:.1%}, {comparison.right_source} covered "
+                f"  {comparison.name}: exact "
+                f"{comparison.left_exact_identity_fraction:.1%}/"
+                f"{comparison.right_exact_identity_fraction:.1%}, overlap "
+                f"{comparison.left_covered_fraction:.1%}/"
                 f"{comparison.right_covered_fraction:.1%}"
             )
     lines.append(f"overall: {'PASS' if outputs.valid else 'FAIL'}")

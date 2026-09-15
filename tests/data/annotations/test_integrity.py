@@ -210,6 +210,7 @@ def test_cross_source_overlap_coverage_is_directional():
     assert result.right_covered_fraction == pytest.approx(1.0)
     assert result.n_shared_keys == 1
     assert result.n_left_only_keys == 1
+    assert result.left_uncovered_duration_quantiles["median"] == pytest.approx(1.0)
 
 
 def test_cross_source_exact_identity_is_generic_and_directional():
