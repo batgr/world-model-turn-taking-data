@@ -20,6 +20,10 @@ notebooks = [
     "skimpy>=0.0.21",
     "tqdm>=4.70.0",
 ]
+vad = [
+    "onnxruntime>=1.20",
+    "silero-vad>=6.2",
+]
 
 [project.scripts]
 conv-wm = "conv_wm.cli:main"

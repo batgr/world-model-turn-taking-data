@@ -33,6 +33,8 @@ class AuditCommand:
     help: str
     run: Callable[[DictConfig, argparse.Namespace], int]
     supports_workers: bool = False
+    supports_dataset: bool = False
+    supports_coverage_config: bool = False
 
 
 def _audit_manifest(cfg: DictConfig, _: argparse.Namespace) -> int:
@@ -109,6 +111,39 @@ def _audit_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
     return EXIT_OK if outputs.valid else EXIT_AUDIT_FAILED
 
 
+def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.audits.vocal_annotation_coverage import (
+        run_vocal_annotation_coverage_audit,
+    )
+
+    command = ["conv-wm"]
+    if args.config is not None:
+        command += ["--config", str(args.config)]
+    command += [
+        "audit",
+        "vocal-annotation-coverage",
+        "--dataset",
+        args.dataset,
+    ]
+    if args.coverage_config is not None:
+        command += ["--coverage-config", str(args.coverage_config)]
+    outputs = run_vocal_annotation_coverage_audit(
+        cfg,
+        dataset=args.dataset,
+        coverage_config_path=args.coverage_config,
+        command=" ".join(command),
+    )
+    statistics = outputs.report["coverage_statistics"]
+    assert isinstance(statistics, dict)
+    print(
+        f"recordings: {statistics['successful_recording_count']}/"
+        f"{statistics['recording_count']}  unresolved ratio: "
+        f"{statistics['unresolved_identity_ratio']}"
+    )
+    print(f"report: {outputs.report_path}")
+    return EXIT_OK
+
+
 def _clean_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
     from conv_wm.data.cleaning import (
         format_annotation_cleaning_summary,
@@ -150,6 +185,13 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         "annotation integrity of registered datasets (needs media)",
         _audit_annotations,
     ),
+    AuditCommand(
+        "vocal-annotation-coverage",
+        "measure acoustic and defensible focal voice annotation coverage",
+        _audit_vocal_annotation_coverage,
+        supports_dataset=True,
+        supports_coverage_config=True,
+    ),
 )
 
 
@@ -178,6 +220,20 @@ def build_parser() -> argparse.ArgumentParser:
                 type=int,
                 default=4,
                 help="parallel ffprobe workers (default 4)",
+            )
+        if command.supports_dataset:
+            sub.add_argument(
+                "--dataset",
+                choices=("egocom", "ego4d", "all"),
+                default="all",
+                help="dataset population to audit (default all)",
+            )
+        if command.supports_coverage_config:
+            sub.add_argument(
+                "--coverage-config",
+                type=Path,
+                default=None,
+                help="versioned VAD, identity and overlap configuration",
             )
         sub.set_defaults(handler=command.run)
     clean = subparsers.add_parser(
@@ -215,7 +271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (MissingPrerequisiteError, FFprobeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_FAILURE
-    except (FileNotFoundError, TypeError, ValueError, KeyError) as exc:
+    except (FileNotFoundError, ImportError, TypeError, ValueError, KeyError) as exc:
         print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return EXIT_FAILURE
 

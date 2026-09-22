@@ -1,0 +1,32 @@
+# Versioned parameters of the vocal annotation coverage audit.
+# Every value here is copied into report.json; change them here, never in code.
+schema_version: 1
+
+detector:
+  name: silero_vad
+  sample_rate_hz: 16000
+  threshold: 0.5            # speech probability above which a chunk starts speech
+  neg_threshold: null       # end-of-speech probability; null = silero default (threshold - 0.15)
+  min_speech_duration_ms: 100   # short vocalisations ("mm", "hm") must survive
+  min_silence_duration_ms: 100
+  speech_pad_ms: 30
+  window_size_samples: 512  # 32 ms chunks at 16 kHz; the model's native window
+
+coverage:
+  annotation_overlap_tolerance_s: 0.2   # focal annotation dilated by this before overlap
+  covered_min_overlap_ratio: 0.9        # detected duration inside (dilated) annotation
+  uncovered_max_overlap_ratio: 0.1
+  annotation_merge_gap_s: 0.3           # gaps <= this between annotation intervals are merged
+  duration_bucket_edges_s: [0.25, 0.5, 1.0]
+  short_segment_max_duration_s: 0.5
+
+identity:
+  focal_annotation_min_overlap_ratio: 0.5   # annotation alone identifies only substantially overlapping segments
+  other_annotation_min_overlap_ratio: 0.5   # overlap with another participant's annotation
+  multi_device_energy:
+    frame_s: 0.01
+    dominance_threshold_db: 3.0     # |focal - loudest other| below this is unresolved
+    min_identity_confidence: 0.8    # validated precision below which attributions are unresolved
+    validation_min_intervals: 20    # annotated intervals per class needed to validate a recording
+    sync_max_lag_s: 2.0
+    sync_min_correlation: 0.2

@@ -40,6 +40,7 @@ def test_help_lists_every_audit(capsys):
         "audio",
         "sync",
         "annotations",
+        "vocal-annotation-coverage",
     ):
         assert name in out
 
