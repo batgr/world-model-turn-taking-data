@@ -82,3 +82,53 @@ def test_manifest_audit_runs_end_to_end_on_an_empty_root(tmp_path, capsys):
     assert code == cli.EXIT_OK
     assert (tmp_path / "reports" / "manifest" / "summary.json").exists()
     assert "1 files" in capsys.readouterr().out
+
+
+def test_build_help_lists_the_three_v0_vocal_layers(capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(["build", "--help"])
+
+    assert exit_info.value.code == 0
+    out = capsys.readouterr().out
+    assert "native-focal-voice-state" in out
+    assert "control-focal-voice-state" in out
+    assert "vocal-action-grid" in out
+
+
+def test_control_focal_voice_state_reports_its_missing_prerequisite(tmp_path, capsys):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        OmegaConf.to_yaml(
+            OmegaConf.create(
+                {
+                    "paths": {
+                        stage: str(tmp_path / stage)
+                        for stage in (
+                            "raw",
+                            "interim",
+                            "validated",
+                            "processed",
+                            "model_ready",
+                            "reports",
+                        )
+                    },
+                    "datasets": {"ego4d": {}, "egocom": {}},
+                    "manifest": {"output": str(tmp_path / "manifest.parquet")},
+                }
+            )
+        )
+    )
+
+    code = cli.main(
+        [
+            "--config",
+            str(config),
+            "build",
+            "control-focal-voice-state",
+            "--dataset",
+            "ego4d",
+        ]
+    )
+
+    assert code == cli.EXIT_FAILURE
+    assert "conv-wm build native-focal-voice-state" in capsys.readouterr().err

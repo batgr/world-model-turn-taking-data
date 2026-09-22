@@ -10,6 +10,9 @@ from conv_wm.data.cleaning import (
     run_annotation_cleaning,
 )
 from conv_wm.data.datasets.ego4d_cleaning import (
+    CLIP_COLUMNS,
+    MISSING_VOICE_COLUMNS,
+    PERSON_COLUMNS,
     SOCIAL_COLUMNS,
     TRANSCRIPTION_COLUMNS,
     VOICE_COLUMNS,
@@ -72,8 +75,40 @@ def _social_row(**overrides):
     return row
 
 
-def _clean_ego4d(*, talking, looking=None, voice=None, transcriptions=None):
+def _clip_row(**overrides):
+    row = {
+        "split": "train",
+        "clip_uid": "clip-1",
+        "source_clip_uid": "source-1",
+        "video_uid": "video-1",
+        "video_start_sec": 10.0,
+        "video_end_sec": 20.0,
+        "video_start_frame": 300,
+        "video_end_frame": 600,
+        "clip_start_sec": 0,
+        "clip_end_sec": 10.0,
+        "clip_start_frame": 0,
+        "clip_end_frame": 300,
+        "valid": True,
+    }
+    row.update(overrides)
+    return row
+
+
+def _clean_ego4d(
+    *, talking, looking=None, voice=None, transcriptions=None, clips=None, missing=None
+):
     sources = {
+        "clips": pd.DataFrame.from_records(
+            clips or [_clip_row()], columns=CLIP_COLUMNS
+        ),
+        "persons": pd.DataFrame.from_records(
+            [{"clip_uid": "clip-1", "person_id": "0", "is_camera_wearer": True}],
+            columns=PERSON_COLUMNS,
+        ),
+        "missing_voice_segments": pd.DataFrame.from_records(
+            missing or [], columns=MISSING_VOICE_COLUMNS
+        ).astype({"start_time": float, "end_time": float}),
         "voice_segments": pd.DataFrame.from_records(
             voice or [_voice_row()], columns=VOICE_COLUMNS
         ),
@@ -196,7 +231,53 @@ def test_null_nested_annotation_collection_is_structurally_empty():
         ]
     )
 
-    assert all(table.empty for table in tables.values())
+    assert len(tables["clips"]) == 1
+    assert tables["clips"].loc[0, "clip_uid"] == "clip-1"
+    assert all(table.empty for name, table in tables.items() if name != "clips")
+
+
+def test_clip_validity_wearer_and_missing_voice_regions_are_extracted():
+    tables = extract_annotation_tables(
+        [
+            {
+                "split": "val",
+                "clips": [
+                    {
+                        **{k: v for k, v in _clip_row().items() if k != "split"},
+                        "valid": False,
+                        "missing_voice_segments": [
+                            {"person": "0", "start_time": 1.0, "end_time": 2.0}
+                        ],
+                        "persons": [
+                            {
+                                "person_id": "0",
+                                "camera_wearer": True,
+                                "voice_segments": [],
+                            },
+                            {"person_id": "1", "camera_wearer": False},
+                        ],
+                    }
+                ],
+            }
+        ]
+    )
+
+    clip = tables["clips"].loc[0]
+    assert (clip["split"], clip["valid"], clip["video_start_sec"]) == (
+        "val",
+        False,
+        10.0,
+    )
+    assert tables["persons"]["is_camera_wearer"].tolist() == [True, False]
+    missing = tables["missing_voice_segments"].loc[0]
+    assert (missing["person_id"], missing["start_time"], missing["end_time"]) == (
+        "0",
+        1.0,
+        2.0,
+    )
+    results = {r.name: r for r in clean_annotation_tables(tables)}
+    assert results["clips"].statistics == {"invalid_clip_rows": 1}
+    assert results["missing_voice_segments"].output_rows == 1
 
 
 def test_cleaning_orchestration_writes_accounted_table_and_report(tmp_path):

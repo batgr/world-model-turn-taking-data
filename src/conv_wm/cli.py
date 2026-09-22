@@ -144,6 +144,57 @@ def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) 
     return EXIT_OK
 
 
+def _build_native_focal_voice_state(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.native_focal_voice_state import (
+        format_outputs,
+        run_native_focal_voice_state_build,
+    )
+
+    command = ["conv-wm"]
+    if args.config is not None:
+        command += ["--config", str(args.config)]
+    command += ["build", "native-focal-voice-state", "--dataset", args.dataset]
+    outputs = run_native_focal_voice_state_build(
+        cfg, dataset=args.dataset, command=" ".join(command)
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK
+
+
+def _build_control_focal_voice_state(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.control_focal_voice_state import (
+        format_outputs,
+        run_control_focal_voice_state_build,
+    )
+
+    command = ["conv-wm"]
+    if args.config is not None:
+        command += ["--config", str(args.config)]
+    command += ["build", "control-focal-voice-state", "--dataset", args.dataset]
+    outputs = run_control_focal_voice_state_build(
+        cfg, dataset=args.dataset, command=" ".join(command)
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK
+
+
+def _build_vocal_action_grid(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.vocal_action_grid import (
+        format_outputs,
+        run_vocal_action_grid_build,
+    )
+
+    command = ["conv-wm"]
+    if args.config is not None:
+        command += ["--config", str(args.config)]
+    command += ["build", "vocal-action-grid", "--dataset", args.dataset]
+    outputs = run_vocal_action_grid_build(
+        cfg, dataset=args.dataset, command=" ".join(command)
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK
+
+
 def _clean_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
     from conv_wm.data.cleaning import (
         format_annotation_cleaning_summary,
@@ -244,6 +295,41 @@ def build_parser() -> argparse.ArgumentParser:
         "annotations", help="clean registered annotation sources into interim tables"
     )
     clean_annotations.set_defaults(handler=_clean_annotations)
+    build = subparsers.add_parser("build", help="build derived data products")
+    build_subparsers = build.add_subparsers(dest="build", required=True)
+    native_state = build_subparsers.add_parser(
+        "native-focal-voice-state",
+        help="derive the wearer's SPEAKING/SILENT/UNKNOWN timeline from native annotations",
+    )
+    native_state.add_argument(
+        "--dataset",
+        choices=("egocom", "ego4d", "all"),
+        default="all",
+        help="dataset to build (default all)",
+    )
+    native_state.set_defaults(handler=_build_native_focal_voice_state)
+    control_state = build_subparsers.add_parser(
+        "control-focal-voice-state",
+        help="requantize the native vocal state at Δ by sub-step silence bridging",
+    )
+    control_state.add_argument(
+        "--dataset",
+        choices=("egocom", "ego4d", "all"),
+        default="all",
+        help="dataset to build (default all)",
+    )
+    control_state.set_defaults(handler=_build_control_focal_voice_state)
+    action_grid = build_subparsers.add_parser(
+        "vocal-action-grid",
+        help="sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
+    )
+    action_grid.add_argument(
+        "--dataset",
+        choices=("egocom", "ego4d", "all"),
+        default="all",
+        help="dataset to build (default all)",
+    )
+    action_grid.set_defaults(handler=_build_vocal_action_grid)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
     return parser

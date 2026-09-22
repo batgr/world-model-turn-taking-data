@@ -19,7 +19,28 @@ from conv_wm.data.cleaning import (
     require_source_columns,
 )
 
-RULE_VERSION = "ego4d-annotation-cleaning-v1"
+RULE_VERSION = "ego4d-annotation-cleaning-v2"
+
+CLIP_COLUMNS = (
+    "split",
+    "clip_uid",
+    "source_clip_uid",
+    "video_uid",
+    "video_start_sec",
+    "video_end_sec",
+    "video_start_frame",
+    "video_end_frame",
+    "clip_start_sec",
+    "clip_end_sec",
+    "clip_start_frame",
+    "clip_end_frame",
+    "valid",
+)
+PERSON_COLUMNS = ("clip_uid", "person_id", "is_camera_wearer")
+MISSING_VOICE_COLUMNS = ("clip_uid", "person_id", "start_time", "end_time")
+"""``missing_voice_segments`` entries: the release ships the key on every clip
+but no entry, so the item layout mirrors ``voice_segments`` (``person``,
+``start_time``, ``end_time``) and any other key is kept out."""
 
 VOICE_COLUMNS = (
     "clip_uid",
@@ -59,6 +80,9 @@ SOCIAL_COLUMNS = (
     "is_at_me",
 )
 
+CLIP_REQUIRED = CLIP_COLUMNS
+PERSON_REQUIRED = PERSON_COLUMNS
+MISSING_VOICE_REQUIRED = ("clip_uid", "start_time", "end_time")
 VOICE_REQUIRED = VOICE_COLUMNS
 TRANSCRIPTION_REQUIRED = TRANSCRIPTION_COLUMNS
 SOCIAL_REQUIRED = tuple(column for column in SOCIAL_COLUMNS if column != "target")
@@ -124,6 +148,9 @@ def extract_annotation_tables(
 ) -> dict[str, pd.DataFrame]:
     """Flatten only annotation collections affected by historical null filtering."""
     records: dict[str, list[dict[str, Any]]] = {
+        "clips": [],
+        "persons": [],
+        "missing_voice_segments": [],
         "voice_segments": [],
         "transcriptions": [],
         "social_segments_talking": [],
@@ -135,9 +162,33 @@ def extract_annotation_tables(
                 raise TypeError("Ego4D clips must be JSON objects")
             clip = clip_value
             clip_uid = clip.get("clip_uid")
+            records["clips"].append(
+                {
+                    "split": video.get("split"),
+                    **{key: clip.get(key) for key in CLIP_COLUMNS if key != "split"},
+                }
+            )
+            for missing_value in _collection(clip, "missing_voice_segments"):
+                if not isinstance(missing_value, Mapping):
+                    raise TypeError("Ego4D missing voice segments must be JSON objects")
+                records["missing_voice_segments"].append(
+                    {
+                        "clip_uid": clip_uid,
+                        "person_id": missing_value.get("person"),
+                        "start_time": missing_value.get("start_time"),
+                        "end_time": missing_value.get("end_time"),
+                    }
+                )
             for person_value in _collection(clip, "persons"):
                 if not isinstance(person_value, Mapping):
                     raise TypeError("Ego4D persons must be JSON objects")
+                records["persons"].append(
+                    {
+                        "clip_uid": clip_uid,
+                        "person_id": person_value.get("person_id"),
+                        "is_camera_wearer": person_value.get("camera_wearer"),
+                    }
+                )
                 for segment_value in _collection(person_value, "voice_segments"):
                     if not isinstance(segment_value, Mapping):
                         raise TypeError("Ego4D voice segments must be JSON objects")
@@ -159,6 +210,20 @@ def extract_annotation_tables(
                     annotation["clip_uid"] = clip_uid
                     records[source_name].append(annotation)
     return {
+        "clips": pd.DataFrame.from_records(records["clips"], columns=CLIP_COLUMNS),
+        "persons": pd.DataFrame.from_records(
+            records["persons"], columns=PERSON_COLUMNS
+        ),
+        "missing_voice_segments": pd.DataFrame.from_records(
+            records["missing_voice_segments"], columns=MISSING_VOICE_COLUMNS
+        ).astype(
+            {
+                "clip_uid": "string",
+                "person_id": "string",
+                "start_time": float,
+                "end_time": float,
+            }
+        ),
         "voice_segments": pd.DataFrame.from_records(
             records["voice_segments"], columns=VOICE_COLUMNS
         ),
@@ -209,6 +274,36 @@ def clean_annotation_tables(
     sources: Mapping[str, pd.DataFrame],
 ) -> list[CleanedAnnotationTable]:
     """Apply the reviewed required-field policy to flat Ego4D source tables."""
+    clips = _clean_table(
+        sources["clips"],
+        name="clips",
+        required=CLIP_REQUIRED,
+        optional=(),
+        decision="NO FILTER NEEDED",
+        reason=(
+            "Clip records carry the annotated window, the release validity flag and "
+            "the split; every field is structural and always present."
+        ),
+    )
+    persons = _clean_table(
+        sources["persons"],
+        name="persons",
+        required=PERSON_REQUIRED,
+        optional=(),
+        decision="NO FILTER NEEDED",
+        reason="One row per annotated person and clip, with the camera-wearer flag.",
+    )
+    missing_voice = _clean_table(
+        sources["missing_voice_segments"],
+        name="missing_voice_segments",
+        required=MISSING_VOICE_REQUIRED,
+        optional=("person_id",),
+        decision="NO FILTER NEEDED",
+        reason=(
+            "Explicitly missing voice-annotation regions; the release ships none, "
+            "and any that appear must become UNKNOWN downstream, never silence."
+        ),
+    )
     voice = _clean_table(
         sources["voice_segments"],
         name="voice_segments",
@@ -256,6 +351,21 @@ def clean_annotation_tables(
     talking_table = talking.table
     looking_table = looking.table
     return [
+        replace(
+            clips,
+            statistics={
+                "invalid_clip_rows": int((~clips.table["valid"].astype(bool)).sum()),
+            },
+        ),
+        replace(
+            persons,
+            statistics={
+                "camera_wearer_rows": int(
+                    persons.table["is_camera_wearer"].astype(bool).sum()
+                ),
+            },
+        ),
+        missing_voice,
         voice,
         transcriptions,
         replace(

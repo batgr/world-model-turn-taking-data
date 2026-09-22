@@ -22,6 +22,7 @@ datasets:
       av: av.parquet
       clips_clean: clips_clean.parquet
       persons_clean: persons_clean.parquet
+      missing_voice_segments_clean: missing_voice_segments_clean.parquet
       tracking_paths_clean: tracking_paths_clean.parquet
       voice_segments_clean: voice_segments_clean.parquet
       transcriptions_clean: transcriptions_clean.parquet

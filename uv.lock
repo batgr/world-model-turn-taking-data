@@ -210,16 +210,16 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+coverage-audit = [
+    { name = "onnxruntime" },
+    { name = "silero-vad" },
+]
 notebooks = [
     { name = "matplotlib" },
     { name = "pyyaml" },
     { name = "seaborn" },
     { name = "skimpy" },
     { name = "tqdm" },
-]
-vad = [
-    { name = "onnxruntime" },
-    { name = "silero-vad" },
 ]
 
 [package.dev-dependencies]
@@ -234,17 +234,17 @@ dev = [
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'notebooks'", specifier = ">=3.11.1" },
     { name = "omegaconf", specifier = ">=2.3.1" },
-    { name = "onnxruntime", marker = "extra == 'vad'", specifier = ">=1.20" },
+    { name = "onnxruntime", marker = "extra == 'coverage-audit'", specifier = ">=1.20" },
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pandera", extras = ["pandas"], specifier = ">=0.33.1" },
     { name = "pyarrow", specifier = ">=25.0.0" },
     { name = "pyyaml", marker = "extra == 'notebooks'", specifier = ">=6.0.3" },
     { name = "seaborn", marker = "extra == 'notebooks'", specifier = ">=0.13.2" },
-    { name = "silero-vad", marker = "extra == 'vad'", specifier = ">=6.2" },
+    { name = "silero-vad", marker = "extra == 'coverage-audit'", specifier = ">=6.2" },
     { name = "skimpy", marker = "extra == 'notebooks'", specifier = ">=0.0.21" },
     { name = "tqdm", marker = "extra == 'notebooks'", specifier = ">=4.70.0" },
 ]
-provides-extras = ["notebooks", "vad"]
+provides-extras = ["notebooks", "coverage-audit"]
 
 [package.metadata.requires-dev]
 dev = [

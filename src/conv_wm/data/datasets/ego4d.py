@@ -24,6 +24,7 @@ from conv_wm.data.annotations import (
     TimeUnit,
 )
 from conv_wm.data.datasets.ego4d_cleaning import build_annotation_cleaning
+from conv_wm.data.datasets.ego4d_native_voice import load_ego4d_native_voice
 from conv_wm.data.datasets.spec import (
     AudioInterpretation,
     DatasetSpec,
@@ -50,9 +51,22 @@ EGO4D_CLIPS_SCHEMA = pa.DataFrameSchema(
         "clip_end_sec": pa.Column(float, nullable=False),
         "clip_start_frame": pa.Column(int, nullable=False),
         "clip_end_frame": pa.Column(int, nullable=False),
+        "valid": pa.Column(bool, nullable=False),
     },
     strict=True,
     name="ego4d_clips_clean",
+)
+
+
+EGO4D_MISSING_VOICE_SCHEMA = pa.DataFrameSchema(
+    {
+        "clip_uid": pa.Column(str, nullable=False),
+        "person_id": pa.Column(str, nullable=True),
+        "start_time": pa.Column(float, nullable=False),
+        "end_time": pa.Column(float, nullable=False),
+    },
+    strict=True,
+    name="ego4d_missing_voice_segments_clean",
 )
 
 
@@ -197,6 +211,7 @@ STRUCTURE = StructuralSpec(
         for name, schema in (
             ("clips_clean", EGO4D_CLIPS_SCHEMA),
             ("persons_clean", EGO4D_PERSONS_SCHEMA),
+            ("missing_voice_segments_clean", EGO4D_MISSING_VOICE_SCHEMA),
             ("tracking_paths_clean", EGO4D_TRACKING_PATHS_SCHEMA),
             ("tracks_clean", EGO4D_TRACKS_SCHEMA),
             ("voice_segments_clean", EGO4D_VOICE_SEGMENTS_SCHEMA),
@@ -207,6 +222,7 @@ STRUCTURE = StructuralSpec(
     ),
     relations=(
         _clip_relation("persons_clean", "persons"),
+        _clip_relation("missing_voice_segments_clean", "missing_voice_segments"),
         _clip_relation("tracking_paths_clean", "tracking_paths"),
         _clip_relation("tracks_clean", "tracks"),
         _clip_relation("voice_segments_clean", "voice_segments"),
@@ -596,6 +612,7 @@ EGO4D = DatasetSpec(
     structure=STRUCTURE,
     annotations=ANNOTATIONS,
     annotation_cleaner=build_annotation_cleaning,
+    native_focal_voice=load_ego4d_native_voice,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),
         extra_decode_cases=systematic_profile_cases,

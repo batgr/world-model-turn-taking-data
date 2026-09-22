@@ -36,10 +36,19 @@ laboratory notebook. It holds the investigations that led to the current
 audio taxonomy and is kept as evidence; it is not the implementation and it
 is not updated when the implementation changes.
 
-## Stages and capabilities
+## The v0 pipeline
 
-Data flows `raw → interim → validated → processed → model_ready`. The current
-pipeline covers the audits that make raw and interim data trustworthy:
+Data flows `raw → interim → validated → processed → model_ready`. The v0
+vocal pipeline is ego-only and annotation-only:
+
+```text
+raw annotations
+    -> structural / integrity validation      (audits, cleaning)
+    -> native focal vocal state               SPEAKING / SILENT / UNKNOWN per wearer
+    -> control focal vocal state              the same, requantized at Δ = 100 ms
+    -> vocal action grid                      Δ = 100 ms, NO_EVENT / ONSET / OFFSET or masked
+    -> model-ready                            (later)
+```
 
 | Capability | Command | Report |
 | --- | --- | --- |
@@ -50,16 +59,60 @@ pipeline covers the audits that make raw and interim data trustworthy:
 | Audio timeline audit | `conv-wm audit audio` | `temporal/audio_timeline/` |
 | A/V technical alignment | `conv-wm audit sync` | `temporal/av_sync/` |
 | Annotation integrity | `conv-wm audit annotations` | `annotations/` |
-| Targeted annotation cleaning | `conv-wm clean annotations` | `cleaning/annotations/summary.json` |
-| Vocal annotation coverage | `conv-wm audit vocal-annotation-coverage --dataset all` | `vocal_annotation_coverage/` |
+| Targeted annotation cleaning | `conv-wm clean annotations` | interim tables, `cleaning/annotations/summary.json` |
+| **Native focal voice state (v0 layer)** | `conv-wm build native-focal-voice-state --dataset all` | `native_focal_voice_state/<dataset>/`, data in `${paths.processed}/native_focal_voice_state/<dataset>/` |
+| **Control focal voice state (v0 layer)** | `conv-wm build control-focal-voice-state --dataset all` | `control_focal_voice_state/<dataset>/`, data in `${paths.processed}/control_focal_voice_state/<dataset>/` |
+| **Vocal action grid (v0 layer)** | `conv-wm build vocal-action-grid --dataset all` | `vocal_action_grid/<dataset>/`, data in `${paths.processed}/vocal_action_grid/<dataset>/` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;
-media reads the manifest. A missing prerequisite stops the command with the
-command that produces it. There is no other ordering constraint.
+media reads the manifest; the native focal voice-state build reads the cleaned
+annotation tables, the media metadata table and the manifest; the control focal
+voice-state build reads only the native artifact; the vocal action grid reads
+the control artifact (and the native timeline its report points at, gridded as
+a diagnostic comparison only). Each layer refuses an input whose checksum no
+longer matches the report that produced it. A missing prerequisite stops the
+command with the command that produces it. There is no other ordering
+constraint.
 
-Label/cue ontology, temporal representation and model-ready packaging are later
-capabilities (pages 08–09 remain placeholders).
+The native state is derived from native annotations only
+([`native_focal_voice_state.md`](native_focal_voice_state.md)): Ego4D
+camera-wearer `voice_segments` and EgoCom speaker-attributed word timings.
+Its two documented limitations — EgoCom absence of annotation is `SILENT`
+despite a measured focal-specific coverage of 83.49 %, and Ego4D
+`voice_segments` may absorb short internal pauses — are not corrected in v0.
+
+The native timeline is immutable. The control layer
+([`control_focal_voice_state.md`](control_focal_voice_state.md)) requantizes it
+at Δ = 100 ms with one rule — sub-step silence bridging, `SPEAKING → SILENT
+(g < Δ) → SPEAKING` becomes continuous `SPEAKING` — and keeps the provenance of
+every bridged gap. Short speech bursts are deliberately not filtered. This is a
+statement about the controller's resolution, not a correction of the
+annotations.
+
+The vocal action grid ([`vocal_action_grid.md`](vocal_action_grid.md)) samples
+the control state every Δ = 100 ms as `NO_EVENT` / `ONSET` / `OFFSET`, masking
+any slot the vocabulary cannot express (unknown state or time, more than one
+transition) rather than inventing a label. It merges nothing itself and reports
+both grids: bridging takes EgoCom's compound slots from 34 495 to 2 083 (valid
+action ratio 97.44 % → 99.78 %) and Ego4D's from 20 to 1. What survives is the
+short speech bursts, which are kept on purpose.
+
+## Diagnostic audit (not part of v0)
+
+| Capability | Command | Report |
+| --- | --- | --- |
+| Vocal annotation coverage | `conv-wm audit vocal-annotation-coverage --dataset all` | `vocal_annotation_coverage/` |
+
+The coverage audit runs a voice activity detector on the audio to measure
+how much acoustically detected wearer speech the native annotations cover
+([`vocal_annotation_coverage.md`](vocal_annotation_coverage.md)). It is
+informative — it revealed the EgoCom incompleteness above — and needs the
+`coverage-audit` extra; it never modifies v0 and nothing in the v0 pipeline
+depends on it beyond the reference recorded in the build report.
+
+Model-ready packaging (windowing, features, splits) is a later capability;
+page 09 remains a placeholder.
 
 ## One entry point
 
@@ -68,6 +121,9 @@ uv sync
 uv run conv-wm --help
 uv run conv-wm audit <capability> [--max-workers N]
 uv run conv-wm clean annotations
+uv run conv-wm build native-focal-voice-state --dataset all
+uv run conv-wm build control-focal-voice-state --dataset all
+uv run conv-wm build vocal-action-grid --dataset all
 uv run conv-wm datasets
 ```
 
@@ -84,7 +140,7 @@ modules remain as thin compatibility wrappers.
                     generic pipeline
         manifest · media · video · audio · sync
         structural validation · annotation integrity
-                  annotation cleaning
+        annotation cleaning · native focal voice state
                           │ reads
           ┌───────────────┼────────────────┐
        EgoCom           Ego4D          <new dataset>
@@ -103,6 +159,7 @@ registry (`conv_wm.data.datasets.get(name)`):
 | `structure: StructuralSpec` | tables with Pandera schemas and loaders, relations between them | structural validation |
 | `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field, known limitations) and cross-source comparisons | annotation integrity |
 | `annotation_cleaner` | dataset-specific, explicitly validated minimal transformations | annotation cleaning |
+| `native_focal_voice` | cleaned native annotations mapped to one focal voice recording per (view, wearer) | native focal voice-state build |
 | `audio: AudioInterpretation` | a known boundary grid, extra decoded-validation windows, a dataset summary section | audio timeline audit (relabelling), video timeline audit (extra windows) |
 
 A dataset that is present on disk but not registered is still inventoried and
@@ -119,7 +176,10 @@ media-audited with an empty spec.
    - `AnnotationSpec`: one `AnnotationSourceSpec` per annotation table and the
      `CrossSourceComparison`s that make sense;
    - `AudioInterpretation` only if the recordings have known joins or a
-     regime worth decoding systematically.
+     regime worth decoding systematically;
+   - `native_focal_voice` (`<key>_native_voice.py`): the wearer's native
+     speech intervals and declared `UNKNOWN` regions per recording, if the
+     dataset takes part in the vocal pipeline.
 3. Register it in `conv_wm/data/datasets/__init__.py` (built-ins) or from a
    test/fixture with `datasets.register(spec)`.
 4. Run `conv-wm audit structure` and `conv-wm audit annotations`; document

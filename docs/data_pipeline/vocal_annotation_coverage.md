@@ -1,11 +1,17 @@
-# Vocal annotation coverage audit
+# Vocal annotation coverage audit (diagnostic)
 
 ## Scope
 
 This audit measures whether wearer/focal voice annotations cover acoustically
-detected vocal activity before any `ONSET`, `OFFSET` or `NO_EVENT` actions are
-constructed. It is detection/QC only: it does not modify annotations or media,
-does not create pseudo-labels, and does not construct actions.
+detected vocal activity. It is detection/QC only: it does not modify
+annotations or media, does not create pseudo-labels, and does not construct
+actions. It is **not part of the v0 pipeline**: the v0 focal voice state
+([`native_focal_voice_state.md`](native_focal_voice_state.md)) is derived from
+native annotations alone and only references this audit's artifact in its
+report. The audit's value is scientific: it quantifies a real limitation of
+the datasets (EgoCom focal-specific coverage of 83.49 % where measurable,
+Ego4D not measurable) for the Dataset Card, the methodology and future
+ablations.
 
 The audit keeps three concepts separate:
 
@@ -58,7 +64,7 @@ All detector, identity, overlap, merge and duration-bucket parameters live in
 Install the optional maintained VAD dependencies and run one or both corpora:
 
 ```bash
-uv sync --extra vad
+uv sync --extra coverage-audit
 uv run conv-wm audit vocal-annotation-coverage --dataset egocom
 uv run conv-wm audit vocal-annotation-coverage --dataset ego4d
 uv run conv-wm audit vocal-annotation-coverage --dataset all

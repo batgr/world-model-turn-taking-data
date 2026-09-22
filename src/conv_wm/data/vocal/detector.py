@@ -69,7 +69,8 @@ class SileroVoiceActivityDetector:
             from silero_vad import get_speech_timestamps, load_silero_vad
         except ImportError as exc:  # pragma: no cover - depends on the optional extra
             raise ImportError(
-                "Silero VAD is not installed; install the 'vad' extra: uv sync --extra vad"
+                "Silero VAD is not installed; install the coverage-audit extra: "
+                "uv sync --extra coverage-audit"
             ) from exc
         self._model = load_silero_vad(onnx=True)
         self._timestamps = get_speech_timestamps

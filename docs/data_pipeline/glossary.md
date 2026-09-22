@@ -111,6 +111,63 @@ report column and a term differ, the column name is given in code style.
   at least one interval of another source with the same entity key. Evidence
   of agreement, not identity.
 
+## Native focal voice state
+
+- **Focal voice state** — the camera wearer's vocal state on the canonical
+  timeline: `SPEAKING`, `SILENT` or `UNKNOWN`. Derived from native
+  annotations only; `actor_id = wearer_id` (ego-only prototype).
+- **Source kind** — the native evidence behind an interval:
+  `ego4d_voice_segments` (a vocal episode, possibly absorbing short pauses),
+  `egocom_transcript` (a speaker-attributed word interval),
+  `invalid_or_missing` (declared `UNKNOWN` region).
+- **Canonical window** — the annotated time range of one recording on its
+  dataset's canonical timeline; the timeline covers it exactly.
+- **Native-annotation-derived state** — what v0 produces, as opposed to an
+  exhaustive physical vocal-activity ground truth; absence of annotation is
+  `SILENT` by contract, with the documented coverage limitations.
+
+## Control focal voice state
+
+- **Control focal voice state** — the native timeline requantized at Δ: what a
+  controller running at `decision_step_s` can represent. Written as a separate
+  artifact; the native one is immutable.
+- **Sub-step silence bridging** — the one control transform:
+  `SPEAKING → SILENT (g < Δ) → SPEAKING` becomes continuous `SPEAKING`. The
+  condition is strict, so a gap of exactly Δ is kept. A quantization tied to the
+  controller's resolution, **not** a correction of the annotation.
+- **Bridged gap** — one native sub-Δ silence absorbed by that rule; each keeps a
+  row in `bridged_gaps.parquet` and is counted on the interval that absorbed it
+  (`bridged_gap_count`, `bridged_gap_total_duration_s`).
+- **Short speech burst** — a `SILENT → SPEAKING → SILENT` vocalization; never
+  filtered, whatever its duration. The symmetric rule is deliberately not
+  applied.
+
+## Vocal action grid
+
+- **Decision step (Δ)** — the control period of the action grid, 0.100 s. Not
+  a video frame rate, an audio sample period or a prediction horizon.
+- **Slot** — one half-open control step ``[t_k, t_k + Δ)`` with ``t_k = k · Δ``;
+  only slots entirely inside the timeline are emitted.
+- **Action** — `NO_EVENT` (hold the current state), `ONSET`
+  (`SILENT → SPEAKING`), `OFFSET` (`SPEAKING → SILENT`). The complete v0 space.
+- **Masked slot** — a slot the vocabulary cannot express: `action` is null,
+  `action_valid` false and `mask_reason` says why. Never a fourth action.
+- **tau** — `event_time_s - t_k`, the position of the event inside its step;
+  native timestamps stay exact, nothing is rounded onto the grid.
+- **Compound slot** — a slot holding more than one resolved transition; masked
+  in v0. Its **pattern** is the state chain it walks through
+  (`SILENT-SPEAKING-SILENT` is a short speech burst,
+  `SPEAKING-SILENT-SPEAKING` a sub-step silence, which bridging removes).
+- **Sub-Δ gap** — a `SPEAKING → SILENT → SPEAKING` gap shorter than Δ,
+  classified **cross_slot** (both events representable) or **same_slot**
+  (they collide in one slot). Which one it is depends on the grid's phase, not
+  on the pause: the control layer removes that arbitrariness upstream.
+- **Native grid comparison** — the same statistics computed on the
+  untransformed native timeline, reported next to the production ones so the
+  effect of bridging is explicit. A diagnostic; never written as a table.
+- **Logged behaviour proxy** — what an action label is: observed annotated
+  behaviour sampled on a grid, not a randomized causal intervention.
+
 ## Reports
 
 - **Summary** — the JSON document an audit writes; always contains

@@ -1,12 +1,14 @@
 # conv_wm
 
-Reproducible data audits for a multimodal conversational world model built on
-egocentric conversation datasets (Ego4D AV, EgoCom, and datasets to come).
+Reproducible data pipeline for a multimodal conversational world model built
+on egocentric conversation datasets (Ego4D AV, EgoCom, and datasets to come).
 
-The pipeline inventories raw data, validates annotation tables, measures
-media timelines from native timestamps, and establishes whether annotation
-sources are temporally, referentially and semantically trustworthy — without
-modifying any raw data. Read
+The v0 pipeline inventories raw data, validates annotation tables, measures
+media timelines from native timestamps, establishes whether annotation sources
+are trustworthy, turns the native annotations into a continuous
+`SPEAKING` / `SILENT` / `UNKNOWN` timeline of the camera wearer's vocal state,
+and samples it every 100 ms as `NO_EVENT` / `ONSET` / `OFFSET` actions. Raw
+data is never modified. Read
 [`docs/data_pipeline/README.md`](docs/data_pipeline/README.md) for the
 architecture and [`docs/data_pipeline/glossary.md`](docs/data_pipeline/glossary.md)
 for the vocabulary.
@@ -16,14 +18,14 @@ for the vocabulary.
 ```bash
 uv sync                       # implementation and checks
 uv sync --extra notebooks     # plus the exploration libraries
-uv sync --extra vad           # plus Silero VAD for vocal coverage auditing
+uv sync --extra coverage-audit  # plus Silero VAD, only for the diagnostic coverage audit
 ```
 
 FFmpeg (`ffmpeg`/`ffprobe`) must be on `PATH` for the media audits. Data
 locations come from `conf/config.yaml`; set `EGO_DATA_ROOT` to point at your
 data root.
 
-## Running audits
+## Running the pipeline
 
 One entry point:
 
@@ -36,9 +38,12 @@ uv run conv-wm audit video         # video timeline cadence (needs media)
 uv run conv-wm audit audio         # audio packet and PCM-vs-PTS timelines (needs media)
 uv run conv-wm audit sync          # technical A/V alignment (needs media)
 uv run conv-wm audit annotations   # annotation integrity contracts (needs media)
-uv run conv-wm audit vocal-annotation-coverage --dataset all  # VAD coverage QC
 uv run conv-wm clean annotations   # source-faithful derived annotation tables
+uv run conv-wm build native-focal-voice-state --dataset all   # v0 wearer vocal-state timeline
+uv run conv-wm build control-focal-voice-state --dataset all  # v0 timeline requantized at Δ
+uv run conv-wm build vocal-action-grid --dataset all          # v0 100 ms action grid
 uv run conv-wm datasets            # registered datasets
+uv run conv-wm audit vocal-annotation-coverage --dataset all  # diagnostic: VAD vs annotation coverage
 ```
 
 Reports are written below `${paths.reports}`; every summary carries its
@@ -57,7 +62,11 @@ src/conv_wm/           maintained implementation
   data/media/          ffprobe access, media metadata, video and audio timelines, A/V alignment
   data/annotations/    annotation-source specifications and integrity checks
   data/audits/         one orchestration module per audit + thin run_* wrappers
-  data/datasets/       DatasetSpec registry: ego4d.py, egocom.py
+  data/cleaning.py     annotation cleaning orchestration and accounting
+  data/native_focal_voice_state.py  v0 build: native annotations -> wearer vocal state + lineage
+  data/vocal_action_grid.py         v0 build: vocal state -> 100 ms NO_EVENT/ONSET/OFFSET grid
+  data/vocal/          native_state.py and action_grid.py (the v0 contracts); the rest serves the coverage audit
+  data/datasets/       DatasetSpec registry: ego4d.py, egocom.py (+ *_cleaning.py, *_native_voice.py)
 docs/data_pipeline/    architecture, glossary, one page per capability
 notebooks/             laboratory notebooks (evidence, not implementation)
 tests/                 semantics of every module; no test needs the corpus

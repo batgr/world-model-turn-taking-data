@@ -22,6 +22,7 @@ from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 
 if TYPE_CHECKING:
     from conv_wm.data.cleaning import CleanedAnnotationTable
+    from conv_wm.data.vocal.native_source import NativeFocalVoiceSource
 
 TableLoader = Callable[[DictConfig], pd.DataFrame]
 """Load one table of a dataset from the configured paths."""
@@ -100,6 +101,10 @@ SummarySectionBuilder = Callable[[pd.DataFrame, pd.DataFrame], Mapping[str, obje
 AnnotationCleaner = Callable[[DictConfig], list["CleanedAnnotationTable"]]
 """Validate source annotations and return explicitly derived interim tables."""
 
+NativeFocalVoiceLoader = Callable[[DictConfig, pd.DataFrame], "NativeFocalVoiceSource"]
+"""Given the configuration and the media metadata table, map cleaned native
+annotations to one focal voice recording per (view, wearer)."""
+
 
 @dataclass(frozen=True)
 class AudioInterpretation:
@@ -126,6 +131,8 @@ class DatasetSpec:
     """Annotation-source semantics submitted to the annotation integrity audit."""
     annotation_cleaner: AnnotationCleaner | None = None
     """Dataset-specific rules called by the generic annotation-cleaning command."""
+    native_focal_voice: NativeFocalVoiceLoader | None = None
+    """Adapter feeding the native focal voice-state build; ``None`` opts out."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:

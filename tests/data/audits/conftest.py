@@ -55,6 +55,7 @@ def valid_ego4d_tables():
                 "clip_end_sec": [10.0],
                 "clip_start_frame": [0],
                 "clip_end_frame": [300],
+                "valid": [True],
             }
         ),
         "persons_clean": pd.DataFrame(
@@ -62,6 +63,14 @@ def valid_ego4d_tables():
                 "clip_uid": ["clip-1"],
                 "person_id": ["0"],
                 "is_camera_wearer": [True],
+            }
+        ),
+        "missing_voice_segments_clean": pd.DataFrame(
+            {
+                "clip_uid": pd.Series([], dtype=str),
+                "person_id": pd.Series([], dtype=str),
+                "start_time": pd.Series([], dtype=float),
+                "end_time": pd.Series([], dtype=float),
             }
         ),
         "tracking_paths_clean": pd.DataFrame(

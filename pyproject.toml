@@ -1,7 +1,7 @@
 [project]
 name = "conv_wm"
 version = "0.2.0"
-description = "Reproducible data audits for a multimodal conversational world model"
+description = "Reproducible data pipeline and audits for a multimodal conversational world model"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -20,7 +20,9 @@ notebooks = [
     "skimpy>=0.0.21",
     "tqdm>=4.70.0",
 ]
-vad = [
+# Diagnostic only: the vocal annotation coverage audit runs Silero VAD.
+# The v0 pipeline (cleaning, native focal voice state) never imports these.
+coverage-audit = [
     "onnxruntime>=1.20",
     "silero-vad>=6.2",
 ]

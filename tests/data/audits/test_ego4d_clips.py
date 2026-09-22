@@ -20,6 +20,7 @@ def make_valid_clips() -> pd.DataFrame:
             "clip_end_sec": [300.0, 300.0],
             "clip_start_frame": [0, 0],
             "clip_end_frame": [9000, 9000],
+            "valid": [True, True],
         }
     )
 
