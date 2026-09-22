@@ -51,6 +51,7 @@ pipeline covers the audits that make raw and interim data trustworthy:
 | A/V technical alignment | `conv-wm audit sync` | `temporal/av_sync/` |
 | Annotation integrity | `conv-wm audit annotations` | `annotations/` |
 | Targeted annotation cleaning | `conv-wm clean annotations` | `cleaning/annotations/summary.json` |
+| Vocal annotation coverage | `conv-wm audit vocal-annotation-coverage --dataset all` | `vocal_annotation_coverage/` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;

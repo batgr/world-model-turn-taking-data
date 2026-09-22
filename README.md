@@ -16,6 +16,7 @@ for the vocabulary.
 ```bash
 uv sync                       # implementation and checks
 uv sync --extra notebooks     # plus the exploration libraries
+uv sync --extra vad           # plus Silero VAD for vocal coverage auditing
 ```
 
 FFmpeg (`ffmpeg`/`ffprobe`) must be on `PATH` for the media audits. Data
@@ -35,6 +36,7 @@ uv run conv-wm audit video         # video timeline cadence (needs media)
 uv run conv-wm audit audio         # audio packet and PCM-vs-PTS timelines (needs media)
 uv run conv-wm audit sync          # technical A/V alignment (needs media)
 uv run conv-wm audit annotations   # annotation integrity contracts (needs media)
+uv run conv-wm audit vocal-annotation-coverage --dataset all  # VAD coverage QC
 uv run conv-wm clean annotations   # source-faithful derived annotation tables
 uv run conv-wm datasets            # registered datasets
 ```
