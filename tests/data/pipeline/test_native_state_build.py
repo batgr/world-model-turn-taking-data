@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import sys
 from pathlib import Path
@@ -13,7 +12,7 @@ from omegaconf import OmegaConf
 
 from conv_wm.data.datasets.ego4d_native_voice import load_ego4d_native_voice
 from conv_wm.data.datasets.egocom_native_voice import load_egocom_native_voice
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     run_native_focal_voice_state_build,
     supported_datasets,
 )
@@ -295,7 +294,7 @@ def _prepare_build(tmp_path):
 def test_build_writes_one_artifact_per_dataset_with_shared_schema_and_lineage(tmp_path):
     cfg = _prepare_build(tmp_path)
 
-    outputs = run_native_focal_voice_state_build(cfg, stream=io.StringIO())
+    outputs = run_native_focal_voice_state_build(cfg)
 
     assert (
         [o.dataset for o in outputs]
@@ -329,8 +328,8 @@ def test_build_writes_one_artifact_per_dataset_with_shared_schema_and_lineage(tm
 def test_build_is_deterministic_and_needs_no_acoustic_model(tmp_path):
     cfg = _prepare_build(tmp_path)
 
-    first = run_native_focal_voice_state_build(cfg, stream=None)
-    second = run_native_focal_voice_state_build(cfg, stream=None)
+    first = run_native_focal_voice_state_build(cfg)
+    second = run_native_focal_voice_state_build(cfg)
 
     for a, b in zip(first, second, strict=True):
         pd.testing.assert_frame_equal(a.timeline, b.timeline)
@@ -349,11 +348,11 @@ def test_build_is_deterministic_and_needs_no_acoustic_model(tmp_path):
 def test_build_selects_a_single_dataset(tmp_path):
     cfg = _prepare_build(tmp_path)
 
-    [output] = run_native_focal_voice_state_build(cfg, dataset="egocom", stream=None)
+    [output] = run_native_focal_voice_state_build(cfg, dataset="egocom")
 
     assert output.dataset == "egocom"
     assert not (
         Path(cfg.paths.processed) / "native_focal_voice_state" / "ego4d"
     ).exists()
     with pytest.raises(ValueError):
-        run_native_focal_voice_state_build(cfg, dataset="nope", stream=None)
+        run_native_focal_voice_state_build(cfg, dataset="nope")

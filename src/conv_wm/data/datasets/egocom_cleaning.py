@@ -10,7 +10,7 @@ import pandas as pd
 from omegaconf import DictConfig
 
 from conv_wm.config import get_path
-from conv_wm.data.cleaning import (
+from conv_wm.data.pipeline.clean import (
     CleanedAnnotationTable,
     remove_rows_missing_required_fields,
     require_source_columns,

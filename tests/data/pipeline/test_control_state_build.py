@@ -10,7 +10,7 @@ import pytest
 from state_layers import TIMELINE, build_control_state, config_for, write_native_state
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
-from conv_wm.data.control_focal_voice_state import BRIDGED_GAPS_TABLE, TIMELINE_TABLE
+from conv_wm.data.pipeline.control_state import BRIDGED_GAPS_TABLE, TIMELINE_TABLE
 from conv_wm.data.vocal.action_grid import DECISION_STEP_S
 from conv_wm.data.vocal.control_state import (
     CONTROL_STATE_SCHEMA_VERSION,

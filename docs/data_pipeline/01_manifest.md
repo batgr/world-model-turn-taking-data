@@ -101,18 +101,16 @@ Core implementation:
 src/conv_wm/data/manifest.py
 ```
 
-Audit orchestration and compatibility wrapper:
+Audit orchestration:
 
 ```code
 src/conv_wm/data/audits/manifest.py
-src/conv_wm/data/build_manifest.py
 ```
 
 Tests:
 
 ```code
 tests/data/test_manifest.py
-tests/data/test_build_manifest.py
 ```
 
 ## Design decisions

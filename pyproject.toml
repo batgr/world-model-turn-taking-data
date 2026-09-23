@@ -1,23 +1,21 @@
 [project]
 name = "conv_wm"
 version = "0.2.0"
-description = "Reproducible data pipeline and audits for a multimodal conversational world model"
+description = "Reproducible pipeline turning egocentric conversation corpora into model-ready turn-taking data"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "numpy>=2.0",
     "omegaconf>=2.3.1",
     "pandas>=3.0.5",
     "pandera[pandas]>=0.33.1",
-    "pyarrow>=25.0.0",
+    "pyarrow>=25.0.0",  # the Parquet engine pandas reads and writes through
 ]
 
 [project.optional-dependencies]
 # Exploration only: the maintained implementation never imports these.
 notebooks = [
-    "matplotlib>=3.11.1",
     "pyyaml>=6.0.3",
-    "seaborn>=0.13.2",
-    "skimpy>=0.0.21",
     "tqdm>=4.70.0",
 ]
 # Diagnostic only: the vocal annotation coverage audit runs Silero VAD.
@@ -59,6 +57,8 @@ extend-select = ["D102", "D103"]
 
 [tool.pyright]
 include = ["src", "tests"]
+# tests/data holds the shared fixtures the test modules import by bare name
+extraPaths = ["tests/data"]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false

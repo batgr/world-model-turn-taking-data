@@ -207,6 +207,10 @@ it.
 
 The build is deterministic and takes seconds (~2.7 M slots, ~12 MB of Parquet).
 
+The grid is the last per-step layer: the model-ready stage
+([`model_ready.md`](model_ready.md)) indexes the windows it supports without
+copying any of it.
+
 ## Results (2026-09-23)
 
 Every column is one grid of the same recordings: **native** is the diagnostic

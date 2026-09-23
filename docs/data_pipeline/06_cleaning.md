@@ -20,7 +20,7 @@ Run the maintained implementation with:
 uv run conv-wm clean annotations
 ```
 
-Generic orchestration and accounting live in `conv_wm.data.cleaning`. Dataset
+Generic orchestration and accounting live in `conv_wm.data.pipeline.clean`. Dataset
 rules live beside their declarations in `conv_wm.data.datasets.ego4d_cleaning`
 and `conv_wm.data.datasets.egocom_cleaning`; each is registered through
 `DatasetSpec.annotation_cleaner`. The discovery notebook remains historical

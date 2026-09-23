@@ -25,6 +25,8 @@ project. Read this page first; the numbered pages describe one capability each,
 ```text
 notebooks/   laboratory notebooks: investigation, evidence, exploration
 src/conv_wm/ maintained implementation (the only code the CLI and tests run)
+             data/pipeline/ the canonical stages; data/vocal/ their pure semantics
+             data/datasets/ the dataset adapters; data/audits/ the population audits
 docs/        current contracts, terminology and decisions
 reports/     generated population evidence (below ${paths.reports}, not versioned)
 conf/        configuration (paths, dataset files, manifest options)
@@ -47,7 +49,7 @@ raw annotations
     -> native focal vocal state               SPEAKING / SILENT / UNKNOWN per wearer
     -> control focal vocal state              the same, requantized at Δ = 100 ms
     -> vocal action grid                      Δ = 100 ms, NO_EVENT / ONSET / OFFSET or masked
-    -> model-ready                            (later)
+    -> model ready                            valid anchors + train/validation/test
 ```
 
 | Capability | Command | Report |
@@ -63,6 +65,7 @@ raw annotations
 | **Native focal voice state (v0 layer)** | `conv-wm build native-focal-voice-state --dataset all` | `native_focal_voice_state/<dataset>/`, data in `${paths.processed}/native_focal_voice_state/<dataset>/` |
 | **Control focal voice state (v0 layer)** | `conv-wm build control-focal-voice-state --dataset all` | `control_focal_voice_state/<dataset>/`, data in `${paths.processed}/control_focal_voice_state/<dataset>/` |
 | **Vocal action grid (v0 layer)** | `conv-wm build vocal-action-grid --dataset all` | `vocal_action_grid/<dataset>/`, data in `${paths.processed}/vocal_action_grid/<dataset>/` |
+| **Model ready (v0 layer)** | `conv-wm build model-ready --dataset all` | `model_ready/<dataset>/`, data in `${paths.model_ready}/<dataset>/` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;
@@ -111,8 +114,15 @@ informative — it revealed the EgoCom incompleteness above — and needs the
 `coverage-audit` extra; it never modifies v0 and nothing in the v0 pipeline
 depends on it beyond the reference recorded in the build report.
 
-Model-ready packaging (windowing, features, splits) is a later capability;
-page 09 remains a placeholder.
+The model-ready stage ([`model_ready.md`](model_ready.md)) closes the pipeline:
+it indexes the valid training anchors of the grid — enough context, a complete
+1 s future, no window crossing a session or a discontinuity — labels each
+`event` or `background` from the existing action vocabulary, and assigns
+`train` / `validation` / `test` to whole conversations, preferring each
+release's own split. Windows are described, never materialized, so a modelling
+repository picks the context length at load time. Page 09 remains a
+placeholder for model-specific packaging (features, tensors), which belongs to
+that repository.
 
 ## One entry point
 
@@ -130,9 +140,10 @@ uv run conv-wm datasets
 Exit codes: `0` success, `1` the audit could not run (missing artifact or
 tool, unreadable input), `2` the audit ran and its verdict is FAIL (structural
 or annotation contracts). Every subcommand calls the same function that the
-tests exercise (`conv_wm.data.audits.<capability>.run_*_audit(cfg)`); the CLI
-adds nothing but argument parsing. The `python -m conv_wm.data.audits.run_*`
-modules remain as thin compatibility wrappers.
+tests exercise (`conv_wm.data.audits.<capability>.run_*_audit(cfg)` for the
+audits, `conv_wm.data.pipeline.<stage>.run_*_build(cfg)` for the build stages);
+the CLI adds nothing but argument parsing. `conv-wm build all` runs the build
+stages in order and is the canonical entry point.
 
 ## Generic versus dataset-specific
 

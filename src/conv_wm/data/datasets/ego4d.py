@@ -25,6 +25,7 @@ from conv_wm.data.annotations import (
 )
 from conv_wm.data.datasets.ego4d_cleaning import build_annotation_cleaning
 from conv_wm.data.datasets.ego4d_native_voice import load_ego4d_native_voice
+from conv_wm.data.datasets.ego4d_splits import load_ego4d_recording_splits
 from conv_wm.data.datasets.spec import (
     AudioInterpretation,
     DatasetSpec,
@@ -613,6 +614,7 @@ EGO4D = DatasetSpec(
     annotations=ANNOTATIONS,
     annotation_cleaner=build_annotation_cleaning,
     native_focal_voice=load_ego4d_native_voice,
+    recording_splits=load_ego4d_recording_splits,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),
         extra_decode_cases=systematic_profile_cases,

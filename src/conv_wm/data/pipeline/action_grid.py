@@ -2,7 +2,7 @@
 
 The production grid is sampled from the *control* timeline — the native one
 requantized at Δ by sub-step silence bridging
-(:mod:`conv_wm.data.control_focal_voice_state`). This module never reads a
+(:mod:`conv_wm.data.pipeline.control_state`). This module never reads a
 dataset's annotations, never touches audio and never merges intervals itself:
 the only transform lives one layer up, and this build records which one ran.
 
@@ -13,10 +13,9 @@ as a production table.
 
 from __future__ import annotations
 
-import sys
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
 
 import numpy as np
 import pandas as pd
@@ -24,22 +23,22 @@ from omegaconf import DictConfig
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
 from conv_wm.data.audits.errors import MissingPrerequisiteError
-from conv_wm.data.control_focal_voice_state import (
+from conv_wm.data.pipeline.control_state import (
     NATIVE_BUILD_COMMAND,
     config_checksum,
     selected_datasets,
     supported_datasets,
 )
-from conv_wm.data.control_focal_voice_state import (
+from conv_wm.data.pipeline.control_state import (
     PROCESSED_ROOT as CONTROL_PROCESSED_ROOT,
 )
-from conv_wm.data.control_focal_voice_state import (
+from conv_wm.data.pipeline.control_state import (
     REPORT_FILE as CONTROL_REPORT_FILE,
 )
-from conv_wm.data.control_focal_voice_state import (
+from conv_wm.data.pipeline.control_state import (
     REPORT_ROOT as CONTROL_REPORT_ROOT,
 )
-from conv_wm.data.control_focal_voice_state import (
+from conv_wm.data.pipeline.control_state import (
     TIMELINE_TABLE as CONTROL_TIMELINE_TABLE,
 )
 from conv_wm.data.pipeline_inputs import (
@@ -68,6 +67,8 @@ from conv_wm.data.vocal.control_state import CONTROL_STATE_SCHEMA_VERSION
 from conv_wm.data.vocal.native_state import NATIVE_STATE_SCHEMA_VERSION
 from conv_wm.provenance import collect_provenance
 from conv_wm.reports import JsonDict, write_summary, write_table
+
+logger = logging.getLogger(__name__)
 
 REPORT_SCHEMA_VERSION = 2
 PROCESSED_ROOT = Path("vocal_action_grid")
@@ -810,7 +811,6 @@ def run_vocal_action_grid_build(
     *,
     dataset: str = "all",
     command: str | None = None,
-    stream: TextIO | None = sys.stderr,
 ) -> list[VocalActionGridOutputs]:
     """Build the vocal action grid of every selected dataset."""
     manifest_path = Path(cfg.manifest.output)
@@ -823,12 +823,12 @@ def run_vocal_action_grid_build(
     for name in selected_datasets(dataset):
         source = load_control_state_input(cfg, name)
         native_timeline = load_native_timeline_for_comparison(source)
-        if stream is not None:
-            print(
-                f"vocal action grid {name}: {len(source.table)} control intervals "
-                f"({len(native_timeline)} native)",
-                file=stream,
-            )
+        logger.info(
+            "%s: %d control intervals (%d native)",
+            name,
+            len(source.table),
+            len(native_timeline),
+        )
         outputs.append(
             _build_dataset(
                 source,

@@ -1,12 +1,15 @@
 """``conv-wm``: the single command-line entry point of the data pipeline.
 
-Every subcommand calls the same audit functions that the tests exercise; this
-module only parses arguments, resolves configuration and reports outcomes.
+Every subcommand calls the same function the tests exercise — the audits in
+:mod:`conv_wm.data.audits`, the stages in :mod:`conv_wm.data.pipeline`. This
+module only parses arguments, resolves configuration and reports outcomes;
+``build all`` is the canonical run.
 """
 
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -23,6 +26,17 @@ EXIT_FAILURE = 1
 """The audit could not run (missing prerequisite, missing tool, crash)."""
 EXIT_AUDIT_FAILED = 2
 """The audit ran and its verdict is FAIL (structural or annotation contracts)."""
+
+DATASET_CHOICES = ("egocom", "ego4d", "all")
+
+
+def configure_logging(verbose: bool) -> None:
+    """Send library progress to stderr; command results stay on stdout."""
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(levelname)-5s %(message)s",
+        stream=sys.stderr,
+    )
 
 
 @dataclass(frozen=True)
@@ -144,59 +158,69 @@ def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) 
     return EXIT_OK
 
 
-def _build_native_focal_voice_state(cfg: DictConfig, args: argparse.Namespace) -> int:
-    from conv_wm.data.native_focal_voice_state import (
+def _stage_command(args: argparse.Namespace, stage: str) -> str:
+    """The exact command line that produced an artifact, for its report."""
+    parts = ["conv-wm"]
+    if args.config is not None:
+        parts += ["--config", str(args.config)]
+    return " ".join([*parts, "build", stage, "--dataset", args.dataset])
+
+
+def _build_native_state(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.native_state import (
         format_outputs,
         run_native_focal_voice_state_build,
     )
 
-    command = ["conv-wm"]
-    if args.config is not None:
-        command += ["--config", str(args.config)]
-    command += ["build", "native-focal-voice-state", "--dataset", args.dataset]
     outputs = run_native_focal_voice_state_build(
-        cfg, dataset=args.dataset, command=" ".join(command)
+        cfg,
+        dataset=args.dataset,
+        command=_stage_command(args, "native-focal-voice-state"),
     )
     print(format_outputs(outputs))
     return EXIT_OK
 
 
-def _build_control_focal_voice_state(cfg: DictConfig, args: argparse.Namespace) -> int:
-    from conv_wm.data.control_focal_voice_state import (
+def _build_control_state(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.control_state import (
         format_outputs,
         run_control_focal_voice_state_build,
     )
 
-    command = ["conv-wm"]
-    if args.config is not None:
-        command += ["--config", str(args.config)]
-    command += ["build", "control-focal-voice-state", "--dataset", args.dataset]
     outputs = run_control_focal_voice_state_build(
-        cfg, dataset=args.dataset, command=" ".join(command)
+        cfg,
+        dataset=args.dataset,
+        command=_stage_command(args, "control-focal-voice-state"),
     )
     print(format_outputs(outputs))
     return EXIT_OK
 
 
-def _build_vocal_action_grid(cfg: DictConfig, args: argparse.Namespace) -> int:
-    from conv_wm.data.vocal_action_grid import (
+def _build_action_grid(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.action_grid import (
         format_outputs,
         run_vocal_action_grid_build,
     )
 
-    command = ["conv-wm"]
-    if args.config is not None:
-        command += ["--config", str(args.config)]
-    command += ["build", "vocal-action-grid", "--dataset", args.dataset]
     outputs = run_vocal_action_grid_build(
-        cfg, dataset=args.dataset, command=" ".join(command)
+        cfg, dataset=args.dataset, command=_stage_command(args, "vocal-action-grid")
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK
+
+
+def _build_model_ready(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.model_ready import format_outputs, run_model_ready_build
+
+    outputs = run_model_ready_build(
+        cfg, dataset=args.dataset, command=_stage_command(args, "model-ready")
     )
     print(format_outputs(outputs))
     return EXIT_OK
 
 
 def _clean_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
-    from conv_wm.data.cleaning import (
+    from conv_wm.data.pipeline.clean import (
         format_annotation_cleaning_summary,
         run_annotation_cleaning,
     )
@@ -246,17 +270,67 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
 )
 
 
+@dataclass(frozen=True)
+class BuildCommand:
+    """One ``conv-wm build <name>`` stage, in the order the pipeline runs it."""
+
+    name: str
+    help: str
+    run: Callable[[DictConfig, argparse.Namespace], int]
+
+
+BUILD_COMMANDS: tuple[BuildCommand, ...] = (
+    BuildCommand(
+        "native-focal-voice-state",
+        "derive the wearer's SPEAKING/SILENT/UNKNOWN timeline from native annotations",
+        _build_native_state,
+    ),
+    BuildCommand(
+        "control-focal-voice-state",
+        "requantize the native vocal state at the control step by sub-step silence bridging",
+        _build_control_state,
+    ),
+    BuildCommand(
+        "vocal-action-grid",
+        "sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
+        _build_action_grid,
+    ),
+    BuildCommand(
+        "model-ready",
+        "index the training anchors the action grid supports and assign splits",
+        _build_model_ready,
+    ),
+)
+
+
+def _build_all(cfg: DictConfig, args: argparse.Namespace) -> int:
+    """Run the build stages in order from ``--from`` on, stopping at the first failure."""
+    names = [command.name for command in BUILD_COMMANDS]
+    start = names.index(args.start_from) if args.start_from else 0
+    for command in BUILD_COMMANDS[start:]:
+        logging.getLogger("conv_wm").info("stage: %s", command.name)
+        code = command.run(cfg, args)
+        if code != EXIT_OK:
+            return code
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Argument parser for ``conv-wm``."""
     parser = argparse.ArgumentParser(
         prog="conv-wm",
-        description="Reproducible data audits for the conversational world-model pipeline.",
+        description="Reproducible data pipeline for a multimodal turn-taking dataset.",
     )
     parser.add_argument(
         "--config",
         type=Path,
         default=None,
         help=f"configuration file (default: {DEFAULT_CONFIG_PATH})",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="log every stage's progress to stderr at DEBUG level",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     audit = subparsers.add_parser(
@@ -295,41 +369,36 @@ def build_parser() -> argparse.ArgumentParser:
         "annotations", help="clean registered annotation sources into interim tables"
     )
     clean_annotations.set_defaults(handler=_clean_annotations)
-    build = subparsers.add_parser("build", help="build derived data products")
+    build = subparsers.add_parser(
+        "build", help="build the derived data products, in pipeline order"
+    )
     build_subparsers = build.add_subparsers(dest="build", required=True)
-    native_state = build_subparsers.add_parser(
-        "native-focal-voice-state",
-        help="derive the wearer's SPEAKING/SILENT/UNKNOWN timeline from native annotations",
+    for command in BUILD_COMMANDS:
+        sub = build_subparsers.add_parser(command.name, help=command.help)
+        sub.add_argument(
+            "--dataset",
+            choices=DATASET_CHOICES,
+            default="all",
+            help="dataset to build (default all)",
+        )
+        sub.set_defaults(handler=command.run)
+    build_all = build_subparsers.add_parser(
+        "all", help="run every build stage in order (the canonical pipeline)"
     )
-    native_state.add_argument(
+    build_all.add_argument(
         "--dataset",
-        choices=("egocom", "ego4d", "all"),
+        choices=DATASET_CHOICES,
         default="all",
         help="dataset to build (default all)",
     )
-    native_state.set_defaults(handler=_build_native_focal_voice_state)
-    control_state = build_subparsers.add_parser(
-        "control-focal-voice-state",
-        help="requantize the native vocal state at Δ by sub-step silence bridging",
+    build_all.add_argument(
+        "--from",
+        dest="start_from",
+        choices=[command.name for command in BUILD_COMMANDS],
+        default=None,
+        help="start at this stage instead of the first one",
     )
-    control_state.add_argument(
-        "--dataset",
-        choices=("egocom", "ego4d", "all"),
-        default="all",
-        help="dataset to build (default all)",
-    )
-    control_state.set_defaults(handler=_build_control_focal_voice_state)
-    action_grid = build_subparsers.add_parser(
-        "vocal-action-grid",
-        help="sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
-    )
-    action_grid.add_argument(
-        "--dataset",
-        choices=("egocom", "ego4d", "all"),
-        default="all",
-        help="dataset to build (default all)",
-    )
-    action_grid.set_defaults(handler=_build_vocal_action_grid)
+    build_all.set_defaults(handler=_build_all)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
     return parser
@@ -351,6 +420,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI; returns the process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
+    configure_logging(args.verbose)
     try:
         cfg = load_config(args.config)
         return int(args.handler(cfg, args))

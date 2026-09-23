@@ -66,7 +66,10 @@ class SileroVoiceActivityDetector:
             return
         os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
         try:
-            from silero_vad import get_speech_timestamps, load_silero_vad
+            from silero_vad import (  # pyright: ignore[reportMissingImports]
+                get_speech_timestamps,
+                load_silero_vad,
+            )
         except ImportError as exc:  # pragma: no cover - depends on the optional extra
             raise ImportError(
                 "Silero VAD is not installed; install the coverage-audit extra: "
@@ -78,8 +81,10 @@ class SileroVoiceActivityDetector:
     def version(self) -> str:
         """``silero-vad <package version> onnx:<sha256 prefix of the model file>``."""
         os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
-        import silero_vad
+        import silero_vad  # pyright: ignore[reportMissingImports]
 
+        if silero_vad.__file__ is None:  # pragma: no cover - defensive
+            raise ImportError("silero_vad has no file location to hash the model from")
         model_file = Path(silero_vad.__file__).parent / "data" / "silero_vad.onnx"
         digest = hashlib.sha256(model_file.read_bytes()).hexdigest()
         return (
@@ -89,7 +94,7 @@ class SileroVoiceActivityDetector:
 
     def detect(self, audio: DecodedAudio) -> list[DetectedSegment]:
         """Run the model and attach the mean chunk probability to each segment."""
-        import torch
+        import torch  # pyright: ignore[reportMissingImports]
 
         self._load()
         assert self._model is not None and self._timestamps is not None

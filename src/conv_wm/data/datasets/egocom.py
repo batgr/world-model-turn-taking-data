@@ -20,6 +20,7 @@ from conv_wm.data.annotations import (
 )
 from conv_wm.data.datasets.egocom_cleaning import build_annotation_cleaning
 from conv_wm.data.datasets.egocom_native_voice import load_egocom_native_voice
+from conv_wm.data.datasets.egocom_splits import load_egocom_recording_splits
 from conv_wm.data.datasets.spec import (
     DatasetSpec,
     RelationSpec,
@@ -245,4 +246,5 @@ EGOCOM = DatasetSpec(
     annotations=ANNOTATIONS,
     annotation_cleaner=build_annotation_cleaning,
     native_focal_voice=load_egocom_native_voice,
+    recording_splits=load_egocom_recording_splits,
 )

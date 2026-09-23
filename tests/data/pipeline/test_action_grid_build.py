@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import importlib.util
-import io
 import json
 from pathlib import Path
 from typing import Any
@@ -15,6 +14,11 @@ import pytest
 from state_layers import build_control_state, config_for, write_native_state
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
+from conv_wm.data.pipeline.action_grid import (
+    GRID_TABLE,
+    check_invariants,
+    run_vocal_action_grid_build,
+)
 from conv_wm.data.vocal.action_grid import (
     ACTION_SCHEMA_VERSION,
     ACTIONS,
@@ -24,11 +28,6 @@ from conv_wm.data.vocal.action_grid import (
 )
 from conv_wm.data.vocal.control_state import CONTROL_STATE_SCHEMA_VERSION
 from conv_wm.data.vocal.native_state import NATIVE_STATE_SCHEMA_VERSION
-from conv_wm.data.vocal_action_grid import (
-    GRID_TABLE,
-    check_invariants,
-    run_vocal_action_grid_build,
-)
 
 STEP = DECISION_STEP_S
 ACOUSTIC_PACKAGES = {"torch", "torchaudio", "silero_vad", "onnxruntime", "pyannote"}
@@ -37,7 +36,7 @@ ACOUSTIC_PACKAGES = {"torch", "torchaudio", "silero_vad", "onnxruntime", "pyanno
 def _build(cfg, dataset="all"):
     """Build the control layer the grid consumes, then the grid itself."""
     build_control_state(cfg, dataset)
-    return run_vocal_action_grid_build(cfg, dataset=dataset, stream=io.StringIO())
+    return run_vocal_action_grid_build(cfg, dataset=dataset)
 
 
 def _by_index(grid: pd.DataFrame) -> dict[int, dict[str, Any]]:
@@ -269,7 +268,7 @@ def test_stale_or_missing_control_state_is_refused(tmp_path):
     write_native_state(cfg, "ego4d")
 
     with pytest.raises(MissingPrerequisiteError):
-        run_vocal_action_grid_build(cfg, dataset="ego4d", stream=io.StringIO())
+        run_vocal_action_grid_build(cfg, dataset="ego4d")
 
     [control] = build_control_state(cfg, "ego4d")
     frame = pd.read_parquet(control.timeline_path)
@@ -277,7 +276,7 @@ def test_stale_or_missing_control_state_is_refused(tmp_path):
     frame.to_parquet(control.timeline_path, index=False)
 
     with pytest.raises(ValueError, match="does not match"):
-        run_vocal_action_grid_build(cfg, dataset="ego4d", stream=io.StringIO())
+        run_vocal_action_grid_build(cfg, dataset="ego4d")
 
 
 def test_a_native_timeline_rewritten_behind_the_control_layer_is_refused(tmp_path):
@@ -290,7 +289,7 @@ def test_a_native_timeline_rewritten_behind_the_control_layer_is_refused(tmp_pat
     frame.to_parquet(native_path, index=False)
 
     with pytest.raises(ValueError, match="does not match"):
-        run_vocal_action_grid_build(cfg, dataset="ego4d", stream=io.StringIO())
+        run_vocal_action_grid_build(cfg, dataset="ego4d")
 
 
 def test_invalid_timeline_is_fully_masked(tmp_path):
@@ -337,10 +336,10 @@ def _import_closure(module: str) -> set[str]:
 
 
 def test_build_needs_no_acoustic_dependency():
-    closure = _import_closure("conv_wm.data.vocal_action_grid")
+    closure = _import_closure("conv_wm.data.pipeline.action_grid")
 
     assert not {name for name in closure if name.split(".")[0] in ACOUSTIC_PACKAGES}
-    assert "conv_wm.data.vocal_action_grid" in closure
+    assert "conv_wm.data.pipeline.action_grid" in closure
     assert not {
         name
         for name in closure

@@ -168,6 +168,26 @@ report column and a term differ, the column name is given in code style.
 - **Logged behaviour proxy** — what an action label is: observed annotated
   behaviour sampled on a grid, not a randomized causal intervention.
 
+## Model ready
+
+- **Anchor** — a grid slot that can carry a training window: enough context
+  before it, a complete future after it, inside one segment.
+- **Segment** — a maximal run of consecutive `decision_index` values of one
+  recording; windows never cross one.
+- **max_context_steps** — the largest context an anchor supports,
+  `min(available past+current steps, 50)`. The context length itself is chosen
+  downstream, never materialized here.
+- **Sample class** — `event` when the future horizon logs an action other than
+  `NO_EVENT`, `background` otherwise. Metadata for downstream sampling; the
+  natural distribution is preserved.
+- **is_trainable** — both measured validity ratios satisfy the thresholds.
+  Rejected anchors stay in the index with their ratios.
+- **Split** — `train` / `validation` / `test`, assigned to whole conversation
+  groups, preferring the release's own assignment; a deterministic seeded
+  fallback covers sessions it does not.
+- **Split leakage** — a conversation group whose sessions do not share one
+  split. Reported, never silently repaired.
+
 ## Reports
 
 - **Summary** — the JSON document an audit writes; always contains

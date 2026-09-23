@@ -1,4 +1,4 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
@@ -8,15 +8,22 @@ wheels/
 .pytest_cache/
 .ruff_cache/
 
-# Virtual environments
-.venv
-# Data
-data/*.parquet
+# Environments
+.venv/
 
-# Generated reports/artifacts
-reports/
+# Generated artifacts. Everything the pipeline writes lives under the configured
+# ${root} (conf/config.yaml); these root-anchored entries cover the default,
+# which keeps it inside the checkout. Anchored so src/conv_wm/data/ and
+# tests/data/ are never excluded.
+/data/
+/reports/
+/outputs/
 
-# OS
+# Notebooks
+.ipynb_checkpoints/
+
+# Editors and OS
+.obsidian/
+.idea/
+.vscode/
 .DS_Store
-
-outputs/

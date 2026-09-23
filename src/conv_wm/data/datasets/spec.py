@@ -21,7 +21,7 @@ from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 
 if TYPE_CHECKING:
-    from conv_wm.data.cleaning import CleanedAnnotationTable
+    from conv_wm.data.pipeline.clean import CleanedAnnotationTable
     from conv_wm.data.vocal.native_source import NativeFocalVoiceSource
 
 TableLoader = Callable[[DictConfig], pd.DataFrame]
@@ -105,6 +105,10 @@ NativeFocalVoiceLoader = Callable[[DictConfig, pd.DataFrame], "NativeFocalVoiceS
 """Given the configuration and the media metadata table, map cleaned native
 annotations to one focal voice recording per (view, wearer)."""
 
+RecordingSplitLoader = Callable[[DictConfig], pd.DataFrame]
+"""Return the dataset's own train/val/test assignment as ``recording_id`` /
+``split`` rows, so the model-ready stage propagates it instead of resplitting."""
+
 
 @dataclass(frozen=True)
 class AudioInterpretation:
@@ -133,6 +137,8 @@ class DatasetSpec:
     """Dataset-specific rules called by the generic annotation-cleaning command."""
     native_focal_voice: NativeFocalVoiceLoader | None = None
     """Adapter feeding the native focal voice-state build; ``None`` opts out."""
+    recording_splits: RecordingSplitLoader | None = None
+    """Upstream split assignment; ``None`` leaves model-ready samples unsplit."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:

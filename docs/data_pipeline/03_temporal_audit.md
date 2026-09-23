@@ -286,12 +286,12 @@ The older sampled outputs in the same directory are retained for provenance.
 From the repository root:
 
 ```bash
-uv run python -m conv_wm.data.audits.run_media_metadata
-uv run python -m conv_wm.data.audits.run_video_timeline
-uv run python -m conv_wm.data.audits.run_audio_timeline
+uv run conv-wm audit media
+uv run conv-wm audit video
+uv run conv-wm audit audio
 ```
 
-The audio runner performs complete packet scans and a small deterministic targeted
+The audio audit performs complete packet scans and a small deterministic targeted
 decode. Four workers were retained after an eight-file benchmark improved from
 69.29 seconds sequentially to about 28 seconds.
 

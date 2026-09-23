@@ -1,4 +1,6 @@
-root: ${oc.env:EGO_DATA_ROOT,/Volumes/PortableSSD/data}
+# Where every stage reads and writes. Point EGO_DATA_ROOT at your data root;
+# the default keeps everything inside the checkout (git-ignored).
+root: ${oc.env:EGO_DATA_ROOT,./data}
 
 paths:
   raw: ${root}/raw

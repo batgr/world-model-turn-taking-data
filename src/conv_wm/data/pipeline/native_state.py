@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
 
 import pandas as pd
 from omegaconf import DictConfig
@@ -33,6 +32,8 @@ from conv_wm.data.vocal.native_state import (
 )
 from conv_wm.provenance import collect_provenance
 from conv_wm.reports import JsonDict, write_summary, write_table
+
+logger = logging.getLogger(__name__)
 
 REPORT_SCHEMA_VERSION = 1
 PROCESSED_ROOT = Path("native_focal_voice_state")
@@ -280,7 +281,6 @@ def run_native_focal_voice_state_build(
     *,
     dataset: str = "all",
     command: str | None = None,
-    stream: TextIO | None = sys.stderr,
 ) -> list[NativeFocalVoiceStateOutputs]:
     """Build the native focal voice-state artifact of every selected dataset."""
     paths = pipeline_paths(cfg)
@@ -293,11 +293,7 @@ def run_native_focal_voice_state_build(
         loader = datasets.get(name).native_focal_voice
         assert loader is not None
         source = loader(cfg, media)
-        if stream is not None:
-            print(
-                f"native focal voice state {name}: {len(source.recordings)} recordings",
-                file=stream,
-            )
+        logger.info("%s: %d recordings", name, len(source.recordings))
         outputs.append(
             _build_dataset(
                 source,

@@ -15,30 +15,29 @@ it refuses a native artifact whose checksum no longer matches its own report.
 from __future__ import annotations
 
 import hashlib
-import sys
+import logging
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
-from typing import TextIO
 
 import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     PROCESSED_ROOT as NATIVE_PROCESSED_ROOT,
 )
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     REPORT_FILE as NATIVE_REPORT_FILE,
 )
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     REPORT_ROOT as NATIVE_REPORT_ROOT,
 )
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     TIMELINE_TABLE as NATIVE_TIMELINE_TABLE,
 )
-from conv_wm.data.native_focal_voice_state import (
+from conv_wm.data.pipeline.native_state import (
     selected_datasets,
     supported_datasets,
 )
@@ -65,6 +64,8 @@ from conv_wm.data.vocal.native_state import (
 )
 from conv_wm.provenance import collect_provenance
 from conv_wm.reports import JsonDict, write_summary, write_table
+
+logger = logging.getLogger(__name__)
 
 REPORT_SCHEMA_VERSION = 1
 PROCESSED_ROOT = Path("control_focal_voice_state")
@@ -538,18 +539,13 @@ def run_control_focal_voice_state_build(
     *,
     dataset: str = "all",
     command: str | None = None,
-    stream: TextIO | None = sys.stderr,
 ) -> list[ControlFocalVoiceStateOutputs]:
     """Build the control focal voice-state artifact of every selected dataset."""
     invoked = command or f"conv-wm build control-focal-voice-state --dataset {dataset}"
     outputs: list[ControlFocalVoiceStateOutputs] = []
     for name in selected_datasets(dataset):
         source = load_native_state_input(cfg, name)
-        if stream is not None:
-            print(
-                f"control focal voice state {name}: {len(source.table)} native intervals",
-                file=stream,
-            )
+        logger.info("%s: %d native intervals", name, len(source.table))
         outputs.append(_build_dataset(source, cfg=cfg, command=invoked))
     return outputs
 

@@ -4,11 +4,6 @@ import pandas as pd
 from omegaconf import OmegaConf
 
 from conv_wm.data import datasets
-from conv_wm.data.cleaning import (
-    CleanedAnnotationTable,
-    remove_rows_missing_required_fields,
-    run_annotation_cleaning,
-)
 from conv_wm.data.datasets.ego4d_cleaning import (
     CLIP_COLUMNS,
     MISSING_VOICE_COLUMNS,
@@ -21,6 +16,11 @@ from conv_wm.data.datasets.ego4d_cleaning import (
 )
 from conv_wm.data.datasets.egocom_cleaning import clean_ground_truth
 from conv_wm.data.datasets.spec import DatasetSpec
+from conv_wm.data.pipeline.clean import (
+    CleanedAnnotationTable,
+    remove_rows_missing_required_fields,
+    run_annotation_cleaning,
+)
 
 
 def _voice_row(**overrides):
