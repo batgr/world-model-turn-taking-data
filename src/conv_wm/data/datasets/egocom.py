@@ -19,6 +19,7 @@ from conv_wm.data.annotations import (
     TimeUnit,
 )
 from conv_wm.data.datasets.egocom_cleaning import build_annotation_cleaning
+from conv_wm.data.datasets.egocom_labels import EGOCOM_LABEL_FACTS
 from conv_wm.data.datasets.egocom_media import load_egocom_media
 from conv_wm.data.datasets.egocom_native_voice import load_egocom_native_voice
 from conv_wm.data.datasets.egocom_splits import load_egocom_recording_splits
@@ -248,5 +249,6 @@ EGOCOM = DatasetSpec(
     annotation_cleaner=build_annotation_cleaning,
     native_focal_voice=load_egocom_native_voice,
     media_records=load_egocom_media,
+    label_facts=EGOCOM_LABEL_FACTS,
     recording_splits=load_egocom_recording_splits,
 )

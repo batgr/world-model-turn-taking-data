@@ -94,15 +94,18 @@ def load_ego4d_native_voice(
         if missing_regions:
             clips_with_missing_regions += 1
             unknown.extend(missing_regions)
-        media_unknown = _media_unknown(
+        media_unknown_regions = media_unknown(
             coverage.get(str(row["video_uid"])),
             clip_start_s=start_s,
             clip_end_s=end_s,
             media_offset_s=clip_media_offset_s(row),
         )
-        if media_unknown and media_unknown[0].annotation_id != "media_uncovered":
+        if (
+            media_unknown_regions
+            and media_unknown_regions[0].annotation_id != "media_uncovered"
+        ):
             clips_without_media += 1
-        unknown.extend(media_unknown)
+        unknown.extend(media_unknown_regions)
         recordings.append(
             NativeFocalRecording(
                 dataset="ego4d",
@@ -146,7 +149,7 @@ def load_ego4d_native_voice(
     )
 
 
-def _media_unknown(
+def media_unknown(
     coverage: MediaCoverage | None,
     *,
     clip_start_s: float,
@@ -176,4 +179,4 @@ def _media_unknown(
     return output
 
 
-__all__ = ["ANNOTATION_SCHEMA_VERSION", "load_ego4d_native_voice"]
+__all__ = ["ANNOTATION_SCHEMA_VERSION", "load_ego4d_native_voice", "media_unknown"]

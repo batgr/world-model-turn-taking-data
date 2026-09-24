@@ -24,6 +24,7 @@ from conv_wm.data.annotations import (
     TimeUnit,
 )
 from conv_wm.data.datasets.ego4d_cleaning import build_annotation_cleaning
+from conv_wm.data.datasets.ego4d_labels import EGO4D_LABEL_FACTS
 from conv_wm.data.datasets.ego4d_media import load_ego4d_media
 from conv_wm.data.datasets.ego4d_native_voice import load_ego4d_native_voice
 from conv_wm.data.datasets.ego4d_splits import load_ego4d_recording_splits
@@ -616,6 +617,7 @@ EGO4D = DatasetSpec(
     annotation_cleaner=build_annotation_cleaning,
     native_focal_voice=load_ego4d_native_voice,
     media_records=load_ego4d_media,
+    label_facts=EGO4D_LABEL_FACTS,
     recording_splits=load_ego4d_recording_splits,
     audio=AudioInterpretation(
         known_boundary_grid=KnownBoundaryGrid(period_sec=STITCH_PERIOD_SEC),

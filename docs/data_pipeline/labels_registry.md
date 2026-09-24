@@ -6,174 +6,174 @@ Registry version 1, label schema version 1. 164 labels, 116 materializable. How 
 
 ## Support matrix
 
-| label | source kind | modalities | level |  |
-| --- | --- | --- | --- |  |
-| `instantaneous.speaker_activity_subframes` | native_annotation | audio | subframe |  |
-| `instantaneous.speaker_activity` | native_annotation | audio | grid |  |
-| `instantaneous.ego_speaking_subframes` | native_annotation | audio | subframe |  |
-| `instantaneous.ego_speaking` | native_annotation | audio | grid |  |
-| `instantaneous.others_active_subframes` | deterministic | audio | subframe |  |
-| `instantaneous.others_active` | deterministic | audio | grid |  |
-| `instantaneous.joint_speech_state_subframes` | deterministic | audio | subframe |  |
-| `instantaneous.joint_speech_state_occupancy` | deterministic | audio | grid |  |
-| `instantaneous.active_speaker_count_subframes` | deterministic | audio | subframe |  |
-| `instantaneous.floor_holder_subframes` | deterministic | audio | subframe |  |
-| `instantaneous.diarized_speech_activity` | external_model | audio | subframe |  |
-| `events.speaker_onset_subframes` | deterministic | audio | subframe |  |
-| `events.speaker_offset_subframes` | deterministic | audio | subframe |  |
-| `events.speaker_transition_valid_subframes` | deterministic | audio | subframe |  |
-| `events.ego_onset_subframes` | deterministic | audio | subframe |  |
-| `events.ego_offset_subframes` | deterministic | audio | subframe |  |
-| `events.other_onset_subframes` | deterministic | audio | subframe |  |
-| `events.other_offset_subframes` | deterministic | audio | subframe |  |
-| `events.floor_change_subframes` | deterministic | audio | subframe |  |
-| `events.previous_floor_holder_subframes` | deterministic | audio | subframe |  |
-| `events.next_floor_holder_subframes` | deterministic | audio | subframe |  |
-| `events.speaker_onsets` | deterministic | audio | event |  |
-| `events.speaker_offsets` | deterministic | audio | event |  |
-| `onset_context.previous_unique_speaker_subframes` | deterministic | audio | subframe |  |
-| `onset_context.ego_was_last_unique_speaker_subframes` | deterministic | audio | subframe |  |
-| `onset_context.others_active_at_ego_onset_subframes` | deterministic | audio | subframe |  |
-| `onset_context.silence_duration_before_ego_onset_subframes` | deterministic | audio | subframe |  |
-| `onset_context.simultaneous_other_onset_subframes` | deterministic | audio | subframe |  |
-| `onset_context.ego_onset_context_valid_subframes` | deterministic | audio | subframe |  |
-| `onset_context.ego_onset_type_subframes` | deterministic | audio | subframe |  |
-| `overlap.within_overlap_subframes` | deterministic | audio | subframe |  |
-| `overlap.between_overlap_subframes` | deterministic | audio | subframe |  |
-| `overlap.simultaneous_onset_overlap_subframes` | deterministic | audio | subframe |  |
-| `overlap.overlap_events` | deterministic | audio | segment |  |
-| `overlap.overlap_function` | human_annotation | audio, text | segment |  |
-| `timing.time_since_ego_onset` | deterministic | audio | grid |  |
-| `timing.time_since_ego_offset` | deterministic | audio | grid |  |
-| `timing.time_since_other_onset` | deterministic | audio | grid |  |
-| `timing.time_since_other_offset` | deterministic | audio | grid |  |
-| `timing.time_since_speaker_activity` | deterministic | audio | grid |  |
-| `timing.time_since_floor_change` | deterministic | audio | grid |  |
-| `timing.time_to_next_ego_onset` | deterministic | audio | grid |  |
-| `timing.time_to_next_ego_offset` | deterministic | audio | grid |  |
-| `timing.time_to_next_other_onset` | deterministic | audio | grid |  |
-| `timing.time_to_next_other_offset` | deterministic | audio | grid |  |
-| `timing.time_to_next_floor_change` | deterministic | audio | grid |  |
-| `timing.time_to_next_speaker_onset` | deterministic | audio | grid |  |
-| `timing.silence_duration` | deterministic | audio | grid |  |
-| `timing.observation_bounds` | deterministic | audio | grid |  |
-| `timing.silences` | deterministic | audio | segment |  |
-| `turns.speech_runs` | deterministic | audio | segment |  |
-| `turns.turns` | deterministic | audio | segment |  |
-| `turns.floor_transfers` | deterministic | audio | event |  |
-| `next_speaker.next_speaker` | deterministic | audio | grid |  |
-| `next_speaker.next_unique_speaker` | deterministic | audio | grid |  |
-| `next_speaker.current_speaker_continues` | deterministic | audio | grid |  |
-| `next_speaker.floor_transfer_target` | deterministic | audio | grid |  |
-| `future.future_speaker_activity` | deterministic | audio | grid |  |
-| `future.future_ego_activity` | deterministic | audio | grid |  |
-| `future.future_others_activity` | deterministic | audio | grid |  |
-| `future.future_joint_speech_state` | deterministic | audio | grid |  |
-| `future.future_floor_holder` | deterministic | audio | grid |  |
-| `future.future_overlap` | deterministic | audio | grid |  |
-| `future.future_ego_onset` | deterministic | audio | grid |  |
-| `future.future_ego_offset` | deterministic | audio | grid |  |
-| `future.future_other_onset` | deterministic | audio | grid |  |
-| `future.future_other_offset` | deterministic | audio | grid |  |
-| `future.future_next_speaker` | deterministic | audio | grid |  |
-| `prosody.ego_f0_hz` | external_model | audio | grid |  |
-| `prosody.ego_voiced_fraction` | external_model | audio | grid |  |
-| `prosody.ego_rms_db` | deterministic | audio | grid |  |
-| `prosody.ego_solo_mask_fraction` | deterministic | audio | grid |  |
-| `prosody.others_f0` | external_model | audio | grid |  |
-| `prosody.egemaps` | external_model | audio | grid |  |
-| `prosody.mfcc` | deterministic | audio | grid |  |
-| `prosody.voice_quality` | external_model | audio | grid |  |
-| `prosody.final_lengthening` | external_model | audio, text | segment |  |
-| `prosody.perceptual_loudness` | deterministic | audio | grid |  |
-| `text.tokens` | native_annotation | text | event |  |
-| `text.speech_rate` | deterministic | text, audio | segment |  |
-| `text.final_punctuation` | deterministic | text | segment |  |
-| `text.interrogative_cue` | deterministic | text | segment |  |
-| `text.turn_final_token` | deterministic | text | segment |  |
-| `text.discourse_markers` | deterministic | text | segment |  |
-| `text.lexical_completion` | external_model | text | segment |  |
-| `text.syntactic_completion` | external_model | text | segment |  |
-| `text.semantic_completion` | human_annotation | text | segment |  |
-| `text.dialogue_act` | human_annotation | text | segment |  |
-| `text.adjacency_pair_role` | human_annotation | text | segment |  |
-| `text.agreement` | human_annotation | text | segment |  |
-| `text.repair` | human_annotation | text | segment |  |
-| `text.relevance` | human_annotation | text | segment |  |
-| `text.common_ground` | human_annotation | text | segment |  |
-| `text.asr_transcript` | external_model | audio, text | event |  |
-| `video.face_visible` | external_model | video | subframe |  |
-| `video.face_bbox` | external_model | video | subframe |  |
-| `video.face_landmarks` | external_model | video | subframe |  |
-| `video.head_pose` | external_model | video | subframe |  |
-| `video.gaze_proxy` | external_model | video | subframe |  |
-| `video.gaze_target` | external_model | video | subframe |  |
-| `video.mouth_openness` | external_model | video | subframe |  |
-| `video.nod_shake` | external_model | video | subframe |  |
-| `video.facial_movement` | external_model | video | subframe |  |
-| `video.upper_body_pose` | external_model | video | subframe |  |
-| `video.body_orientation` | external_model | video | subframe |  |
-| `video.hand_pose` | external_model | video | subframe |  |
-| `video.gesture_activity` | external_model | video | subframe |  |
-| `video.pre_speech_movement` | external_model | video | subframe |  |
-| `video.participant_geometry` | external_model | video | subframe |  |
-| `video.camera_motion` | external_model | video | subframe |  |
-| `social_native.looking_at_wearer_subframes` | native_annotation | video | subframe |  |
-| `social_native.talking_to_wearer_subframes` | native_annotation | audio, video | subframe |  |
-| `social_native.anyone_looking_at_wearer_subframes` | deterministic | video | subframe |  |
-| `social_native.anyone_talking_to_wearer_subframes` | deterministic | audio, video | subframe |  |
-| `social_native.face_tracked_subframes` | native_annotation | video | subframe |  |
-| `social_native.face_track_bbox` | native_annotation | video | grid |  |
-| `social_native.social_segments` | native_annotation | audio, video | segment |  |
-| `social_native.face_tracks` | native_annotation | video | segment |  |
-| `addressee.addressee` | human_annotation | audio, video, text | segment |  |
-| `addressee.broadcast` | human_annotation | audio, video, text | segment |  |
-| `backchannel.events` | human_annotation | audio, video, text | event |  |
-| `profiles.speaking_time` | deterministic | audio | participant |  |
-| `profiles.turn_statistics` | deterministic | audio | participant |  |
-| `profiles.pause_statistics` | deterministic | audio | participant |  |
-| `profiles.onset_offset_counts` | deterministic | audio | participant |  |
-| `profiles.overlap_statistics` | deterministic | audio | participant |  |
-| `profiles.floor_transfer_statistics` | deterministic | audio | participant |  |
-| `profiles.interaction_profile_features` | deterministic | audio | participant |  |
-| `profiles.interaction_profile_feature_names` | deterministic | audio | participant |  |
-| `social_states.engagement` | human_annotation | audio, video, text | segment |  |
-| `social_states.dominance` | human_annotation | audio, video, text | segment |  |
-| `social_states.leadership` | human_annotation | audio, video, text | segment |  |
-| `social_states.rapport` | human_annotation | audio, video, text | segment |  |
-| `social_states.cohesion` | human_annotation | audio, video, text | segment |  |
-| `social_states.tension` | human_annotation | audio, video, text | segment |  |
-| `social_states.awkwardness` | human_annotation | audio, video, text | segment |  |
-| `social_states.stance` | human_annotation | audio, video, text | segment |  |
-| `social_states.affect_emotion` | human_annotation | audio, video, text | segment |  |
-| `social_states.agreement_conflict` | human_annotation | audio, video, text | segment |  |
-| `social_states.floor_partition` | human_annotation | audio, video, text | segment |  |
-| `nuisance.global_audio_rms` | deterministic | audio | grid |  |
-| `nuisance.zero_crossing_rate` | deterministic | audio | grid |  |
-| `nuisance.spectral_centroid` | deterministic | audio | grid |  |
-| `nuisance.spectral_bandwidth` | deterministic | audio | grid |  |
-| `nuisance.spectral_flux` | deterministic | audio | grid |  |
-| `nuisance.spectral_valid` | deterministic | audio | grid |  |
-| `nuisance.background_noise_proxy` | deterministic | audio | grid |  |
-| `nuisance.audio_valid` | deterministic | audio | grid |  |
-| `nuisance.frame_mean_rgb` | deterministic | video | grid |  |
-| `nuisance.brightness` | deterministic | video | grid |  |
-| `nuisance.contrast` | deterministic | video | grid |  |
-| `nuisance.saturation` | deterministic | video | grid |  |
-| `nuisance.blur_score` | deterministic | video | grid |  |
-| `nuisance.dominant_colour` | deterministic | video | grid |  |
-| `nuisance.frame_difference` | deterministic | video | grid |  |
-| `nuisance.frame_valid` | deterministic | video | grid |  |
-| `metadata.recording_identity` | native_annotation | metadata | recording |  |
-| `metadata.participants` | native_annotation | metadata | recording |  |
-| `metadata.recording_span` | native_annotation | metadata | recording |  |
-| `metadata.source_offset` | native_annotation | metadata | recording |  |
-| `metadata.background_conditions` | native_annotation | metadata | recording |  |
-| `metadata.participant_identity` | native_annotation | metadata | participant |  |
-| `metadata.participant_native_speaker` | native_annotation | metadata | participant |  |
-| `metadata.participant_is_host` | native_annotation | metadata | participant |  |
+| label | source kind | modalities | level | ego4d | egocom |
+| --- | --- | --- | --- | --- | --- |
+| `instantaneous.speaker_activity_subframes` | native_annotation | audio | subframe | yes | yes |
+| `instantaneous.speaker_activity` | native_annotation | audio | grid | yes | yes |
+| `instantaneous.ego_speaking_subframes` | native_annotation | audio | subframe | yes | yes |
+| `instantaneous.ego_speaking` | native_annotation | audio | grid | yes | yes |
+| `instantaneous.others_active_subframes` | deterministic | audio | subframe | yes | yes |
+| `instantaneous.others_active` | deterministic | audio | grid | yes | yes |
+| `instantaneous.joint_speech_state_subframes` | deterministic | audio | subframe | yes | yes |
+| `instantaneous.joint_speech_state_occupancy` | deterministic | audio | grid | yes | yes |
+| `instantaneous.active_speaker_count_subframes` | deterministic | audio | subframe | yes | yes |
+| `instantaneous.floor_holder_subframes` | deterministic | audio | subframe | yes | yes |
+| `instantaneous.diarized_speech_activity` | external_model | audio | subframe | — | — |
+| `events.speaker_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.speaker_offset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.speaker_transition_valid_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.ego_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.ego_offset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.other_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.other_offset_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.floor_change_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.previous_floor_holder_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.next_floor_holder_subframes` | deterministic | audio | subframe | yes | yes |
+| `events.speaker_onsets` | deterministic | audio | event | yes | yes |
+| `events.speaker_offsets` | deterministic | audio | event | yes | yes |
+| `onset_context.previous_unique_speaker_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.ego_was_last_unique_speaker_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.others_active_at_ego_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.silence_duration_before_ego_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.simultaneous_other_onset_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.ego_onset_context_valid_subframes` | deterministic | audio | subframe | yes | yes |
+| `onset_context.ego_onset_type_subframes` | deterministic | audio | subframe | yes | yes |
+| `overlap.within_overlap_subframes` | deterministic | audio | subframe | yes | yes |
+| `overlap.between_overlap_subframes` | deterministic | audio | subframe | yes | yes |
+| `overlap.simultaneous_onset_overlap_subframes` | deterministic | audio | subframe | yes | yes |
+| `overlap.overlap_events` | deterministic | audio | segment | yes | yes |
+| `overlap.overlap_function` | human_annotation | audio, text | segment | — | — |
+| `timing.time_since_ego_onset` | deterministic | audio | grid | yes | yes |
+| `timing.time_since_ego_offset` | deterministic | audio | grid | yes | yes |
+| `timing.time_since_other_onset` | deterministic | audio | grid | yes | yes |
+| `timing.time_since_other_offset` | deterministic | audio | grid | yes | yes |
+| `timing.time_since_speaker_activity` | deterministic | audio | grid | yes | yes |
+| `timing.time_since_floor_change` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_ego_onset` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_ego_offset` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_other_onset` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_other_offset` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_floor_change` | deterministic | audio | grid | yes | yes |
+| `timing.time_to_next_speaker_onset` | deterministic | audio | grid | yes | yes |
+| `timing.silence_duration` | deterministic | audio | grid | yes | yes |
+| `timing.observation_bounds` | deterministic | audio | grid | yes | yes |
+| `timing.silences` | deterministic | audio | segment | yes | yes |
+| `turns.speech_runs` | deterministic | audio | segment | yes | yes |
+| `turns.turns` | deterministic | audio | segment | yes | yes |
+| `turns.floor_transfers` | deterministic | audio | event | yes | yes |
+| `next_speaker.next_speaker` | deterministic | audio | grid | yes | yes |
+| `next_speaker.next_unique_speaker` | deterministic | audio | grid | yes | yes |
+| `next_speaker.current_speaker_continues` | deterministic | audio | grid | yes | yes |
+| `next_speaker.floor_transfer_target` | deterministic | audio | grid | yes | yes |
+| `future.future_speaker_activity` | deterministic | audio | grid | yes | yes |
+| `future.future_ego_activity` | deterministic | audio | grid | yes | yes |
+| `future.future_others_activity` | deterministic | audio | grid | yes | yes |
+| `future.future_joint_speech_state` | deterministic | audio | grid | yes | yes |
+| `future.future_floor_holder` | deterministic | audio | grid | yes | yes |
+| `future.future_overlap` | deterministic | audio | grid | yes | yes |
+| `future.future_ego_onset` | deterministic | audio | grid | yes | yes |
+| `future.future_ego_offset` | deterministic | audio | grid | yes | yes |
+| `future.future_other_onset` | deterministic | audio | grid | yes | yes |
+| `future.future_other_offset` | deterministic | audio | grid | yes | yes |
+| `future.future_next_speaker` | deterministic | audio | grid | yes | yes |
+| `prosody.ego_f0_hz` | external_model | audio | grid | yes | yes |
+| `prosody.ego_voiced_fraction` | external_model | audio | grid | yes | yes |
+| `prosody.ego_rms_db` | deterministic | audio | grid | yes | yes |
+| `prosody.ego_solo_mask_fraction` | deterministic | audio | grid | yes | yes |
+| `prosody.others_f0` | external_model | audio | grid | — | — |
+| `prosody.egemaps` | external_model | audio | grid | — | — |
+| `prosody.mfcc` | deterministic | audio | grid | — | — |
+| `prosody.voice_quality` | external_model | audio | grid | — | — |
+| `prosody.final_lengthening` | external_model | audio, text | segment | — | — |
+| `prosody.perceptual_loudness` | deterministic | audio | grid | — | — |
+| `text.tokens` | native_annotation | text | event | yes | yes |
+| `text.speech_rate` | deterministic | text, audio | segment | — | yes |
+| `text.final_punctuation` | deterministic | text | segment | yes | yes |
+| `text.interrogative_cue` | deterministic | text | segment | yes | yes |
+| `text.turn_final_token` | deterministic | text | segment | yes | yes |
+| `text.discourse_markers` | deterministic | text | segment | yes | yes |
+| `text.lexical_completion` | external_model | text | segment | — | — |
+| `text.syntactic_completion` | external_model | text | segment | — | — |
+| `text.semantic_completion` | human_annotation | text | segment | — | — |
+| `text.dialogue_act` | human_annotation | text | segment | — | — |
+| `text.adjacency_pair_role` | human_annotation | text | segment | — | — |
+| `text.agreement` | human_annotation | text | segment | — | — |
+| `text.repair` | human_annotation | text | segment | — | — |
+| `text.relevance` | human_annotation | text | segment | — | — |
+| `text.common_ground` | human_annotation | text | segment | — | — |
+| `text.asr_transcript` | external_model | audio, text | event | — | — |
+| `video.face_visible` | external_model | video | subframe | — | — |
+| `video.face_bbox` | external_model | video | subframe | — | — |
+| `video.face_landmarks` | external_model | video | subframe | — | — |
+| `video.head_pose` | external_model | video | subframe | — | — |
+| `video.gaze_proxy` | external_model | video | subframe | — | — |
+| `video.gaze_target` | external_model | video | subframe | — | — |
+| `video.mouth_openness` | external_model | video | subframe | — | — |
+| `video.nod_shake` | external_model | video | subframe | — | — |
+| `video.facial_movement` | external_model | video | subframe | — | — |
+| `video.upper_body_pose` | external_model | video | subframe | — | — |
+| `video.body_orientation` | external_model | video | subframe | — | — |
+| `video.hand_pose` | external_model | video | subframe | — | — |
+| `video.gesture_activity` | external_model | video | subframe | — | — |
+| `video.pre_speech_movement` | external_model | video | subframe | — | — |
+| `video.participant_geometry` | external_model | video | subframe | — | — |
+| `video.camera_motion` | external_model | video | subframe | — | — |
+| `social_native.looking_at_wearer_subframes` | native_annotation | video | subframe | yes | — |
+| `social_native.talking_to_wearer_subframes` | native_annotation | audio, video | subframe | yes | — |
+| `social_native.anyone_looking_at_wearer_subframes` | deterministic | video | subframe | yes | — |
+| `social_native.anyone_talking_to_wearer_subframes` | deterministic | audio, video | subframe | yes | — |
+| `social_native.face_tracked_subframes` | native_annotation | video | subframe | yes | — |
+| `social_native.face_track_bbox` | native_annotation | video | grid | yes | — |
+| `social_native.social_segments` | native_annotation | audio, video | segment | yes | — |
+| `social_native.face_tracks` | native_annotation | video | segment | yes | — |
+| `addressee.addressee` | human_annotation | audio, video, text | segment | — | — |
+| `addressee.broadcast` | human_annotation | audio, video, text | segment | — | — |
+| `backchannel.events` | human_annotation | audio, video, text | event | — | — |
+| `profiles.speaking_time` | deterministic | audio | participant | yes | yes |
+| `profiles.turn_statistics` | deterministic | audio | participant | yes | yes |
+| `profiles.pause_statistics` | deterministic | audio | participant | yes | yes |
+| `profiles.onset_offset_counts` | deterministic | audio | participant | yes | yes |
+| `profiles.overlap_statistics` | deterministic | audio | participant | yes | yes |
+| `profiles.floor_transfer_statistics` | deterministic | audio | participant | yes | yes |
+| `profiles.interaction_profile_features` | deterministic | audio | participant | yes | yes |
+| `profiles.interaction_profile_feature_names` | deterministic | audio | participant | yes | yes |
+| `social_states.engagement` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.dominance` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.leadership` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.rapport` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.cohesion` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.tension` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.awkwardness` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.stance` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.affect_emotion` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.agreement_conflict` | human_annotation | audio, video, text | segment | — | — |
+| `social_states.floor_partition` | human_annotation | audio, video, text | segment | — | — |
+| `nuisance.global_audio_rms` | deterministic | audio | grid | yes | yes |
+| `nuisance.zero_crossing_rate` | deterministic | audio | grid | yes | yes |
+| `nuisance.spectral_centroid` | deterministic | audio | grid | yes | yes |
+| `nuisance.spectral_bandwidth` | deterministic | audio | grid | yes | yes |
+| `nuisance.spectral_flux` | deterministic | audio | grid | yes | yes |
+| `nuisance.spectral_valid` | deterministic | audio | grid | yes | yes |
+| `nuisance.background_noise_proxy` | deterministic | audio | grid | yes | yes |
+| `nuisance.audio_valid` | deterministic | audio | grid | yes | yes |
+| `nuisance.frame_mean_rgb` | deterministic | video | grid | yes | yes |
+| `nuisance.brightness` | deterministic | video | grid | yes | yes |
+| `nuisance.contrast` | deterministic | video | grid | yes | yes |
+| `nuisance.saturation` | deterministic | video | grid | yes | yes |
+| `nuisance.blur_score` | deterministic | video | grid | yes | yes |
+| `nuisance.dominant_colour` | deterministic | video | grid | yes | yes |
+| `nuisance.frame_difference` | deterministic | video | grid | yes | yes |
+| `nuisance.frame_valid` | deterministic | video | grid | yes | yes |
+| `metadata.recording_identity` | native_annotation | metadata | recording | yes | yes |
+| `metadata.participants` | native_annotation | metadata | recording | yes | yes |
+| `metadata.recording_span` | native_annotation | metadata | recording | yes | yes |
+| `metadata.source_offset` | native_annotation | metadata | recording | yes | — |
+| `metadata.background_conditions` | native_annotation | metadata | recording | — | yes |
+| `metadata.participant_identity` | native_annotation | metadata | participant | yes | yes |
+| `metadata.participant_native_speaker` | native_annotation | metadata | participant | — | yes |
+| `metadata.participant_is_host` | native_annotation | metadata | participant | — | yes |
 
-Dataset facts: .
+Dataset facts: **ego4d** face_tracks, media.audio, media.video, meta.source_offset, social.looking, social.talking, speech, transcript; **egocom** media.audio, media.video, meta.background, meta.host, meta.native_speaker, speech, transcript, words.
 
 ## `instantaneous` — Who is speaking now: per-participant activity, joint state, floor.
 
@@ -188,7 +188,7 @@ Whether each participant speaks at any time inside the subframe (native speech i
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `speaker_activity_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.speaker_activity`
 
@@ -201,7 +201,7 @@ Whether each participant speaks at any time inside the decision cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `speaker_activity`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.ego_speaking_subframes`
 
@@ -214,7 +214,7 @@ Whether the camera wearer speaks inside the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `ego_speaking_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.ego_speaking`
 
@@ -227,7 +227,7 @@ Whether the camera wearer speaks inside the decision cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `ego_speaking`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.others_active_subframes`
 
@@ -240,7 +240,7 @@ Whether any participant other than the wearer speaks inside the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: true as soon as one other participant is known to speak; false only when every other participant is known silent; null otherwise.
 - **storage**: `speech/grid.parquet` columns `others_active_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.others_active`
 
@@ -253,7 +253,7 @@ Whether any participant other than the wearer speaks inside the cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: three-valued as for others_active_subframes.
 - **storage**: `speech/grid.parquet` columns `others_active`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.joint_speech_state_subframes`
 
@@ -266,7 +266,7 @@ Joint wearer/others state of the subframe: 0 silence, 1 ego only, 2 others only,
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `joint_speech_state_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.joint_speech_state_occupancy`
 
@@ -279,7 +279,7 @@ Fraction of the decision cell spent in each joint state (silence, ego only, othe
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null when any participant is UNKNOWN for part of the cell.
 - **storage**: `speech/grid.parquet` columns `joint_speech_state_occupancy`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.active_speaker_count_subframes`
 
@@ -292,7 +292,7 @@ Number of participants speaking inside the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `active_speaker_count_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.floor_holder_subframes`
 
@@ -305,7 +305,7 @@ Instantaneous unique speaker of the subframe: participant index, -1 NONE (nobody
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null = UNKNOWN; -1 and -2 are documented categories, not missing values.
 - **storage**: `speech/grid.parquet` columns `floor_holder_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `instantaneous.diarized_speech_activity`
 
@@ -333,7 +333,7 @@ Whether each participant starts speaking (SILENT -> SPEAKING) in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the transition is not observable (participant UNKNOWN in the subframe or the preceding one, or the subframe opens the recording).
 - **storage**: `speech/grid.parquet` columns `speaker_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.speaker_offset_subframes`
 
@@ -346,7 +346,7 @@ Whether each participant stops speaking (SPEAKING -> SILENT) in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the transition is not observable (participant UNKNOWN in the subframe or the preceding one, or the subframe opens the recording).
 - **storage**: `speech/grid.parquet` columns `speaker_offset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.speaker_transition_valid_subframes`
 
@@ -359,7 +359,7 @@ Whether an onset/offset of each participant is observable in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: never null.
 - **storage**: `speech/grid.parquet` columns `speaker_transition_valid_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.ego_onset_subframes`
 
@@ -372,7 +372,7 @@ Whether the wearer starts speaking in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the transition is not observable (participant UNKNOWN in the subframe or the preceding one, or the subframe opens the recording).
 - **storage**: `speech/grid.parquet` columns `ego_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.ego_offset_subframes`
 
@@ -385,7 +385,7 @@ Whether the wearer stops speaking in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the transition is not observable (participant UNKNOWN in the subframe or the preceding one, or the subframe opens the recording).
 - **storage**: `speech/grid.parquet` columns `ego_offset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.other_onset_subframes`
 
@@ -398,7 +398,7 @@ Whether any other participant starts speaking in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: true if any other onset is observed; false only if every other participant's transitions are observable; null otherwise.
 - **storage**: `speech/grid.parquet` columns `other_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.other_offset_subframes`
 
@@ -411,7 +411,7 @@ Whether any other participant stops speaking in the subframe.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: three-valued as for other_onset_subframes.
 - **storage**: `speech/grid.parquet` columns `other_offset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.floor_change_subframes`
 
@@ -424,7 +424,7 @@ Whether the floor (last unique speaker) passes to another participant in the sub
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the floor is unknown at the subframe start (after UNKNOWN or the recording start, until someone speaks alone).
 - **storage**: `speech/grid.parquet` columns `floor_change_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.previous_floor_holder_subframes`
 
@@ -437,7 +437,7 @@ Participant index losing the floor, in subframes holding a floor change.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a floor change (first change).
 - **storage**: `speech/grid.parquet` columns `previous_floor_holder_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.next_floor_holder_subframes`
 
@@ -450,7 +450,7 @@ Participant index gaining the floor, in subframes holding a floor change.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a floor change (last change).
 - **storage**: `speech/grid.parquet` columns `next_floor_holder_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.speaker_onsets`
 
@@ -463,7 +463,7 @@ Every observable onset of every participant, in native time, with its onset-cont
 - **time**: native canonical timestamp in seconds, never rounded to the grid
 - **validity**: only observable onsets are rows (both sides known). Context columns are null when unknown; onset_type is 'undetermined' when context_valid is false.
 - **storage**: `speech/events.parquet` columns `participant_index`, `participant_id`, `is_ego`, `previous_unique_speaker_index`, `was_last_unique_speaker`, `others_active_before`, `others_active_at_onset`, `silence_before_s`, `simultaneous_other_onset`, `onset_type`, `context_valid` (rows where `event_type == 'onset'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `events.speaker_offsets`
 
@@ -476,7 +476,7 @@ Every observable offset of every participant, in native time.
 - **time**: native canonical timestamp in seconds, never rounded to the grid
 - **validity**: only observable offsets are rows (both sides known).
 - **storage**: `speech/events.parquet` columns `participant_index`, `participant_id`, `is_ego` (rows where `event_type == 'offset'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `onset_context` — The primitives describing the situation of each wearer onset.
@@ -492,7 +492,7 @@ At a wearer onset: the last participant who spoke alone before it.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset; see onset_context.ego_onset_context_valid_subframes. Also null when that speaker is unknown.
 - **storage**: `speech/grid.parquet` columns `previous_unique_speaker_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.ego_was_last_unique_speaker_subframes`
 
@@ -505,7 +505,7 @@ At a wearer onset: whether the wearer was the last unique speaker.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset; see onset_context.ego_onset_context_valid_subframes.
 - **storage**: `speech/grid.parquet` columns `ego_was_last_unique_speaker_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.others_active_at_ego_onset_subframes`
 
@@ -518,7 +518,7 @@ At a wearer onset: whether another participant speaks at the onset instant.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset; see onset_context.ego_onset_context_valid_subframes.
 - **storage**: `speech/grid.parquet` columns `others_active_at_ego_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.silence_duration_before_ego_onset_subframes`
 
@@ -531,7 +531,7 @@ At a wearer onset: duration of the joint silence ending at it (0 when someone wa
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset; see onset_context.ego_onset_context_valid_subframes. Null when the silence starts at the recording start or at UNKNOWN (censored).
 - **storage**: `speech/grid.parquet` columns `silence_duration_before_ego_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.simultaneous_other_onset_subframes`
 
@@ -544,7 +544,7 @@ At a wearer onset: whether another participant starts within simultaneous_onset_
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset; see onset_context.ego_onset_context_valid_subframes.
 - **storage**: `speech/grid.parquet` columns `simultaneous_other_onset_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.ego_onset_context_valid_subframes`
 
@@ -557,7 +557,7 @@ Whether the subframe holds a wearer onset whose context is fully known.
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: never null.
 - **storage**: `speech/grid.parquet` columns `ego_onset_context_valid_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `onset_context.ego_onset_type_subframes`
 
@@ -570,7 +570,7 @@ Type of the wearer onset: 1 after_silence (joint silence before, the wearer was 
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null except in subframes holding a wearer onset.
 - **storage**: `speech/grid.parquet` columns `ego_onset_type_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 - **notes**: mpc-wm names: after_silence = self_resumption, floor_transfer = floor_take_after_gap, overlap = floor_take_in_overlap; a simultaneous start after silence is typed by the last unique speaker and flagged by simultaneous_other_onset_subframes.
 
 
@@ -587,7 +587,7 @@ Whether the subframe intersects a within-speaker overlap: the entering participa
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit. Also null over overlaps whose type is undetermined.
 - **storage**: `speech/grid.parquet` columns `within_overlap_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `overlap.between_overlap_subframes`
 
@@ -600,7 +600,7 @@ Whether the subframe intersects a between-speaker overlap: the entering particip
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit. Also null over overlaps whose type is undetermined.
 - **storage**: `speech/grid.parquet` columns `between_overlap_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `overlap.simultaneous_onset_overlap_subframes`
 
@@ -613,7 +613,7 @@ Whether the subframe intersects an overlap whose two participants started within
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null where the state of a required participant is UNKNOWN in the unit.
 - **storage**: `speech/grid.parquet` columns `simultaneous_onset_overlap_subframes`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `overlap.overlap_events`
 
@@ -626,7 +626,7 @@ Every pairwise overlap between an initial speech run and a run of another partic
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: valid=false (type 'undetermined') when a run end that decides the type is censored by UNKNOWN or the recording edge.
 - **storage**: `speech/segments.parquet` columns `initial_participant_index`, `entering_participant_index`, `overlap_type`, `previous_floor_holder_index`, `duration_s`, `valid` (rows where `segment_type == 'overlap'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 - **notes**: Heldner & Edlund (2010) within/between overlap typing, pairwise as in mpc-wm.
 
 ### `overlap.overlap_function`
@@ -654,7 +654,7 @@ Seconds since the last wearer onset before r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_ego_onset`, `time_since_ego_onset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_since_ego_offset`
 
@@ -667,7 +667,7 @@ Seconds since the last wearer offset before r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_ego_offset`, `time_since_ego_offset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_since_other_onset`
 
@@ -680,7 +680,7 @@ Seconds since the last onset of any other participant before r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_other_onset`, `time_since_other_onset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_since_other_offset`
 
@@ -693,7 +693,7 @@ Seconds since the last offset of any other participant before r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_other_offset`, `time_since_other_offset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_since_speaker_activity`
 
@@ -706,7 +706,7 @@ Seconds since any participant last spoke (0 when someone speaks just before r_k)
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_speaker_activity`, `time_since_speaker_activity_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_since_floor_change`
 
@@ -719,7 +719,7 @@ Seconds since the last floor change before r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurred since the start of the current observed span (left-censored: the true value is at least timing.observation_bounds.time_since_observation_start) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_since_floor_change`, `time_since_floor_change_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_ego_onset`
 
@@ -732,7 +732,7 @@ Seconds from r_k to the next wearer onset.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_ego_onset`, `time_to_next_ego_onset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_ego_offset`
 
@@ -745,7 +745,7 @@ Seconds from r_k to the next wearer offset.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_ego_offset`, `time_to_next_ego_offset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_other_onset`
 
@@ -758,7 +758,7 @@ Seconds from r_k to the next onset of any other participant.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_other_onset`, `time_to_next_other_onset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_other_offset`
 
@@ -771,7 +771,7 @@ Seconds from r_k to the next offset of any other participant.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_other_offset`, `time_to_next_other_offset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_floor_change`
 
@@ -784,7 +784,7 @@ Seconds from r_k to the next floor change.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_floor_change`, `time_to_next_floor_change_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.time_to_next_speaker_onset`
 
@@ -797,7 +797,7 @@ Seconds from r_k to the next onset of any participant.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null and valid=false when no such event occurs before the end of the current observed span (right-censored at recording end or UNKNOWN: the true value is at least timing.observation_bounds.time_to_observation_end) or when r_k is not observed. Never zero-filled.
 - **storage**: `speech/grid.parquet` columns `time_to_next_speaker_onset`, `time_to_next_speaker_onset_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.silence_duration`
 
@@ -810,7 +810,7 @@ Elapsed duration of the joint silence in progress at r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when nobody is silent-jointly at r_k or when the silence started at the recording start or UNKNOWN (censored).
 - **storage**: `speech/grid.parquet` columns `silence_duration`, `silence_duration_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.observation_bounds`
 
@@ -823,7 +823,7 @@ Distance from r_k to the start and to the end of the observed span containing it
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when r_k is not observed.
 - **storage**: `speech/grid.parquet` columns `time_since_observation_start`, `time_to_observation_end`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `timing.silences`
 
@@ -836,7 +836,7 @@ Every joint silence: pause (the same participant speaks before and after) or gap
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: valid=false and silence_type 'undetermined' when bounded by UNKNOWN or the recording edge, or when several participants stop/start at its ends.
 - **storage**: `speech/segments.parquet` columns `silence_type`, `previous_speaker_index`, `next_speaker_index`, `duration_s`, `valid` (rows where `segment_type == 'silence'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `turns` — Speech runs, pause-closed turns, silences and floor transfers.
@@ -852,7 +852,7 @@ Maximal continuous speech of one participant (native intervals unioned, no pause
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: valid=false when either end touches UNKNOWN or the recording edge.
 - **storage**: `speech/segments.parquet` columns `participant_index`, `participant_id`, `is_ego`, `duration_s`, `start_censored`, `end_censored`, `valid` (rows where `segment_type == 'speech_run'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `turns.turns`
 
@@ -865,7 +865,7 @@ Speech runs of one participant joined across internal pauses of at most turn_max
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: valid=false when either end is censored. Neighbour columns are null at the recording edges; fto_from_previous_s is null when the previous turn has the same speaker.
 - **storage**: `speech/segments.parquet` columns `participant_index`, `participant_id`, `is_ego`, `duration_s`, `run_count`, `pause_count`, `pause_total_s`, `pause_max_s`, `previous_turn_participant_index`, `next_turn_participant_index`, `fto_from_previous_s`, `start_censored`, `end_censored`, `valid` (rows where `segment_type == 'turn'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `turns.floor_transfers`
 
@@ -878,7 +878,7 @@ Every change of the last unique speaker from one participant to another, with th
 - **time**: native canonical timestamp in seconds, never rounded to the grid
 - **validity**: only transfers between two known holders are rows. locality marks FTOs beyond max_local_gap_s / max_local_overlap_s (kept, not dropped).
 - **storage**: `speech/events.parquet` columns `previous_holder_index`, `next_holder_index`, `fto_s`, `transfer_kind`, `locality`, `previous_run_end_s`, `next_run_start_s` (rows where `event_type == 'floor_change'`)
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `next_speaker` — Who speaks or takes the floor next, from the reference time on.
@@ -894,7 +894,7 @@ Participant index of the next onset at or after r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when censored before any onset, or when several participants tie.
 - **storage**: `speech/grid.parquet` columns `next_speaker`, `next_speaker_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `next_speaker.next_unique_speaker`
 
@@ -907,7 +907,7 @@ Participant index of the next participant to start speaking alone at or after r_
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when censored.
 - **storage**: `speech/grid.parquet` columns `next_unique_speaker`, `next_unique_speaker_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `next_speaker.current_speaker_continues`
 
@@ -920,7 +920,7 @@ Whether the next unique speaker is the current last unique speaker.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when the current last unique speaker is unknown or the next one is censored.
 - **storage**: `speech/grid.parquet` columns `current_speaker_continues`, `current_speaker_continues_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `next_speaker.floor_transfer_target`
 
@@ -933,7 +933,7 @@ Participant index gaining the floor at the next floor change at or after r_k.
 - **time**: reference instant r_k = t_k + Δ (cell end): everything strictly before r_k is past; an event at exactly r_k is future
 - **validity**: null when no floor change is observed before the end of the observed span.
 - **storage**: `speech/grid.parquet` columns `floor_transfer_target`, `floor_transfer_target_valid`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `future` — Supervision over configurable future horizons.
@@ -949,7 +949,7 @@ Whether each participant speaks within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_speaker_activity`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_ego_activity`
 
@@ -962,7 +962,7 @@ Whether the wearer speaks within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_ego_activity`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_others_activity`
 
@@ -975,7 +975,7 @@ Whether any other participant speaks within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_others_activity`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_joint_speech_state`
 
@@ -988,7 +988,7 @@ Joint state (0-3, as instantaneous.joint_speech_state_subframes) just before r_k
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_joint_speech_state`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_floor_holder`
 
@@ -1001,7 +1001,7 @@ Instantaneous floor holder (index, -1 NONE, -2 MULTIPLE) just before r_k + h.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_floor_holder`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_overlap`
 
@@ -1014,7 +1014,7 @@ Whether two or more participants speak simultaneously within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_overlap`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_ego_onset`
 
@@ -1027,7 +1027,7 @@ Whether the wearer starts speaking within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_ego_onset`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_ego_offset`
 
@@ -1040,7 +1040,7 @@ Whether the wearer stops speaking within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_ego_offset`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_other_onset`
 
@@ -1053,7 +1053,7 @@ Whether any other participant starts speaking within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_other_onset`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_other_offset`
 
@@ -1066,7 +1066,7 @@ Whether any other participant stops speaking within each horizon.
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_other_offset`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `future.future_next_speaker`
 
@@ -1079,7 +1079,7 @@ Participant index of the first onset within each horizon, -1 NOBODY when nobody 
 - **time**: future window [r_k, r_k + h) for each configured horizon h, r_k = t_k + Δ
 - **validity**: element null when the horizon window is not entirely observed (recording end or UNKNOWN before r_k + h): censored, never 'no event'.
 - **storage**: `speech/grid.parquet` columns `future_next_speaker`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `prosody` — Per-speaker acoustic features under a reliable speaker mask.
@@ -1095,7 +1095,7 @@ Median fundamental frequency of the wearer's voiced frames in the cell, computed
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null when the ego-solo mask covers less than min_mask_fraction of the cell, or when no masked frame is voiced. Overlap is always masked.
 - **storage**: `audio/grid.parquet` columns `ego_f0_hz`
-- **requires**: speech, media.audio; **datasets**: none registered
+- **requires**: speech, media.audio; **datasets**: ego4d, egocom
 - **external tool**: Praat pitch tracker (autocorrelation, via Parselmouth) (`praat-parselmouth`, extra `labels-audio`); licence: Parselmouth and Praat are GPL-3.0; the licence covers the software, not the numeric outputs, which may be redistributed with the derived data.; determinism: Deterministic signal processing: identical PCM gives identical output.
 
 ### `prosody.ego_voiced_fraction`
@@ -1109,7 +1109,7 @@ Fraction of the masked frames Praat judges voiced, computed only on audio frames
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null when the ego-solo mask covers less than min_mask_fraction.
 - **storage**: `audio/grid.parquet` columns `ego_voiced_fraction`
-- **requires**: speech, media.audio; **datasets**: none registered
+- **requires**: speech, media.audio; **datasets**: ego4d, egocom
 - **external tool**: Praat pitch tracker (autocorrelation, via Parselmouth) (`praat-parselmouth`, extra `labels-audio`); licence: Parselmouth and Praat are GPL-3.0; the licence covers the software, not the numeric outputs, which may be redistributed with the derived data.; determinism: Deterministic signal processing: identical PCM gives identical output.
 
 ### `prosody.ego_rms_db`
@@ -1123,7 +1123,7 @@ RMS energy (dBFS) of the wearer's speech in the cell, computed only on audio fra
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null when the ego-solo mask covers less than min_mask_fraction.
 - **storage**: `audio/grid.parquet` columns `ego_rms_db`
-- **requires**: speech, media.audio; **datasets**: none registered
+- **requires**: speech, media.audio; **datasets**: ego4d, egocom
 
 ### `prosody.ego_solo_mask_fraction`
 
@@ -1136,7 +1136,7 @@ Fraction of the cell where the wearer is the sole known speaker: the attribution
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where any participant is UNKNOWN in the cell.
 - **storage**: `audio/grid.parquet` columns `ego_solo_mask_fraction`
-- **requires**: speech, media.audio; **datasets**: none registered
+- **requires**: speech, media.audio; **datasets**: ego4d, egocom
 
 ### `prosody.others_f0`
 
@@ -1221,7 +1221,7 @@ Native transcript tokens (words, or utterances when the corpus only times uttera
 - **time**: native canonical timestamp in seconds, never rounded to the grid
 - **validity**: untimed tokens are kept with null time_s/end_s and timing_valid=false; turn_id is null when the token cannot be placed in a turn.
 - **storage**: `text/events.parquet` columns `participant_index`, `participant_id`, `unit`, `text`, `token_class`, `end_s`, `timing_valid`, `turn_id`, `source_row` (rows where `event_type == 'token'`)
-- **requires**: speech, transcript; **datasets**: none registered
+- **requires**: speech, transcript; **datasets**: ego4d, egocom
 
 ### `text.speech_rate`
 
@@ -1234,7 +1234,7 @@ Lexical words per second of each turn (per turn duration and per voiced second),
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: speech_rate_valid=false for utterance units or turns without lexical words.
 - **storage**: `text/segments.parquet` columns `unit`, `word_count`, `timed_word_count`, `words_per_second`, `words_per_voiced_second`, `speech_rate_valid` (rows where `segment_type == 'text_unit'`)
-- **requires**: speech, words; **datasets**: none registered
+- **requires**: speech, words; **datasets**: egocom
 
 ### `text.final_punctuation`
 
@@ -1247,7 +1247,7 @@ Punctuation mark closing the text unit as transcribed ('.', '?', '!', ',').
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: one row per text unit: a turn with word timings (unit='turn') or a native utterance (unit='utterance'). Columns are null when the unit has no lexical token. Null when the unit ends without punctuation.
 - **storage**: `text/segments.parquet` columns `final_punctuation` (rows where `segment_type == 'text_unit'`)
-- **requires**: speech, transcript; **datasets**: none registered
+- **requires**: speech, transcript; **datasets**: ego4d, egocom
 
 ### `text.interrogative_cue`
 
@@ -1260,7 +1260,7 @@ Whether the text unit ends with a transcribed question mark.
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: one row per text unit: a turn with word timings (unit='turn') or a native utterance (unit='utterance'). Columns are null when the unit has no lexical token. A transcription cue, not a dialogue-act label.
 - **storage**: `text/segments.parquet` columns `interrogative_cue` (rows where `segment_type == 'text_unit'`)
-- **requires**: speech, transcript; **datasets**: none registered
+- **requires**: speech, transcript; **datasets**: ego4d, egocom
 
 ### `text.turn_final_token`
 
@@ -1273,7 +1273,7 @@ Last lexical token of the text unit, lower-cased.
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: one row per text unit: a turn with word timings (unit='turn') or a native utterance (unit='utterance'). Columns are null when the unit has no lexical token.
 - **storage**: `text/segments.parquet` columns `final_token` (rows where `segment_type == 'text_unit'`)
-- **requires**: speech, transcript; **datasets**: none registered
+- **requires**: speech, transcript; **datasets**: ego4d, egocom
 
 ### `text.discourse_markers`
 
@@ -1286,7 +1286,7 @@ Discourse marker opening / closing the text unit, from a fixed versioned lexicon
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: one row per text unit: a turn with word timings (unit='turn') or a native utterance (unit='utterance'). Columns are null when the unit has no lexical token. Null when no lexicon entry matches.
 - **storage**: `text/segments.parquet` columns `initial_discourse_marker`, `final_discourse_marker` (rows where `segment_type == 'text_unit'`)
-- **requires**: speech, transcript; **datasets**: none registered
+- **requires**: speech, transcript; **datasets**: ego4d, egocom
 
 ### `text.lexical_completion`
 
@@ -1608,7 +1608,7 @@ Ego4D Social Looking-At-Me: frame-level label of a tracked, identified face bein
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: false where the participant's face is tracked (or a native negative segment covers it) and no positive segment does; null (valid=false) where the face is not tracked: not annotated is never negative.
 - **storage**: `social/grid.parquet` columns `looking_at_wearer_subframes`, `looking_at_wearer_valid_subframes`
-- **requires**: speech, social.looking, face_tracks; **datasets**: none registered
+- **requires**: speech, social.looking, face_tracks; **datasets**: ego4d
 
 ### `social_native.talking_to_wearer_subframes`
 
@@ -1621,7 +1621,7 @@ Ego4D Social Talking-To-Me: utterance-level label of a speaking, tracked person 
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null (valid=false) outside native talking segments of the participant.
 - **storage**: `social/grid.parquet` columns `talking_to_wearer_subframes`, `talking_to_wearer_valid_subframes`
-- **requires**: speech, social.talking; **datasets**: none registered
+- **requires**: speech, social.talking; **datasets**: ego4d
 
 ### `social_native.anyone_looking_at_wearer_subframes`
 
@@ -1634,7 +1634,7 @@ Whether any relevant participant looks at the wearer (tri-state aggregate of loo
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: true if any participant is true; false only when at least one relevant participant (tracked or covered) exists and every relevant one is known false; null otherwise.
 - **storage**: `social/grid.parquet` columns `anyone_looking_at_wearer_subframes`, `anyone_looking_at_wearer_valid_subframes`
-- **requires**: speech, social.looking, face_tracks; **datasets**: none registered
+- **requires**: speech, social.looking, face_tracks; **datasets**: ego4d
 
 ### `social_native.anyone_talking_to_wearer_subframes`
 
@@ -1647,7 +1647,7 @@ Whether any relevant participant talks to the wearer (tri-state aggregate).
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: relevant = covered by a talking segment or speaking; true if any is true; false only when every relevant participant is known false; null otherwise (an active speaker without a segment hides a possible positive).
 - **storage**: `social/grid.parquet` columns `anyone_talking_to_wearer_subframes`, `anyone_talking_to_wearer_valid_subframes`
-- **requires**: speech, social.talking; **datasets**: none registered
+- **requires**: speech, social.talking; **datasets**: ego4d
 
 ### `social_native.face_tracked_subframes`
 
@@ -1660,7 +1660,7 @@ Whether a native face-track box of the participant exists in the subframe (frame
 - **time**: subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the recording's canonical clock
 - **validity**: null only where the recording is UNKNOWN.
 - **storage**: `social/grid.parquet` columns `face_tracked_subframes`
-- **requires**: speech, face_tracks; **datasets**: none registered
+- **requires**: speech, face_tracks; **datasets**: ego4d
 
 ### `social_native.face_track_bbox`
 
@@ -1673,7 +1673,7 @@ Mean native face box (x, y, width, height in source pixels) of each participant 
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null for a participant without a tracked frame in the cell.
 - **storage**: `social/grid.parquet` columns `face_track_bbox`
-- **requires**: speech, face_tracks; **datasets**: none registered
+- **requires**: speech, face_tracks; **datasets**: ego4d
 
 ### `social_native.social_segments`
 
@@ -1686,7 +1686,7 @@ Native LAM/TTM segments exactly as released: person (tracking) id, kind, is_at_m
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: participant_index is null for unresolved persons (e.g. '-1').
 - **storage**: `social/segments.parquet` columns `participant_index`, `participant_id`, `person`, `kind`, `is_at_me`, `annotation_target`, `resolved`, `start_frame`, `end_frame`, `duration_s` (rows where `segment_type == 'social_segment'`)
-- **requires**: speech, social.looking, social.talking; **datasets**: none registered
+- **requires**: speech, social.looking, social.talking; **datasets**: ego4d
 - **notes**: annotation_target is the release's raw 'target' field; its semantics are undocumented, so it is preserved and never promoted to an addressee.
 
 ### `social_native.face_tracks`
@@ -1700,7 +1700,7 @@ One row per native face track: participant, tracking id, first/last frame and fr
 - **time**: native canonical interval [start_s, end_s) in seconds
 - **validity**: never null.
 - **storage**: `social/segments.parquet` columns `participant_index`, `participant_id`, `track_id`, `first_frame`, `last_frame`, `frame_count`, `duration_s` (rows where `segment_type == 'face_track'`)
-- **requires**: speech, face_tracks; **datasets**: none registered
+- **requires**: speech, face_tracks; **datasets**: ego4d
 
 
 ## `addressee` — Who an utterance is addressed to.
@@ -1755,7 +1755,7 @@ Total speaking time, observed time and speaking ratio of the participant.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `speaking_time_s`, `observed_duration_s`, `speaking_ratio`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.turn_statistics`
 
@@ -1768,7 +1768,7 @@ Speech-run and turn counts, turns per minute and duration statistics.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `speech_run_count`, `run_duration_mean_s`, `run_duration_median_s`, `turn_count`, `turns_per_minute`, `turn_duration_mean_s`, `turn_duration_median_s`, `turn_duration_std_s`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.pause_statistics`
 
@@ -1781,7 +1781,7 @@ Within-speaker pauses (silences typed 'pause' after this participant).
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `pause_count`, `pause_duration_mean_s`, `pause_duration_median_s`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.onset_offset_counts`
 
@@ -1794,7 +1794,7 @@ Observable onsets and offsets, and onsets by type.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `onset_count`, `offset_count`, `onset_after_silence_count`, `onset_floor_transfer_count`, `onset_overlap_count`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.overlap_statistics`
 
@@ -1807,7 +1807,7 @@ Overlaps entered and received, by type; time in overlap; interruption-like count
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `overlaps_entered`, `overlaps_received`, `within_overlaps_entered`, `between_overlaps_entered`, `interruption_like_count`, `overlap_time_s`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.floor_transfer_statistics`
 
@@ -1820,7 +1820,7 @@ Floor takes and yields, FTO distribution of takes and response latency (positive
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `floor_takes`, `floor_yields`, `fto_take_mean_s`, `fto_take_median_s`, `fto_take_q10_s`, `fto_take_q90_s`, `response_latency_mean_s`, `response_latency_median_s`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.interaction_profile_features`
 
@@ -1833,7 +1833,7 @@ Every numeric profile statistic as one vector, in the order of profiles.interact
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `interaction_profile_features`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 ### `profiles.interaction_profile_feature_names`
 
@@ -1846,7 +1846,7 @@ Names of the interaction_profile_features vector entries.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when undefined (e.g. no floor take to average). Computed over the whole recording, future included: non-causal, never an input for predicting within the same recording.
 - **storage**: `speech/participants.parquet` columns `interaction_profile_feature_names`
-- **requires**: speech; **datasets**: none registered
+- **requires**: speech; **datasets**: ego4d, egocom
 
 
 ## `social_states` — Higher-level social constructs (engagement, dominance, ...).
@@ -1986,7 +1986,7 @@ RMS amplitude of the mixed audio in the cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `audio/grid.parquet` columns `global_audio_rms`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.zero_crossing_rate`
@@ -2000,7 +2000,7 @@ Zero-crossing rate of the mixed audio in the cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `audio/grid.parquet` columns `zero_crossing_rate`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.spectral_centroid`
@@ -2014,7 +2014,7 @@ Spectral centroid (Hz) of the Hann-windowed cell.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `audio/grid.parquet` columns `spectral_centroid`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.spectral_bandwidth`
@@ -2028,7 +2028,7 @@ Spectral bandwidth (Hz) around the centroid.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `audio/grid.parquet` columns `spectral_bandwidth`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.spectral_flux`
@@ -2042,7 +2042,7 @@ L2 distance between the normalized magnitude spectra of this cell and the previo
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null for the first decoded cell and where either cell is not decoded or silent.
 - **storage**: `audio/grid.parquet` columns `spectral_flux`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.spectral_valid`
@@ -2056,7 +2056,7 @@ Whether the cell had non-zero spectral energy (spectral features defined).
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: false where the cell is digital silence or not decoded.
 - **storage**: `audio/grid.parquet` columns `spectral_valid`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.background_noise_proxy`
@@ -2070,7 +2070,7 @@ Whether the cell had non-zero spectral energy (spectral features defined).
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `audio/grid.parquet` columns `background_noise_proxy`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.audio_valid`
@@ -2084,7 +2084,7 @@ Whether the whole cell was decoded.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: never null.
 - **storage**: `audio/grid.parquet` columns `audio_valid`
-- **requires**: media.audio; **datasets**: none registered
+- **requires**: media.audio; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.frame_mean_rgb`
@@ -2098,7 +2098,7 @@ Mean RGB of the cell's frames.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `frame_mean_rgb`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.brightness`
@@ -2112,7 +2112,7 @@ Mean Rec.709 luma of the cell's frames.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `brightness`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.contrast`
@@ -2126,7 +2126,7 @@ Standard deviation of pixel values.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `contrast`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.saturation`
@@ -2140,7 +2140,7 @@ Mean HSV saturation.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `saturation`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.blur_score`
@@ -2154,7 +2154,7 @@ Variance of the Laplacian (low = blurry).
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `blur_score`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.dominant_colour`
@@ -2168,7 +2168,7 @@ Centre of the most frequent 4-level-per-channel RGB bin.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `dominant_colour`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.frame_difference`
@@ -2182,7 +2182,7 @@ Mean absolute difference between consecutive frames (motion proxy, not an ego-mo
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: null where the cell was not fully decoded.
 - **storage**: `video/grid.parquet` columns `frame_difference`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 ### `nuisance.frame_valid`
@@ -2196,7 +2196,7 @@ Whether every frame of the cell was decoded.
 - **time**: decision cell k: [t_k, t_k + Δ), t_k = k·Δ
 - **validity**: never null.
 - **storage**: `video/grid.parquet` columns `frame_valid`
-- **requires**: media.video; **datasets**: none registered
+- **requires**: media.video; **datasets**: ego4d, egocom
 - **notes**: A nuisance/diagnostic control computed on the mixed signal; not a social truth.
 
 
@@ -2213,7 +2213,7 @@ Dataset, conversation, view (camera) and wearer identifiers.
 - **time**: the whole recording (all of its observed time)
 - **validity**: never null for a registered recording.
 - **storage**: `speech/recordings.parquet` columns `dataset`, `conversation_id`, `view_id`, `wearer_id`
-- **requires**: nothing; **datasets**: none registered
+- **requires**: nothing; **datasets**: ego4d, egocom
 
 ### `metadata.participants`
 
@@ -2226,7 +2226,7 @@ Participant ids in canonical order (wearer first), their count and the wearer's 
 - **time**: the whole recording (all of its observed time)
 - **validity**: never null for a registered recording.
 - **storage**: `speech/recordings.parquet` columns `participant_ids`, `participant_count`, `wearer_index`
-- **requires**: nothing; **datasets**: none registered
+- **requires**: nothing; **datasets**: ego4d, egocom
 
 ### `metadata.recording_span`
 
@@ -2239,7 +2239,7 @@ Start, end and duration of the recording on its canonical clock.
 - **time**: the whole recording (all of its observed time)
 - **validity**: never null for a registered recording.
 - **storage**: `speech/recordings.parquet` columns `start_s`, `end_s`, `duration_s`
-- **requires**: nothing; **datasets**: none registered
+- **requires**: nothing; **datasets**: ego4d, egocom
 
 ### `metadata.source_offset`
 
@@ -2252,7 +2252,7 @@ Position (seconds) of the recording inside its longer source video.
 - **time**: the whole recording (all of its observed time)
 - **validity**: never null for a registered recording.
 - **storage**: `speech/recordings.parquet` columns `source_offset_s`
-- **requires**: meta.source_offset; **datasets**: none registered
+- **requires**: meta.source_offset; **datasets**: ego4d
 
 ### `metadata.background_conditions`
 
@@ -2265,7 +2265,7 @@ Native background fan / music flags.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when the corpus leaves the flag empty.
 - **storage**: `speech/recordings.parquet` columns `background_fan`, `background_music`
-- **requires**: meta.background; **datasets**: none registered
+- **requires**: meta.background; **datasets**: egocom
 
 ### `metadata.participant_identity`
 
@@ -2278,7 +2278,7 @@ Whether the participant is the wearer and resolves to an annotated person.
 - **time**: the whole recording (all of its observed time)
 - **validity**: never null for a registered recording.
 - **storage**: `speech/participants.parquet` columns `is_ego`, `is_resolved`
-- **requires**: nothing; **datasets**: none registered
+- **requires**: nothing; **datasets**: ego4d, egocom
 
 ### `metadata.participant_native_speaker`
 
@@ -2291,7 +2291,7 @@ Native first-language flag of the participant.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when the corpus does not state it for this participant.
 - **storage**: `speech/participants.parquet` columns `native_speaker`
-- **requires**: meta.native_speaker; **datasets**: none registered
+- **requires**: meta.native_speaker; **datasets**: egocom
 
 ### `metadata.participant_is_host`
 
@@ -2304,4 +2304,4 @@ Native host flag of the participant.
 - **time**: the whole recording (all of its observed time)
 - **validity**: null when the corpus does not state it for this participant.
 - **storage**: `speech/participants.parquet` columns `is_host`
-- **requires**: meta.host; **datasets**: none registered
+- **requires**: meta.host; **datasets**: egocom

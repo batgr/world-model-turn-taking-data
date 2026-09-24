@@ -15,6 +15,7 @@ from omegaconf import DictConfig
 from conv_wm.config import get_path
 from conv_wm.data.datasets.egocom_cleaning import RULE_VERSION
 from conv_wm.data.vocal.native_source import (
+    MediaCoverage,
     NativeFocalVoiceSource,
     media_coverage_by_stem,
     require_table,
@@ -28,6 +29,26 @@ from conv_wm.data.vocal.native_state import (
 
 ANNOTATION_SCHEMA_VERSION = "egocom-ground_truth_transcriptions-v1"
 """EgoCom ``ground_truth_transcriptions.csv`` (word-level, speaker-attributed)."""
+
+
+def media_unknown(
+    coverage: MediaCoverage | None, end_s: float
+) -> list[NativeAnnotation]:
+    """Part time ``[0, end_s)`` the POV video's audio does not cover, as UNKNOWN."""
+    if coverage is None:
+        return [NativeAnnotation(0.0, end_s, "media_missing")]
+    if not coverage.probe_ok:
+        return [NativeAnnotation(0.0, end_s, "media_unprobed")]
+    unknown: list[NativeAnnotation] = []
+    if coverage.audio_start_s > 0.0:
+        unknown.append(
+            NativeAnnotation(0.0, min(coverage.audio_start_s, end_s), "media_uncovered")
+        )
+    if coverage.audio_end_s < end_s:
+        unknown.append(
+            NativeAnnotation(max(coverage.audio_end_s, 0.0), end_s, "media_uncovered")
+        )
+    return unknown
 
 
 def load_egocom_native_voice(
@@ -60,27 +81,10 @@ def load_egocom_native_voice(
         speaking = timed_intervals(
             wearer_words, "ground_truth_clean", "startTime", "endTime"
         )
-        unknown: list[NativeAnnotation] = []
         media_row = coverage.get(view_id)
-        if media_row is None:
+        if media_row is None or not media_row.probe_ok:
             videos_without_media += 1
-            unknown.append(NativeAnnotation(0.0, end_s, "media_missing"))
-        elif not media_row.probe_ok:
-            videos_without_media += 1
-            unknown.append(NativeAnnotation(0.0, end_s, "media_unprobed"))
-        else:
-            if media_row.audio_start_s > 0.0:
-                unknown.append(
-                    NativeAnnotation(
-                        0.0, min(media_row.audio_start_s, end_s), "media_uncovered"
-                    )
-                )
-            if media_row.audio_end_s < end_s:
-                unknown.append(
-                    NativeAnnotation(
-                        max(media_row.audio_end_s, 0.0), end_s, "media_uncovered"
-                    )
-                )
+        unknown = media_unknown(media_row, end_s)
         recordings.append(
             NativeFocalRecording(
                 dataset="egocom",
@@ -130,4 +134,4 @@ def load_egocom_native_voice(
     )
 
 
-__all__ = ["ANNOTATION_SCHEMA_VERSION", "load_egocom_native_voice"]
+__all__ = ["ANNOTATION_SCHEMA_VERSION", "load_egocom_native_voice", "media_unknown"]
