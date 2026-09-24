@@ -101,9 +101,16 @@ TEXT_UNIT_SCHEMA = pa.schema(
 )
 
 
+def token_text(value: Any) -> str | None:
+    """A token's text, ``None`` for a missing (null / NaN) transcription."""
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return None
+    return str(value)
+
+
 def token_class(text: str | None) -> str:
     """``lexical``, ``punctuation``, ``special`` (bracketed noise tags) or ``empty``."""
-    value = (text or "").strip()
+    value = (token_text(text) or "").strip()
     if not value:
         return "empty"
     if _SPECIAL.match(value):
@@ -191,7 +198,7 @@ def text_rows(
                 "participant_index": index.get(pid) if pid is not None else None,
                 "participant_id": pid,
                 "unit": str(item["unit"]),
-                "text": item["text"],
+                "text": token_text(item["text"]),
                 "token_class": classes[position],
                 "end_s": float(ends[position]) if timed[position] else None,
                 "timing_valid": bool(timed[position]),
@@ -211,7 +218,7 @@ def text_rows(
         for ordinal, turn in enumerate(turns):
             own = groups.get(ordinal, frame.iloc[0:0])
             voiced = turn.duration_s - sum(turn.pauses)
-            texts = own["text"].astype(str).tolist()
+            texts = [token_text(value) or "" for value in own["text"].tolist()]
             lexical = [
                 normalize(t)
                 for t, c in zip(texts, own["token_class"], strict=True)
@@ -245,7 +252,7 @@ def text_rows(
             .sort_values(["start", "source_row"], kind="stable")
             .to_dict(orient="records")
         ):
-            text = str(item["text"] or "")
+            text = token_text(item["text"]) or ""
             lexical = [
                 normalize(w) for w in text.split() if token_class(w) == "lexical"
             ]
@@ -333,4 +340,5 @@ __all__ = [
     "normalize",
     "text_rows",
     "token_class",
+    "token_text",
 ]

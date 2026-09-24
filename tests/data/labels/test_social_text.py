@@ -278,3 +278,15 @@ def test_tables_build_with_their_schemas(social_case):
     events, units = text_rows(structure, tokens)
     pa.Table.from_pylist(events, schema=TOKEN_EVENT_SCHEMA)
     pa.Table.from_pylist(units, schema=TEXT_UNIT_SCHEMA)
+
+
+def test_missing_token_text_is_empty_never_the_word_nan():
+    facts = recording({"w": [(1.0, 1.6)]})
+    structure = derive(facts, LabelConfig())
+    tokens = token_frame(
+        [("w", "word", "okay", 1.0, 1.2), ("w", "word", float("nan"), 1.2, 1.6)]
+    )
+    events, units = text_rows(structure, tokens)
+    assert events[1]["text"] is None and events[1]["token_class"] == "empty"
+    assert units[0]["word_count"] == 1 and units[0]["final_token"] == "okay"
+    assert token_class(None) == "empty"
