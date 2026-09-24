@@ -15,6 +15,7 @@ from omegaconf import DictConfig
 
 from conv_wm.config import get_path
 from conv_wm.data.datasets.ego4d_cleaning import RULE_VERSION
+from conv_wm.data.datasets.ego4d_media import clip_media_offset_s
 from conv_wm.data.vocal.native_source import (
     MediaCoverage,
     NativeFocalVoiceSource,
@@ -97,7 +98,7 @@ def load_ego4d_native_voice(
             coverage.get(str(row["video_uid"])),
             clip_start_s=start_s,
             clip_end_s=end_s,
-            video_start_s=float(row["video_start_sec"]),
+            media_offset_s=clip_media_offset_s(row),
         )
         if media_unknown and media_unknown[0].annotation_id != "media_uncovered":
             clips_without_media += 1
@@ -150,15 +151,15 @@ def _media_unknown(
     *,
     clip_start_s: float,
     clip_end_s: float,
-    video_start_s: float,
+    media_offset_s: float,
 ) -> list[NativeAnnotation]:
     """Clip time the source video's audio does not cover, on the clip timeline."""
     if coverage is None:
         return [NativeAnnotation(clip_start_s, clip_end_s, "media_missing")]
     if not coverage.probe_ok:
         return [NativeAnnotation(clip_start_s, clip_end_s, "media_unprobed")]
-    covered_start = coverage.audio_start_s - video_start_s + clip_start_s
-    covered_end = coverage.audio_end_s - video_start_s + clip_start_s
+    covered_start = coverage.audio_start_s - media_offset_s
+    covered_end = coverage.audio_end_s - media_offset_s
     output: list[NativeAnnotation] = []
     if covered_start > clip_start_s:
         output.append(
