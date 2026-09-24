@@ -640,11 +640,18 @@ def onset_context(
 ) -> OnsetContext:
     """Context of the onset ``events[event_index]`` (see :data:`ONSET_TYPES`).
 
-    * ``overlap`` — another participant speaks just before the onset;
-    * ``after_silence`` — joint silence before, the speaker was the last
-      unique speaker (self-resumption);
-    * ``floor_transfer`` — joint silence before, another participant was;
+    * ``overlap`` — another participant is speaking at the onset instant (the
+      onset starts inside someone else's speech);
+    * ``after_silence`` — nobody else speaks at the onset and the speaker was
+      the last unique speaker (self-resumption after a pause);
+    * ``floor_transfer`` — nobody else speaks at the onset and another
+      participant was the last unique speaker (a gap, possibly of zero length
+      when the previous speaker stops exactly at the onset);
     * ``undetermined`` — anything unknown decides it.
+
+    ``silence_before_s`` is the joint silence ending at the onset: 0 when
+    someone was speaking just before, ``None`` when that silence starts at the
+    recording start or at UNKNOWN (censored).
     """
     participant = int(events.participant[event_index])
     piece = int(events.piece[event_index])
@@ -659,11 +666,9 @@ def onset_context(
         silence_before = 0.0
     else:
         silence_before = _silence_before(pieces, piece)
-    if before is None:
-        kind = "undetermined"
-    elif before:
+    if at is True:
         kind = "overlap"
-    elif previous == NO_SPEAKER or silence_before is None:
+    elif at is None or previous == NO_SPEAKER or silence_before is None:
         kind = "undetermined"
     elif previous == participant:
         kind = "after_silence"

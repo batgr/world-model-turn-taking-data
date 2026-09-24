@@ -309,3 +309,22 @@ def test_facts_reject_a_missing_wearer():
             end_s=1.0,
             participants=(ParticipantFacts("x", False),),
         )
+
+
+def test_a_zero_gap_handover_is_a_floor_transfer_not_an_overlap():
+    facts = recording({"w": [(1.0, 2.0)], "x": [(2.0, 3.0)]})
+    structure = derive(facts, CONFIG)
+    context = context_of(structure, 2.0, 1)
+    assert context.others_active_before is True
+    assert context.others_active_at_onset is False
+    assert context.silence_before_s == 0.0
+    assert context.onset_type == "floor_transfer"
+    assert structure.overlaps == []
+    (change,) = structure.floor_changes
+    assert change.fto_s == 0.0 and transfer_kind(change.fto_s) == "no_gap_no_overlap"
+
+
+def test_an_onset_inside_someone_elses_speech_is_an_overlap_even_after_unknown():
+    facts = recording({"w": [(3.0, 3.5)], "x": [(1.0, 5.0)]}, unknown=[(0.0, 2.0)])
+    context = context_of(derive(facts, CONFIG), 3.0, 0)
+    assert context.onset_type == "overlap"

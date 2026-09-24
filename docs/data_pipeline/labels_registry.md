@@ -561,7 +561,7 @@ Whether the subframe holds a wearer onset whose context is fully known.
 
 ### `onset_context.ego_onset_type_subframes`
 
-Type of the wearer onset: 1 after_silence (joint silence before, the wearer was the last unique speaker), 2 floor_transfer (joint silence before, another participant was), 3 overlap (another participant was speaking just before), 0 undetermined.
+Type of the wearer onset: 3 overlap (another participant speaks at the onset instant); otherwise 1 after_silence (the wearer was the last unique speaker) or 2 floor_transfer (another participant was, including a zero-length gap); 0 undetermined.
 
 - **availability**: available
 - **source kind**: deterministic; **role**: context
@@ -571,7 +571,7 @@ Type of the wearer onset: 1 after_silence (joint silence before, the wearer was 
 - **validity**: null except in subframes holding a wearer onset.
 - **storage**: `speech/grid.parquet` columns `ego_onset_type_subframes`
 - **requires**: speech; **datasets**: ego4d, egocom
-- **notes**: mpc-wm names: after_silence = self_resumption, floor_transfer = floor_take_after_gap, overlap = floor_take_in_overlap; a simultaneous start after silence is typed by the last unique speaker and flagged by simultaneous_other_onset_subframes.
+- **notes**: mpc-wm names: after_silence = self_resumption, floor_transfer = floor_take_after_gap, overlap = floor_take_in_overlap. Unlike mpc-wm, overlap is decided at the onset instant in native time, so a zero-gap handover is a floor_transfer; the primitives (others active just before, silence duration, simultaneous onset) are kept alongside.
 
 
 ## `overlap` — Simultaneous speech: native overlap events and their grid view.
