@@ -29,6 +29,7 @@ raw corpora
    ↓  native_state   annotations   -> SPEAKING / SILENT / UNKNOWN per recording
    ↓  control_state  native state  -> the same, requantized at the 100 ms control step
    ↓  action_grid    control state -> NO_EVENT / ONSET / OFFSET per slot, or masked
+   ↓  media_manifest action grid ids -> corpus-relative raw video / audio paths
    ↓  model_ready    action grid   -> valid anchors, splits, dataset card
 train / validation / test index  →  a modelling repository
 ```
@@ -40,6 +41,7 @@ train / validation / test index  →  a modelling repository
 | **native_state** | One continuous, exhaustive vocal-state timeline per recording, from native annotations only — no detector, no model. |
 | **control_state** | Silences shorter than one control step cannot be represented by a controller running at that step, so they are bridged. A quantization, not a correction. |
 | **action_grid** | Sample the state on the regular 100 ms grid and log the one transition a slot may contain. Anything the vocabulary cannot express is masked, never relabelled. |
+| **media_manifest** | Resolve every canonical `recording_id` to its raw media, as paths relative to the corpus root, so a consumer never needs a corpus layout. |
 | **model_ready** | Index the anchors where a training window can be taken, classify each `event` or `background`, and assign splits to whole conversations. |
 
 Each stage has a page under [`docs/data_pipeline/`](docs/data_pipeline/README.md);
@@ -101,7 +103,8 @@ export EGO_DATA_ROOT=/path/to/your/data      # defaults to ./data
 uv run conv-wm audit manifest                # raw inventory
 uv run conv-wm audit media                   # container and stream metadata
 uv run conv-wm clean annotations             # interim tables
-uv run conv-wm build all --dataset all       # the four build stages, in order
+uv run conv-wm build all --dataset all       # the five build stages, in order
+uv run conv-wm audit media-manifest          # optional: every media path exists locally
 ```
 
 `build all` prints the final statistics and the contract checks. To rerun from
@@ -117,6 +120,7 @@ Individual stages, for development:
 uv run conv-wm build native-focal-voice-state --dataset ego4d
 uv run conv-wm build control-focal-voice-state --dataset ego4d
 uv run conv-wm build vocal-action-grid --dataset ego4d
+uv run conv-wm build media-manifest --dataset ego4d
 uv run conv-wm build model-ready --dataset ego4d
 ```
 
@@ -163,6 +167,7 @@ language:
 | `focal_state_before` | `SPEAKING` / `SILENT` / `UNKNOWN` just before the slot |
 | `action` | `NO_EVENT` / `ONSET` / `OFFSET`, or null when masked |
 | `action_valid`, `mask_reason` | whether the slot carries a usable label, and why not |
+| `video_path`, `audio_path`, `media_offset_s` | media manifest: the recording's raw files relative to the corpus root, and `media_time_s = decision_time_s + media_offset_s` |
 
 **Dataset adapters.** A dataset contributes a `DatasetSpec`
 (`data/datasets/<name>.py`) declaring its tables, annotation semantics,
@@ -181,6 +186,7 @@ Everything is written below the configured stage roots, outside the repository.
 | control voice-state timeline | `${paths.processed}/control_focal_voice_state/<dataset>/` |
 | action grid | `${paths.processed}/vocal_action_grid/<dataset>/vocal_action_grid.parquet` |
 | **model-ready index + dataset card** | `${paths.model_ready}/<dataset>/{index.parquet,metadata.json}` |
+| **media manifest** | `${paths.model_ready}/<dataset>/media_manifest.parquet` |
 | reports for every stage | `${paths.reports}/<stage>/<dataset>/report.json` |
 
 ## Model-ready format
@@ -228,7 +234,7 @@ The same raw data, config, code revision and seed produce the same artifacts.
 ./scripts/check.sh               # ruff format --check, ruff check, pyright, pytest
 ./scripts/fix.sh                 # format and autofix
 
-uv run pytest                    # 237 tests, none needs the corpus
+uv run pytest                    # 271 tests, none needs the corpus
 uv run pytest tests/test_pipeline_integration.py   # end-to-end on a synthetic fixture
 uv run ruff check .
 uv run pyright
@@ -245,9 +251,10 @@ recording boundary.
 
 1. Write `src/conv_wm/data/datasets/<name>.py` with a `DatasetSpec`: the
    structural schemas, the annotation-source specs, and the optional
-   `annotation_cleaner`, `native_focal_voice` and `recording_splits` callables.
+   `annotation_cleaner`, `native_focal_voice`, `media_records` and
+   `recording_splits` callables.
 2. Put the dataset-specific parsing in `<name>_cleaning.py`,
-   `<name>_native_voice.py` and `<name>_splits.py` next to it.
+   `<name>_native_voice.py`, `<name>_media.py` and `<name>_splits.py` next to it.
 3. Register it in `data/datasets/__init__.py` and add its paths to
    `conf/config.yaml`.
 4. Run `conv-wm audit structure`, then `conv-wm build all`.
@@ -268,8 +275,8 @@ media primitives           → data/media/
 ## Project scope
 
 This repository produces datasets. Model architectures, training loops,
-samplers and evaluation live elsewhere and consume `index.parquet` plus the
-action grid.
+samplers and evaluation live elsewhere and consume `index.parquet`, the
+action grid and `media_manifest.parquet`.
 
 ## License
 

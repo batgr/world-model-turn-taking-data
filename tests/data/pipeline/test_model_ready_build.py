@@ -321,6 +321,37 @@ def test_build_writes_the_index_and_reports_its_statistics(tmp_path):
     assert all(metadata["contract_checks"].values())
 
 
+def _strings(value):
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)
+    elif isinstance(value, str):
+        yield value
+
+
+def test_the_dataset_card_carries_no_machine_specific_path(tmp_path):
+    cfg = config_for(tmp_path)
+    _grid(cfg, "ego4d")
+    write_recording_splits(cfg, "ego4d", {"rec-1": "train"})
+
+    [output] = _build(cfg, "ego4d")
+    metadata = json.loads(output.metadata_path.read_text())
+
+    leaks = [
+        text
+        for text in _strings(metadata)
+        if str(tmp_path) in text or text.startswith(("/", "~"))
+    ]
+    assert leaks == []
+    assert metadata["files"]["sequences"] == "vocal_action_grid.parquet"
+    assert (
+        metadata["source"]["vocal_action_grid"]["file"] == "vocal_action_grid.parquet"
+    )
+
+
 def test_a_stale_or_missing_action_grid_is_refused(tmp_path):
     cfg = config_for(tmp_path)
 

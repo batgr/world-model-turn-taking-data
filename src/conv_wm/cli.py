@@ -158,6 +158,20 @@ def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) 
     return EXIT_OK
 
 
+def _audit_media_manifest(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.audits.media_manifest import run_media_file_check
+
+    outputs = run_media_file_check(cfg, dataset=args.dataset)
+    for output in outputs:
+        summary = output.summary
+        print(
+            f"{output.dataset}: {summary['status']}  paths checked: "
+            f"{summary['paths_checked']}  missing: {summary['paths_missing']}"
+        )
+        print(f"summary: {output.summary_path}")
+    return EXIT_OK if all(output.passed for output in outputs) else EXIT_AUDIT_FAILED
+
+
 def _stage_command(args: argparse.Namespace, stage: str) -> str:
     """The exact command line that produced an artifact, for its report."""
     parts = ["conv-wm"]
@@ -207,6 +221,19 @@ def _build_action_grid(cfg: DictConfig, args: argparse.Namespace) -> int:
     )
     print(format_outputs(outputs))
     return EXIT_OK
+
+
+def _build_media_manifest(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.media_manifest import (
+        format_outputs,
+        run_media_manifest_build,
+    )
+
+    outputs = run_media_manifest_build(
+        cfg, dataset=args.dataset, command=_stage_command(args, "media-manifest")
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK if all(output.passed for output in outputs) else EXIT_AUDIT_FAILED
 
 
 def _build_model_ready(cfg: DictConfig, args: argparse.Namespace) -> int:
@@ -267,6 +294,12 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         supports_dataset=True,
         supports_coverage_config=True,
     ),
+    AuditCommand(
+        "media-manifest",
+        "check that every media manifest path exists below the local raw root",
+        _audit_media_manifest,
+        supports_dataset=True,
+    ),
 )
 
 
@@ -294,6 +327,11 @@ BUILD_COMMANDS: tuple[BuildCommand, ...] = (
         "vocal-action-grid",
         "sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
         _build_action_grid,
+    ),
+    BuildCommand(
+        "media-manifest",
+        "resolve every canonical recording to its raw media, as corpus-relative paths",
+        _build_media_manifest,
     ),
     BuildCommand(
         "model-ready",
@@ -399,9 +437,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="start at this stage instead of the first one",
     )
     build_all.set_defaults(handler=_build_all)
+    release = subparsers.add_parser(
+        "release",
+        help="assemble the Hugging Face release directories (no raw media)",
+    )
+    release.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="release root (default: release.output from the configuration)",
+    )
+    release.set_defaults(handler=_release)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
     return parser
+
+
+def _release(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.release import build_hf_release
+
+    for item in build_hf_release(cfg, output=args.output):
+        print(
+            f"{item.dataset}: {', '.join(item.splits)} -> {item.metadata_path.parent}"
+        )
+    return EXIT_OK
 
 
 def _list_datasets(_: DictConfig, __: argparse.Namespace) -> int:

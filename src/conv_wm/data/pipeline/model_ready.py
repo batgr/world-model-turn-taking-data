@@ -36,6 +36,10 @@ from conv_wm.data.pipeline.action_grid import (
     REPORT_ROOT as GRID_REPORT_ROOT,
 )
 from conv_wm.data.pipeline.control_state import config_checksum
+from conv_wm.data.pipeline.media_manifest import (
+    media_manifest_for_grid,
+    release_card_section,
+)
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
@@ -585,6 +589,24 @@ def _statistics(
     }
 
 
+def _portable(value: object) -> object:
+    """``value`` with every ``{"path": ...}`` reference reduced to its file name.
+
+    The card is published: it identifies inputs by name and checksum, never by
+    a location on the machine that built it.
+    """
+    if isinstance(value, dict):
+        return {
+            ("file" if key == "path" else key): (
+                Path(str(item)).name if key == "path" else _portable(item)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_portable(item) for item in value]
+    return value
+
+
 def _dataset_metadata(
     source: CheckedArtifact,
     *,
@@ -592,6 +614,7 @@ def _dataset_metadata(
     spec: WindowSpec,
     split_spec: SplitSpec,
     index_path: Path,
+    media: CheckedArtifact | None,
     provenance_time: str,
     git_commit: str | None,
 ) -> JsonDict:
@@ -612,8 +635,10 @@ def _dataset_metadata(
         "git_commit": git_commit,
         "files": {
             "index": index_path.name,
-            "sequences": str(source.table_path),
+            "sequences": source.table_path.name,
+            "media_manifest": release_card_section(media)["file"] if media else None,
         },
+        "media": release_card_section(media) if media else None,
         "grid": {
             "frequency_hz": round(1.0 / DECISION_STEP_S, 6),
             "timestep_seconds": DECISION_STEP_S,
@@ -664,10 +689,12 @@ def _dataset_metadata(
         ),
         "source": {
             "vocal_action_grid": {
-                "path": str(source.table_path),
+                "file": source.table_path.name,
                 "sha256": source.table_sha256,
             },
-            "annotation_versions": source.report.get("source_annotation_versions", {}),
+            "annotation_versions": _portable(
+                source.report.get("source_annotation_versions", {})
+            ),
         },
         "contract_checks": statistics["contract_checks"],
     }
@@ -689,6 +716,7 @@ def _build_dataset(
     )
     summary = _summary_table(index, source.dataset)
     statistics = _statistics(index, source.table, spec)
+    media = media_manifest_for_grid(cfg, source.dataset, source.table_sha256)
 
     processed_dir = paths.model_ready / source.dataset
     report_dir = paths.reports / REPORT_ROOT / source.dataset
@@ -758,6 +786,11 @@ def _build_dataset(
             "control_focal_voice_state_timeline": grid_report.get(
                 "input_artifacts", {}
             ).get("control_focal_voice_state_timeline"),
+            "media_manifest": (
+                {"path": str(media.table_path), "sha256": media.table_sha256}
+                if media
+                else None
+            ),
         },
         "source_annotation_versions": grid_report.get("source_annotation_versions", {}),
         "uv_lock_checksum": sha256_file(uv_lock) if uv_lock.exists() else None,
@@ -800,6 +833,7 @@ def _build_dataset(
             spec=spec,
             split_spec=split_spec,
             index_path=index_path,
+            media=media,
             provenance_time=provenance.generated_at_utc,
             git_commit=provenance.git_commit,
         ),

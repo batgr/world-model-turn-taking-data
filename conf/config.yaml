@@ -48,3 +48,10 @@ datasets:
 manifest:
   compute_checksum: false
   output: ${paths.reports}/manifest/raw_manifest.parquet
+
+# Hugging Face release directories (conv-wm release). Raw media is never
+# included; each dataset ships its media manifest of corpus-relative paths.
+release:
+  output: ${root}/release/hf
+  public: [egocom]        # one public repository per dataset
+  full: [egocom, ego4d]   # the private combined repository

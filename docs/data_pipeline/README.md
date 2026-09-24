@@ -49,6 +49,7 @@ raw annotations
     -> native focal vocal state               SPEAKING / SILENT / UNKNOWN per wearer
     -> control focal vocal state              the same, requantized at Δ = 100 ms
     -> vocal action grid                      Δ = 100 ms, NO_EVENT / ONSET / OFFSET or masked
+    -> media manifest                         recording_id -> corpus-relative video/audio paths
     -> model ready                            valid anchors + train/validation/test
 ```
 
@@ -65,6 +66,8 @@ raw annotations
 | **Native focal voice state (v0 layer)** | `conv-wm build native-focal-voice-state --dataset all` | `native_focal_voice_state/<dataset>/`, data in `${paths.processed}/native_focal_voice_state/<dataset>/` |
 | **Control focal voice state (v0 layer)** | `conv-wm build control-focal-voice-state --dataset all` | `control_focal_voice_state/<dataset>/`, data in `${paths.processed}/control_focal_voice_state/<dataset>/` |
 | **Vocal action grid (v0 layer)** | `conv-wm build vocal-action-grid --dataset all` | `vocal_action_grid/<dataset>/`, data in `${paths.processed}/vocal_action_grid/<dataset>/` |
+| **Media manifest (v0 layer)** | `conv-wm build media-manifest --dataset all` | `media_manifest/<dataset>/`, data in `${paths.model_ready}/<dataset>/media_manifest.parquet` |
+| Media manifest file check | `conv-wm audit media-manifest --dataset all` | `media_manifest/<dataset>/file_check.json` |
 | **Model ready (v0 layer)** | `conv-wm build model-ready --dataset all` | `model_ready/<dataset>/`, data in `${paths.model_ready}/<dataset>/` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
@@ -73,7 +76,9 @@ media reads the manifest; the native focal voice-state build reads the cleaned
 annotation tables, the media metadata table and the manifest; the control focal
 voice-state build reads only the native artifact; the vocal action grid reads
 the control artifact (and the native timeline its report points at, gridded as
-a diagnostic comparison only). Each layer refuses an input whose checksum no
+a diagnostic comparison only); the media manifest reads the action grid, the
+media metadata table and the adapter's tables, and model-ready references it
+when present ([`media_manifest.md`](media_manifest.md)). Each layer refuses an input whose checksum no
 longer matches the report that produced it. A missing prerequisite stops the
 command with the command that produces it. There is no other ordering
 constraint.

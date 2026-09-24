@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent / "data"))
 from state_layers import (
     config_for,
     long_timeline,
+    write_media_metadata,
     write_native_state,
     write_recording_splits,
 )
@@ -52,6 +53,9 @@ def _fixture(tmp_path: Path) -> tuple[DictConfig, Path]:
         frames.append(pd.read_parquet(_native_path(cfg)))
     _rewrite_native_state(cfg, pd.concat(frames, ignore_index=True))
     write_recording_splits(cfg, DATASET, RECORDINGS)
+    write_media_metadata(
+        cfg, [(DATASET, f"EgoCom/240p/{recording}.MP4", 1) for recording in RECORDINGS]
+    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(OmegaConf.to_yaml(cfg))
     return cfg, config_path
@@ -117,6 +121,50 @@ def test_build_all_produces_a_model_ready_index(tmp_path, capsys):
     assert metadata["splits"]["anchors"].keys() == {"train", "validation", "test"}
 
 
+def test_build_all_ships_a_media_manifest_next_to_the_index(tmp_path):
+    cfg, config_path = _fixture(tmp_path)
+
+    code = cli.main(
+        [
+            "--config",
+            str(config_path),
+            "build",
+            "all",
+            "--dataset",
+            DATASET,
+            "--from",
+            "control-focal-voice-state",
+        ]
+    )
+
+    assert code == cli.EXIT_OK
+    release = Path(cfg.paths.model_ready) / DATASET
+    grid = pd.read_parquet(
+        Path(cfg.paths.processed)
+        / "vocal_action_grid"
+        / DATASET
+        / "vocal_action_grid.parquet"
+    )
+    media = pd.read_parquet(release / "media_manifest.parquet")
+    metadata = json.loads((release / "metadata.json").read_text())
+    report = json.loads(
+        (
+            Path(cfg.paths.reports) / "media_manifest" / DATASET / "report.json"
+        ).read_text()
+    )
+
+    assert set(media["recording_id"]) == set(grid["recording_id"])
+    assert media["video_path"].tolist() == [f"240p/{r}.MP4" for r in sorted(RECORDINGS)]
+    assert media["audio_path"].isna().all()
+    assert report["status"] == "PASS"
+    assert report["lineage_chain"][-1] == "media manifest"
+    assert report["media_schema_version"] == 1
+    assert metadata["files"]["media_manifest"] == "media_manifest.parquet"
+    assert metadata["media"]["corpus_directory"] == "EgoCom"
+    assert metadata["media"]["raw_media_distributed"] is False
+    assert str(tmp_path) not in json.dumps(metadata["media"])
+
+
 def test_every_stage_writes_its_artifact_and_report(tmp_path):
     cfg, config_path = _fixture(tmp_path)
 
@@ -144,6 +192,7 @@ def test_every_stage_writes_its_artifact_and_report(tmp_path):
     for stage in (
         "control_focal_voice_state",
         "vocal_action_grid",
+        "media_manifest",
         "model_ready",
     ):
         report = json.loads((reports / stage / DATASET / "report.json").read_text())
@@ -162,6 +211,9 @@ def test_one_conversation_split_across_splits_is_reported_as_leakage(tmp_path):
         frames.append(pd.read_parquet(_native_path(cfg)))
     _rewrite_native_state(cfg, pd.concat(frames, ignore_index=True))
     write_recording_splits(cfg, DATASET, RECORDINGS)
+    write_media_metadata(
+        cfg, [(DATASET, f"EgoCom/240p/{recording}.MP4", 1) for recording in RECORDINGS]
+    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(OmegaConf.to_yaml(cfg))
 

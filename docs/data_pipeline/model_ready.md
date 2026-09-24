@@ -101,9 +101,14 @@ split; it is reported, never silently repaired.
 
 ```text
 ${paths.model_ready}/<dataset>/
-├── index.parquet      one row per valid anchor
-└── metadata.json      the dataset card: geometry, thresholds, counts, lineage
+├── index.parquet           one row per valid anchor
+├── metadata.json           the dataset card: geometry, thresholds, counts, lineage
+└── media_manifest.parquet  written by `build media-manifest` (media_manifest.md)
 ```
+
+When a media manifest built from the same grid exists, `metadata.json` names it
+in `files.media_manifest` and describes it in a path-free `media` section; one
+built from another grid is refused as stale.
 
 The aligned sequences are the existing grid artifact
 (`${paths.processed}/vocal_action_grid/<dataset>/vocal_action_grid.parquet`);

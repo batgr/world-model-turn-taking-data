@@ -178,6 +178,26 @@ def write_recording_splits(cfg, dataset: str, splits: dict[str, str]) -> Path:
     return path
 
 
+def write_media_metadata(cfg, rows: list[tuple[str, str, int]]) -> Path:
+    """Write the media metadata audit table: ``(dataset, relative_path, n_audio)``."""
+    path = (
+        Path(cfg.paths.reports)
+        / "temporal"
+        / "media_metadata"
+        / "media_metadata.parquet"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "dataset": [row[0] for row in rows],
+            "relative_path": [row[1] for row in rows],
+            "probe_ok": [True] * len(rows),
+            "n_audio_streams": [row[2] for row in rows],
+        }
+    ).to_parquet(path, index=False)
+    return path
+
+
 def build_action_grid(cfg, dataset="all"):
     """Run the control and grid builds quietly, as the model-ready stage needs both."""
     build_control_state(cfg, dataset)
@@ -191,6 +211,7 @@ __all__ = [
     "config_for",
     "long_timeline",
     "native_row",
+    "write_media_metadata",
     "write_native_state",
     "write_recording_splits",
 ]

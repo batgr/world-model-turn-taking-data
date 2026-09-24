@@ -7,7 +7,7 @@ on dataset names.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -21,6 +21,7 @@ from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 
 if TYPE_CHECKING:
+    from conv_wm.data.media.media_manifest import MediaSource
     from conv_wm.data.pipeline.clean import CleanedAnnotationTable
     from conv_wm.data.vocal.native_source import NativeFocalVoiceSource
 
@@ -109,6 +110,11 @@ RecordingSplitLoader = Callable[[DictConfig], pd.DataFrame]
 """Return the dataset's own train/val/test assignment as ``recording_id`` /
 ``split`` rows, so the model-ready stage propagates it instead of resplitting."""
 
+MediaRecordLoader = Callable[[DictConfig, pd.DataFrame, Sequence[str]], "MediaSource"]
+"""Given the configuration, the media metadata table and the canonical
+``recording_id`` values of the action grid, resolve each recording to its raw
+media files (or say why it cannot)."""
+
 
 @dataclass(frozen=True)
 class AudioInterpretation:
@@ -139,6 +145,8 @@ class DatasetSpec:
     """Adapter feeding the native focal voice-state build; ``None`` opts out."""
     recording_splits: RecordingSplitLoader | None = None
     """Upstream split assignment; ``None`` leaves model-ready samples unsplit."""
+    media_records: MediaRecordLoader | None = None
+    """Adapter feeding the media manifest build; ``None`` opts out."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:
