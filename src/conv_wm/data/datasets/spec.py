@@ -17,6 +17,7 @@ from omegaconf import DictConfig
 
 from conv_wm.config import Stage, get_path
 from conv_wm.data.annotations.spec import EMPTY_ANNOTATIONS, AnnotationSpec
+from conv_wm.data.labels.facts import LabelFactsSpec
 from conv_wm.data.media.audio.decode import DecodeValidationCase
 from conv_wm.data.media.audio.interpretation import KnownBoundaryGrid
 
@@ -147,6 +148,9 @@ class DatasetSpec:
     """Upstream split assignment; ``None`` leaves model-ready samples unsplit."""
     media_records: MediaRecordLoader | None = None
     """Adapter feeding the media manifest build; ``None`` opts out."""
+    label_facts: LabelFactsSpec | None = None
+    """Canonical facts feeding the label build, and the facts it can provide;
+    ``None`` opts out of labels."""
     audio: AudioInterpretation = field(default_factory=AudioInterpretation)
 
     def __post_init__(self) -> None:
