@@ -238,3 +238,87 @@ def test_labels_are_built_only_on_request_for_media_extractors(built, capsys):
     )
     assert code == cli.EXIT_OK
     assert "egocom/text" in capsys.readouterr().out
+
+
+def _synthetic_video(path: Path, seconds: float) -> None:
+    """A 150 Hz tone and a moving test pattern, encoded like a small POV video."""
+    import subprocess
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"sine=frequency=150:sample_rate=16000:duration={seconds}",
+            "-f",
+            "lavfi",
+            "-i",
+            f"testsrc=size=160x120:rate=30:duration={seconds}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(path),
+        ],
+        check=True,
+    )
+
+
+@pytest.mark.skipif(
+    __import__("shutil").which("ffmpeg") is None, reason="needs ffmpeg on PATH"
+)
+def test_media_extractors_decode_real_files(built, capsys):
+    pytest.importorskip("parselmouth")
+    cfg, config_path = built
+    for recording in RECORDINGS:
+        _synthetic_video(
+            Path(cfg.paths.raw) / "EgoCom" / "240p" / f"{recording}.MP4", 49.0
+        )
+    code = _run(
+        config_path,
+        "build",
+        "labels",
+        "--dataset",
+        DATASET,
+        "--extractors",
+        "audio,video",
+        "--external",
+    )
+    assert code == cli.EXIT_OK, capsys.readouterr().err
+    root = dataset_dir(cfg, DATASET)
+    audio = store.read_manifest(root, "audio")
+    assert audio is not None and "prosody.ego_f0_hz" in audio["materialized_labels"]
+    assert audio["external_tools"]["praat"]["package_version"]
+    bundle = store.load_labels(
+        root,
+        LabelSelection(
+            True,
+            (
+                "prosody.ego_f0_hz",
+                "nuisance.audio_valid",
+                "nuisance.brightness",
+                "nuisance.frame_valid",
+            ),
+        ),
+        recording_ids=["rec-a"],
+    )
+    grid = bundle["grid"].to_pandas().set_index("decision_index")
+    # 3.0-3.1 s: the wearer speaks alone (timeline 2.5-4.0 s, other speaker from 3.8 s)
+    assert grid.loc[30, "ego_f0_hz"] == pytest.approx(150.0, rel=0.03)
+    assert pd.isna(grid.loc[39, "ego_f0_hz"])  # 3.9 s: overlap with speaker 1, masked
+    assert pd.isna(grid.loc[10, "ego_f0_hz"])  # 1.0 s: the wearer is silent
+    assert grid["audio_valid"].mean() > 0.95
+    assert grid["frame_valid"].mean() > 0.95
+    assert grid.loc[grid.frame_valid, "brightness"].notna().all()
+    # building media labels never touched the annotation-only extractors
+    assert store.read_manifest(root, "speech") is not None

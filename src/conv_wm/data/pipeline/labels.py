@@ -520,9 +520,24 @@ def build_extractor(
         elif extractor is Extractor.TEXT:
             tables = _text_tables(inputs.structures, inputs.source)
         else:
-            raise NotImplementedError(
-                f"the {extractor} extractor is not implemented yet"
+            from conv_wm.data.labels import media
+
+            result_media = media.media_tables(
+                cfg,
+                dataset,
+                extractor,
+                inputs.structures,
+                inputs.grid_keys,
+                config,
+                grid_sha256=inputs.grid.table_sha256,
+                external=external,
             )
+            tables = result_media.tables
+            statistics = result_media.statistics
+            extra_inputs = result_media.inputs
+            tools = result_media.tools
+            materialized = [m for m in materialized if m in result_media.materialized]
+            unavailable.update(result_media.unavailable)
         statistics = {
             **statistics,
             **{f"{table}_rows": content.num_rows for table, content in tables.items()},

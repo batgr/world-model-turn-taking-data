@@ -24,6 +24,9 @@ coverage-audit = [
     "onnxruntime>=1.20",
     "silero-vad>=6.2",
 ]
+labels-audio = [
+    "praat-parselmouth>=0.4.5",
+]
 
 [project.scripts]
 conv-wm = "conv_wm.cli:main"
