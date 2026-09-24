@@ -35,7 +35,7 @@ EGO4D_FPS = 30.0
 """Frame rate of every Ego4D video and of the AV clip timeline (frame / 30)."""
 
 
-def clip_media_offset_s(clip: Mapping[str, Any]) -> float:
+def clip_media_offset_s(clip: Mapping[Any, Any]) -> float:
     """Where clip time 0 sits on its source video file: ``media = clip + offset``.
 
     Clip frame ``f`` is video frame ``video_start_frame - clip_start_frame + f``,
