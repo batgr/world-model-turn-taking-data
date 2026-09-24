@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -44,18 +45,34 @@ def write_summary(
     if parameters is not None:
         document["parameters"] = dict(parameters)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    staging = _staging_path(path)
+    staging.write_text(
         json.dumps(document, indent=2, sort_keys=True, default=_json_default) + "\n",
         encoding="utf-8",
     )
+    os.replace(staging, path)
     return document
 
 
 def write_table(path: Path, table: pd.DataFrame) -> Path:
-    """Write ``table`` as Parquet without the index, creating parent directories."""
+    """Write ``table`` as Parquet without the index, creating parent directories.
+
+    The file is written next to its destination and renamed into place, so a
+    reader never sees a partially written table.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    table.to_parquet(path, index=False)
+    staging = _staging_path(path)
+    try:
+        table.to_parquet(staging, index=False)
+        os.replace(staging, path)
+    finally:
+        staging.unlink(missing_ok=True)
     return path
+
+
+def _staging_path(path: Path) -> Path:
+    """A same-directory temporary name, so the final rename is atomic."""
+    return path.with_name(f".{path.name}.{os.getpid()}.tmp")
 
 
 def _json_default(value: object) -> object:

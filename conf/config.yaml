@@ -55,3 +55,18 @@ release:
   output: ${root}/release/hf
   public: [egocom]        # one public repository per dataset
   full: [egocom, ego4d]   # the private combined repository
+
+# Label sidecars (conv-wm build labels): derivation parameters only. Every
+# built extractor records them and their digest in its manifest.json; changing
+# one marks the built labels stale (conv-wm labels status). Label *selection*
+# belongs to the consumer (LabelSelection), not to this file.
+labels:
+  subframes_per_step: 3                  # 30 Hz subframes in each 100 ms cell
+  future_horizons_s: [0.1, 0.5, 1.0]     # future.* targets, one value per horizon
+  simultaneous_onset_tolerance_s: 0.03333333333333333   # one 30 Hz subframe
+  turn_max_internal_pause_s: 0.3         # pause closure of turns.turns
+  max_local_gap_s: 2.0                   # floor transfers beyond: locality long_gap
+  max_local_overlap_s: 2.0               # floor transfers beyond: locality long_overlap
+  audio_sample_rate_hz: 16000            # audio extractor decoding rate
+  audio_min_mask_fraction: 0.5           # ego prosody needs this much ego-solo time per cell
+  video_frame_width: 160                 # video extractor decoding width (pixels)

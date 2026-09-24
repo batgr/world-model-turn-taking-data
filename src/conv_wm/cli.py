@@ -172,6 +172,30 @@ def _audit_media_manifest(cfg: DictConfig, args: argparse.Namespace) -> int:
     return EXIT_OK if all(output.passed for output in outputs) else EXIT_AUDIT_FAILED
 
 
+def _audit_labels(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.labels import run_label_coverage_audit
+
+    outputs = run_label_coverage_audit(cfg, dataset=args.dataset)
+    for name, entry in outputs.report["datasets"].items():
+        labels = entry["labels"].values()
+        built = sum(bool(item["materialized"]) for item in labels)
+        supported = sum(bool(item["supported"]) for item in labels)
+        print(
+            f"{name}: {built} labels built of {supported} supported ({len(entry['labels'])} registered)"
+        )
+    stale = {
+        f"{name}/{extractor}": status["reasons"]
+        for name, extractors in outputs.report["status"].items()
+        for extractor, status in extractors.items()
+        if not status["current"]
+    }
+    for key, reasons in stale.items():
+        print(f"stale {key}: {'; '.join(reasons)}")
+    print(f"report: {outputs.json_path}")
+    print(f"markdown: {outputs.markdown_path}")
+    return EXIT_OK
+
+
 def _stage_command(args: argparse.Namespace, stage: str) -> str:
     """The exact command line that produced an artifact, for its report."""
     parts = ["conv-wm"]
@@ -234,6 +258,68 @@ def _build_media_manifest(cfg: DictConfig, args: argparse.Namespace) -> int:
     )
     print(format_outputs(outputs))
     return EXIT_OK if all(output.passed for output in outputs) else EXIT_AUDIT_FAILED
+
+
+def _build_labels(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.labels import format_outputs, run_label_build
+
+    extractors = _csv(getattr(args, "extractors", None))
+    labels = _csv(getattr(args, "labels", None))
+    modalities = _csv(getattr(args, "modalities", None))
+    external = bool(getattr(args, "external", False))
+    command = _stage_command(args, "labels")
+    for flag, value in (
+        ("--extractors", extractors),
+        ("--labels", labels),
+        ("--modalities", modalities),
+    ):
+        if value:
+            command += f" {flag} {','.join(value)}"
+    if external:
+        command += " --external"
+    outputs = run_label_build(
+        cfg,
+        dataset=args.dataset,
+        extractors=extractors,
+        labels=labels,
+        modalities=modalities,
+        external=external,
+        command=command,
+    )
+    print(format_outputs(outputs))
+    return EXIT_OK
+
+
+def _csv(value: str | None) -> list[str] | None:
+    """Split a comma-separated option (``None`` stays ``None``)."""
+    if not value:
+        return None
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _label_build_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--extractors",
+        default=None,
+        help="comma-separated extractors: speech, social, text, audio, video "
+        "(default: the annotation-only ones)",
+    )
+    parser.add_argument(
+        "--labels",
+        default=None,
+        help="build the extractors holding these labels: exact names, "
+        "'family.*' or 'all' (comma-separated)",
+    )
+    parser.add_argument(
+        "--modalities",
+        default=None,
+        help="build the extractors holding labels of these modalities (comma-separated)",
+    )
+    parser.add_argument(
+        "--external",
+        action="store_true",
+        help="also build external_model labels (needs their optional extras)",
+    )
 
 
 def _build_model_ready(cfg: DictConfig, args: argparse.Namespace) -> int:
@@ -300,6 +386,12 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         _audit_media_manifest,
         supports_dataset=True,
     ),
+    AuditCommand(
+        "labels",
+        "coverage, validity and sanity statistics of the built label sidecars",
+        _audit_labels,
+        supports_dataset=True,
+    ),
 )
 
 
@@ -310,6 +402,8 @@ class BuildCommand:
     name: str
     help: str
     run: Callable[[DictConfig, argparse.Namespace], int]
+    configure: Callable[[argparse.ArgumentParser], None] | None = None
+    """Adds the stage's own options to its ``build <name>`` parser."""
 
 
 BUILD_COMMANDS: tuple[BuildCommand, ...] = (
@@ -337,6 +431,12 @@ BUILD_COMMANDS: tuple[BuildCommand, ...] = (
         "model-ready",
         "index the training anchors the action grid supports and assign splits",
         _build_model_ready,
+    ),
+    BuildCommand(
+        "labels",
+        "derive the label sidecars (annotation-only extractors by default)",
+        _build_labels,
+        _label_build_arguments,
     ),
 )
 
@@ -419,6 +519,8 @@ def build_parser() -> argparse.ArgumentParser:
             default="all",
             help="dataset to build (default all)",
         )
+        if command.configure is not None:
+            command.configure(sub)
         sub.set_defaults(handler=command.run)
     build_all = build_subparsers.add_parser(
         "all", help="run every build stage in order (the canonical pipeline)"
@@ -448,6 +550,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="release root (default: release.output from the configuration)",
     )
     release.set_defaults(handler=_release)
+    labels = subparsers.add_parser(
+        "labels", help="inspect the label registry, selections and built label stores"
+    )
+    label_subparsers = labels.add_subparsers(dest="labels_command", required=True)
+    label_list = label_subparsers.add_parser(
+        "list", help="resolve a selection against the registry and print it"
+    )
+    label_list.add_argument(
+        "--include", default="all", help="comma-separated names/patterns"
+    )
+    label_list.add_argument(
+        "--modalities", default=None, help="comma-separated modalities"
+    )
+    label_list.set_defaults(handler=_labels_list)
+    label_docs = label_subparsers.add_parser(
+        "docs", help="regenerate the registry reference page from the registry"
+    )
+    label_docs.add_argument("--output", type=Path, default=None)
+    label_docs.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 2 if the committed page is out of date",
+    )
+    label_docs.set_defaults(handler=_labels_docs)
+    label_status = label_subparsers.add_parser(
+        "status", help="whether each built extractor is still current"
+    )
+    label_status.add_argument("--dataset", choices=DATASET_CHOICES, default="all")
+    label_status.set_defaults(handler=_labels_status)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
     return parser
@@ -461,6 +592,59 @@ def _release(cfg: DictConfig, args: argparse.Namespace) -> int:
             f"{item.dataset}: {', '.join(item.splits)} -> {item.metadata_path.parent}"
         )
     return EXIT_OK
+
+
+def _labels_list(_: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.labels.catalog import REGISTRY
+    from conv_wm.data.labels.selection import LabelSelection, resolve
+
+    selection = LabelSelection(
+        True, tuple(_csv(args.include) or ()), tuple(_csv(args.modalities) or ())
+    )
+    resolved = resolve(selection, REGISTRY)
+    for spec in resolved.labels:
+        modalities = ",".join(map(str, spec.modalities))
+        print(
+            f"{spec.name}\t{spec.source_kind}\t{modalities}\t{spec.extractor}/{spec.table}"
+        )
+    print(f"{len(resolved.labels)} labels selected, {len(resolved.skipped)} skipped")
+    return EXIT_OK
+
+
+def _labels_docs(_: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.labels.docs import DOC_PATH, registry_markdown
+
+    path = args.output or DOC_PATH
+    content = registry_markdown()
+    if args.check:
+        current = path.read_text(encoding="utf-8") if path.exists() else ""
+        if current != content:
+            print(f"{path} is out of date: run conv-wm labels docs", file=sys.stderr)
+            return EXIT_AUDIT_FAILED
+        print(f"{path} is up to date")
+        return EXIT_OK
+    path.write_text(content, encoding="utf-8")
+    print(f"wrote {path}")
+    return EXIT_OK
+
+
+def _labels_status(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data.pipeline.labels import label_status, selected_datasets
+
+    stale = False
+    for name in selected_datasets(args.dataset):
+        status = label_status(cfg, name)
+        if not status:
+            print(f"{name}: no label extractor built")
+        for extractor, entry in status.items():
+            state = (
+                "current"
+                if entry["current"]
+                else "STALE: " + "; ".join(entry["reasons"])
+            )
+            stale |= not entry["current"]
+            print(f"{name}/{extractor}: {state}")
+    return EXIT_AUDIT_FAILED if stale else EXIT_OK
 
 
 def _list_datasets(_: DictConfig, __: argparse.Namespace) -> int:

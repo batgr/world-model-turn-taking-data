@@ -21,9 +21,8 @@ sys.path.insert(0, str(Path(__file__).parent / "data"))
 from state_layers import (
     config_for,
     long_timeline,
-    write_media_metadata,
+    write_egocom_interim,
     write_native_state,
-    write_recording_splits,
 )
 
 from conv_wm import cli
@@ -39,6 +38,14 @@ def _fixture(tmp_path: Path) -> tuple[DictConfig, Path]:
     synthetic fixture has none of, so the fixture starts one stage later.
     """
     cfg = config_for(tmp_path)
+    # the cleaned tables the label stage reads, consistent with the timelines
+    annotations = write_egocom_interim(
+        cfg,
+        {
+            recording: (f"conversation-{recording}", split, long_timeline())
+            for recording, split in RECORDINGS.items()
+        },
+    )
     frames = []
     for recording in RECORDINGS:
         # each call rewrites the single-recording timeline; keep a copy of each.
@@ -49,13 +56,10 @@ def _fixture(tmp_path: Path) -> tuple[DictConfig, Path]:
             long_timeline(),
             recording=recording,
             conversation=f"conversation-{recording}",
+            annotation_paths=annotations,
         )
         frames.append(pd.read_parquet(_native_path(cfg)))
     _rewrite_native_state(cfg, pd.concat(frames, ignore_index=True))
-    write_recording_splits(cfg, DATASET, RECORDINGS)
-    write_media_metadata(
-        cfg, [(DATASET, f"EgoCom/240p/{recording}.MP4", 1) for recording in RECORDINGS]
-    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(OmegaConf.to_yaml(cfg))
     return cfg, config_path
@@ -203,17 +207,25 @@ def test_every_stage_writes_its_artifact_and_report(tmp_path):
 def test_one_conversation_split_across_splits_is_reported_as_leakage(tmp_path):
     """The same fixture with a single shared conversation must fail the check."""
     cfg = config_for(tmp_path)
+    annotations = write_egocom_interim(
+        cfg,
+        {
+            recording: ("shared", split, long_timeline())
+            for recording, split in RECORDINGS.items()
+        },
+    )
     frames = []
     for recording in RECORDINGS:
         write_native_state(
-            cfg, DATASET, long_timeline(), recording=recording, conversation="shared"
+            cfg,
+            DATASET,
+            long_timeline(),
+            recording=recording,
+            conversation="shared",
+            annotation_paths=annotations,
         )
         frames.append(pd.read_parquet(_native_path(cfg)))
     _rewrite_native_state(cfg, pd.concat(frames, ignore_index=True))
-    write_recording_splits(cfg, DATASET, RECORDINGS)
-    write_media_metadata(
-        cfg, [(DATASET, f"EgoCom/240p/{recording}.MP4", 1) for recording in RECORDINGS]
-    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(OmegaConf.to_yaml(cfg))
 

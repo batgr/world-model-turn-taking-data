@@ -62,7 +62,11 @@ def config_for(tmp_path: Path):
                 },
                 "egocom": {
                     "interim": str(tmp_path / "interim" / "egocom"),
-                    "files": {"video_info_clean": "video_info_clean.parquet"},
+                    "raw": str(tmp_path / "raw" / "EgoCom" / "annotations"),
+                    "files": {
+                        "video_info_clean": "video_info_clean.parquet",
+                        "ground_truth_clean": "ground_truth_clean.parquet",
+                    },
                 },
             },
             "manifest": {"output": str(reports / "manifest" / "raw_manifest.parquet")},
@@ -92,7 +96,13 @@ def native_row(dataset, recording_id, start, end, state, conversation="group-1")
 
 
 def write_native_state(
-    cfg, dataset: str, timeline=TIMELINE, *, recording="rec-1", conversation="group-1"
+    cfg,
+    dataset: str,
+    timeline=TIMELINE,
+    *,
+    recording="rec-1",
+    conversation="group-1",
+    annotation_paths: list[Path] | None = None,
 ):
     """Write a native focal voice-state artifact and the report that vouches for it."""
     processed = Path(cfg.paths.processed) / "native_focal_voice_state" / dataset
@@ -118,7 +128,15 @@ def write_native_state(
                 "created_at": "2026-09-22T00:00:00+00:00",
                 "output_artifacts": {"timeline": {"path": str(path), "sha256": digest}},
                 "input_artifacts": {
-                    "native_annotations": [{"path": "native.parquet", "sha256": "dead"}]
+                    "native_annotations": [
+                        {
+                            "path": str(item),
+                            "sha256": hashlib.sha256(item.read_bytes()).hexdigest(),
+                        }
+                        for item in annotation_paths
+                    ]
+                    if annotation_paths
+                    else [{"path": "native.parquet", "sha256": "dead"}]
                 },
                 "source_dataset_version": {
                     "annotation_schema_version": f"{dataset}-test-v1",
@@ -198,6 +216,94 @@ def write_media_metadata(cfg, rows: list[tuple[str, str, int]]) -> Path:
     return path
 
 
+def write_egocom_interim(
+    cfg,
+    recordings: dict[str, tuple[str, str, list[tuple[float, float, str]]]],
+    *,
+    others: dict[str, list[tuple[str, float, float]]] | None = None,
+) -> list[Path]:
+    """Cleaned EgoCom tables consistent with hand-written wearer timelines.
+
+    ``recordings`` maps a POV video to ``(conversation part, split, timeline)``;
+    the wearer (speaker 0) gets one timed token per SPEAKING interval, so the
+    label facts reproduce the timeline exactly. ``others`` adds tokens of other
+    speakers ``(speaker, start, end)`` per conversation part. Media metadata
+    covering every video's audio is written as well.
+    """
+    interim = Path(cfg.datasets.egocom.interim)
+    interim.mkdir(parents=True, exist_ok=True)
+    info_rows = []
+    words = []
+    for video, (part, split, timeline) in recordings.items():
+        info_rows.append(
+            {
+                "video_id": len(info_rows),
+                "conversation_id": part,
+                "video_speaker_id": 0,
+                "num_speakers": 2,
+                "duration_seconds": round(timeline[-1][1]),
+                "native_speaker": True,
+                "speaker_is_host": False,
+                "video_name": video,
+                "background_fan": False,
+                "background_music": None,
+                "split": split,
+            }
+        )
+        for start, end, state in timeline:
+            if state == "SPEAKING" and not any(
+                w["conversation_id"] == part and w["startTime"] == start for w in words
+            ):
+                words.append(
+                    {
+                        "conversation_id": part,
+                        "speaker_id": 0,
+                        "startTime": start,
+                        "endTime": end,
+                        "word": "hello",
+                    }
+                )
+    for part, items in (others or {}).items():
+        for speaker, start, end in items:
+            words.append(
+                {
+                    "conversation_id": part,
+                    "speaker_id": int(speaker),
+                    "startTime": start,
+                    "endTime": end,
+                    "word": "yes",
+                }
+            )
+    info_path = interim / "video_info_clean.parquet"
+    pd.DataFrame(info_rows).to_parquet(info_path, index=False)
+    transcript = pd.DataFrame(
+        words, columns=["conversation_id", "speaker_id", "startTime", "endTime", "word"]
+    )
+    transcript.insert(0, "source_row", range(len(transcript)))
+    transcript_path = interim / "ground_truth_clean.parquet"
+    transcript.to_parquet(transcript_path, index=False)
+    media_path = (
+        Path(cfg.paths.reports)
+        / "temporal"
+        / "media_metadata"
+        / "media_metadata.parquet"
+    )
+    media_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "dataset": ["egocom"] * len(recordings),
+            "relative_path": [f"EgoCom/240p/{video}.MP4" for video in recordings],
+            "probe_ok": [True] * len(recordings),
+            "n_audio_streams": [1] * len(recordings),
+            "audio_start_time_sec": [0.0] * len(recordings),
+            "audio_duration_sec": [
+                timeline[-1][1] + 1.0 for _, _, timeline in recordings.values()
+            ],
+        }
+    ).to_parquet(media_path, index=False)
+    return [info_path, transcript_path]
+
+
 def build_action_grid(cfg, dataset="all"):
     """Run the control and grid builds quietly, as the model-ready stage needs both."""
     build_control_state(cfg, dataset)
@@ -211,6 +317,7 @@ __all__ = [
     "config_for",
     "long_timeline",
     "native_row",
+    "write_egocom_interim",
     "write_media_metadata",
     "write_native_state",
     "write_recording_splits",
