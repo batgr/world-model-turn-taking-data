@@ -51,6 +51,7 @@ raw annotations
     -> vocal action grid                      Δ = 100 ms, NO_EVENT / ONSET / OFFSET or masked
     -> media manifest                         recording_id -> corpus-relative video/audio paths
     -> model ready                            valid anchors + train/validation/test
+    -> label sidecars                         optional, versioned labels on the same grid
 ```
 
 | Capability | Command | Report |
@@ -69,6 +70,8 @@ raw annotations
 | **Media manifest (v0 layer)** | `conv-wm build media-manifest --dataset all` | `media_manifest/<dataset>/`, data in `${paths.model_ready}/<dataset>/media_manifest.parquet` |
 | Media manifest file check | `conv-wm audit media-manifest --dataset all` | `media_manifest/<dataset>/file_check.json` |
 | **Model ready (v0 layer)** | `conv-wm build model-ready --dataset all` | `model_ready/<dataset>/`, data in `${paths.model_ready}/<dataset>/` |
+| **Label sidecars** | `conv-wm build labels --dataset all` | `labels/<dataset>/<extractor>/`, data in `${paths.processed}/labels/<dataset>/` ([`labels.md`](labels.md)) |
+| Label coverage audit | `conv-wm audit labels --dataset all` | `labels/coverage/` |
 
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;
@@ -176,6 +179,7 @@ registry (`conv_wm.data.datasets.get(name)`):
 | `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field, known limitations) and cross-source comparisons | annotation integrity |
 | `annotation_cleaner` | dataset-specific, explicitly validated minimal transformations | annotation cleaning |
 | `native_focal_voice` | cleaned native annotations mapped to one focal voice recording per (view, wearer) | native focal voice-state build |
+| `label_facts: LabelFactsSpec` | every participant's native speech, UNKNOWN regions, transcripts, social segments, face tracks, and the facts it provides | label sidecars ([`labels.md`](labels.md)) |
 | `audio: AudioInterpretation` | a known boundary grid, extra decoded-validation windows, a dataset summary section | audio timeline audit (relabelling), video timeline audit (extra windows) |
 
 A dataset that is present on disk but not registered is still inventoried and

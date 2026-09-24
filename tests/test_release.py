@@ -83,3 +83,72 @@ def test_release_refuses_an_artifact_changed_behind_its_card(tmp_path):
 
     with pytest.raises(ValueError, match="checksum"):
         build_hf_release(cfg)
+
+
+def test_release_ships_the_label_sidecars_it_can_vouch_for(tmp_path):
+    from conv_wm.data.labels import store
+    from conv_wm.data.labels.registry import Table
+    from conv_wm.data.pipeline.labels import dataset_dir
+
+    cfg = _built(tmp_path)
+    grid_sha = json.loads(
+        (Path(cfg.paths.model_ready) / "egocom" / "metadata.json").read_text()
+    )["source"]["vocal_action_grid"]["sha256"]
+    root = dataset_dir(cfg, "egocom")
+    store.write_registry(root)
+    import pyarrow as pa
+
+    table = pa.table(
+        {"recording_id": ["rec-1"], "decision_index": [0], "decision_time_s": [0.0]}
+    )
+    store.write_extractor(
+        root / "speech",
+        {Table.GRID: table},
+        {
+            "extractor": "speech",
+            "dataset": "egocom",
+            "extractor_version": "v",
+            "config_digest": "c",
+            "materialized_labels": [],
+            "inputs": {"action_grid": {"sha256": grid_sha}},
+        },
+    )
+
+    build_hf_release(cfg)
+
+    public = json.loads((tmp_path / "release" / "egocom" / "metadata.json").read_text())
+    assert public["files"]["labels"] == "data/labels"
+    assert (
+        public["labels"]["extractors"]["speech"]["tables"]["grid"]["file"]
+        == "speech/grid.parquet"
+    )
+    shipped = tmp_path / "release" / "egocom" / "data" / "labels"
+    assert (shipped / "registry.json").exists()
+    assert (shipped / "speech" / "grid.parquet").read_bytes() == (
+        root / "speech" / "grid.parquet"
+    ).read_bytes()
+    assert str(tmp_path) not in json.dumps(public)
+
+
+def test_release_refuses_labels_built_from_another_grid(tmp_path):
+    import pyarrow as pa
+
+    from conv_wm.data.labels import store
+    from conv_wm.data.labels.registry import Table
+    from conv_wm.data.pipeline.labels import StaleUpstreamError, dataset_dir
+
+    cfg = _built(tmp_path)
+    root = dataset_dir(cfg, "egocom")
+    store.write_registry(root)
+    store.write_extractor(
+        root / "speech",
+        {Table.GRID: pa.table({"recording_id": ["rec-1"]})},
+        {
+            "extractor": "speech",
+            "dataset": "egocom",
+            "inputs": {"action_grid": {"sha256": "old"}},
+        },
+    )
+
+    with pytest.raises(StaleUpstreamError, match="another action grid"):
+        build_hf_release(cfg)

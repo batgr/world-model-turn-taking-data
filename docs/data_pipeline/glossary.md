@@ -188,6 +188,33 @@ report column and a term differ, the column name is given in code style.
 - **Split leakage** — a conversation group whose sessions do not share one
   split. Reported, never silently repaired.
 
+## Label sidecars
+
+- **Label** — one entry of the registry (`family.label`): meaning, level,
+  modalities, time reference, source kind, role, validity and storage.
+  [`labels_registry.md`](labels_registry.md) lists them all.
+- **Source kind** (label) — `native_annotation`, `deterministic`,
+  `external_model` (never ground truth) or `human_annotation` (not available).
+- **Fact** — what a dataset adapter declares it can provide (`speech`,
+  `words`, `transcript`, `social.looking`, ...); a label is supported by a
+  dataset exactly when the dataset provides all the facts it requires.
+- **Extractor** — the unit of building (`speech`, `social`, `text`, `audio`,
+  `video`): one directory of tables plus a deterministic `manifest.json`.
+- **Participant index** — position in a recording's `participant_ids`; 0 is
+  always the wearer.
+- **Subframe** — one of the `S` equal parts of a decision cell (default 3,
+  i.e. 30 Hz).
+- **Reference instant** — the cell end `r_k = t_k + Δ` at which timing, next
+  speaker and future labels are evaluated.
+- **Last unique speaker / floor** — the participant who most recently spoke
+  alone; a **floor change** is a change of it between two known participants,
+  its **FTO** the start of the new holder's run minus the end of the previous
+  holder's.
+- **Censored** — a value that would need time beyond the observed span (the
+  recording end or UNKNOWN): null and invalid, never zero.
+- **Ego-solo mask** — time where the wearer is the only known speaker; the
+  only time the wearer's prosody is measured on.
+
 ## Reports
 
 - **Summary** — the JSON document an audit writes; always contains

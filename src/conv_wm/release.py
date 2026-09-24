@@ -12,12 +12,15 @@ layout. Every input is checked against the checksum the card records.
     data/action_grid.parquet
     data/media_manifest.parquet
     data/model_ready/<split>.parquet
+    data/labels/                            label sidecars, when built (registry.json,
+                                            <extractor>/manifest.json + tables)
 <output>/full/                              the private combined repository
     README.md                               hand-written, never overwritten
     <dataset>/metadata.json
     <dataset>/action_grid.parquet
     <dataset>/media_manifest.parquet
     <dataset>/model_ready/<split>.parquet
+    <dataset>/labels/
 ```
 
 Raw media is never copied: the manifest only references it.
@@ -37,6 +40,8 @@ from omegaconf import DictConfig
 from conv_wm.config import pipeline_paths
 from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.pipeline.action_grid import GRID_TABLE, PROCESSED_ROOT
+from conv_wm.data.pipeline.labels import dataset_dir as label_store_dir
+from conv_wm.data.pipeline.labels import release_label_store
 from conv_wm.data.pipeline.model_ready import (
     CANONICAL_SPLITS,
     INDEX_TABLE,
@@ -51,6 +56,7 @@ FULL_RELEASE = "full"
 GRID_FILE = "action_grid.parquet"
 MEDIA_FILE = "media_manifest.parquet"
 PARTITION_DIR = "model_ready"
+LABELS_DIR = "labels"
 
 
 @dataclass(frozen=True)
@@ -132,6 +138,14 @@ def write_release_dataset(
         "sequences": relative(data_dir / GRID_FILE),
         "media_manifest": relative(data_dir / MEDIA_FILE),
     }
+    labels = label_store_dir(cfg, dataset)
+    if labels.exists():
+        card["labels"] = release_label_store(
+            labels,
+            data_dir / LABELS_DIR,
+            grid_sha256=card["source"]["vocal_action_grid"]["sha256"],
+        )
+        card["files"]["labels"] = relative(data_dir / LABELS_DIR)
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(
         json.dumps(card, indent=2, sort_keys=True) + "\n", encoding="utf-8"

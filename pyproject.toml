@@ -65,3 +65,8 @@ extraPaths = ["tests/data"]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: runs on a local copy of a real corpus; skipped unless its path is set",
+]

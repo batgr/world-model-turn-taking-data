@@ -31,7 +31,8 @@ raw corpora
    ↓  action_grid    control state -> NO_EVENT / ONSET / OFFSET per slot, or masked
    ↓  media_manifest action grid ids -> corpus-relative raw video / audio paths
    ↓  model_ready    action grid   -> valid anchors, splits, dataset card
-train / validation / test index  →  a modelling repository
+   ↓  labels         canonical facts + action grid -> optional label sidecars
+train / validation / test index (+ labels on request)  →  a modelling repository
 ```
 
 | Stage | Why it exists |
@@ -43,6 +44,7 @@ train / validation / test index  →  a modelling repository
 | **action_grid** | Sample the state on the regular 100 ms grid and log the one transition a slot may contain. Anything the vocabulary cannot express is masked, never relabelled. |
 | **media_manifest** | Resolve every canonical `recording_id` to its raw media, as paths relative to the corpus root, so a consumer never needs a corpus layout. |
 | **model_ready** | Index the anchors where a training window can be taken, classify each `event` or `background`, and assign splits to whole conversations. |
+| **labels** | Derive, from native annotations only by default, every label the corpora support — multi-participant activity, floor, events, overlap, timing, turns, next speaker, future targets, native social annotations, transcript cues — as optional versioned sidecars on the same grid ([`labels.md`](docs/data_pipeline/labels.md)). |
 
 Each stage has a page under [`docs/data_pipeline/`](docs/data_pipeline/README.md);
 [`glossary.md`](docs/data_pipeline/glossary.md) fixes the vocabulary.
@@ -62,6 +64,8 @@ src/conv_wm/
   data/
     pipeline/                    the canonical stages, in order
       clean.py  native_state.py  control_state.py  action_grid.py  model_ready.py
+      labels.py                  the label sidecar build
+    labels/                      label registry, selection, storage and pure derivations
     vocal/                       the pure semantics the stages apply (no I/O)
     datasets/                    dataset adapters — the extension point
     audits/                      population audits; they classify, never fix
@@ -85,6 +89,7 @@ cd world-model-turn-taking-data
 uv sync                          # implementation, tests and checks
 uv sync --extra notebooks        # plus the exploration libraries
 uv sync --extra coverage-audit   # plus Silero VAD, for the diagnostic coverage audit only
+uv sync --extra labels-audio     # plus Parselmouth (Praat), for external prosody labels only
 ```
 
 Python 3.13+. FFmpeg (`ffmpeg` and `ffprobe`) must be on `PATH` for the media
@@ -103,7 +108,7 @@ export EGO_DATA_ROOT=/path/to/your/data      # defaults to ./data
 uv run conv-wm audit manifest                # raw inventory
 uv run conv-wm audit media                   # container and stream metadata
 uv run conv-wm clean annotations             # interim tables
-uv run conv-wm build all --dataset all       # the five build stages, in order
+uv run conv-wm build all --dataset all       # the build stages, in order (labels last)
 uv run conv-wm audit media-manifest          # optional: every media path exists locally
 ```
 
@@ -187,6 +192,7 @@ Everything is written below the configured stage roots, outside the repository.
 | action grid | `${paths.processed}/vocal_action_grid/<dataset>/vocal_action_grid.parquet` |
 | **model-ready index + dataset card** | `${paths.model_ready}/<dataset>/{index.parquet,metadata.json}` |
 | **media manifest** | `${paths.model_ready}/<dataset>/media_manifest.parquet` |
+| label sidecars | `${paths.processed}/labels/<dataset>/{registry.json,<extractor>/}` |
 | reports for every stage | `${paths.reports}/<stage>/<dataset>/report.json` |
 
 ## Model-ready format
@@ -209,6 +215,18 @@ Each row carries `recording_id`, `conversation_id`, `split`, `anchor_idx`,
 `sample_class` (`event` / `background`) and `is_trainable`.
 [`docs/data_pipeline/model_ready.md`](docs/data_pipeline/model_ready.md) has
 the full schema and the reconstruction recipe.
+
+## Labels
+
+Beyond the action grid, `conv-wm build labels` writes optional label
+sidecars: 164 registered labels in 18 families, each with its modality, source
+kind (native / deterministic / external model / human annotation), time
+reference and validity semantics. Unavailable concepts (dialogue acts,
+addressee, dominance, ...) are registered as `unsupported`, never fabricated.
+A consumer asks for none (the default, no I/O), exact labels, `family.*` or
+`all`, optionally filtered by modality, and reads only those columns. See
+[`labels.md`](docs/data_pipeline/labels.md) and the generated
+[`labels_registry.md`](docs/data_pipeline/labels_registry.md).
 
 ## Reproducibility
 
@@ -234,7 +252,7 @@ The same raw data, config, code revision and seed produce the same artifacts.
 ./scripts/check.sh               # ruff format --check, ruff check, pyright, pytest
 ./scripts/fix.sh                 # format and autofix
 
-uv run pytest                    # 271 tests, none needs the corpus
+uv run pytest                    # none needs the corpus; real-corpus smoke tests are opt-in
 uv run pytest tests/test_pipeline_integration.py   # end-to-end on a synthetic fixture
 uv run ruff check .
 uv run pyright
@@ -252,7 +270,8 @@ recording boundary.
 1. Write `src/conv_wm/data/datasets/<name>.py` with a `DatasetSpec`: the
    structural schemas, the annotation-source specs, and the optional
    `annotation_cleaner`, `native_focal_voice`, `media_records` and
-   `recording_splits` callables.
+   `recording_splits` callables, and `label_facts` (the facts it provides
+   for the label sidecars).
 2. Put the dataset-specific parsing in `<name>_cleaning.py`,
    `<name>_native_voice.py`, `<name>_media.py` and `<name>_splits.py` next to it.
 3. Register it in `data/datasets/__init__.py` and add its paths to
