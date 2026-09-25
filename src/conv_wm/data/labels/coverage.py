@@ -47,7 +47,9 @@ VALIDITY_COLUMNS = (
 def _leaves(array: pa.ChunkedArray | pa.Array) -> tuple[pa.Array, np.ndarray]:
     """Every leaf value of a (possibly nested) column and its null mask.
 
-    A null fixed-size parent (e.g. an UNKNOWN cell) makes each of its leaves null.
+    A null parent list stands for its missing elements: a null fixed-size list
+    for ``list_size`` of them, a null variable-size list (read back from Parquet
+    with no element) for the most common length of its non-null siblings.
     """
     if isinstance(array, pa.ChunkedArray):
         array = array.combine_chunks()
@@ -59,12 +61,25 @@ def _leaves(array: pa.ChunkedArray | pa.Array) -> tuple[pa.Array, np.ndarray]:
             null = np.repeat(null, size) | values.is_null().to_numpy(
                 zero_copy_only=False
             )
-        else:
-            offsets = array.offsets.to_numpy(zero_copy_only=False)
-            values = array.values.slice(offsets[0], offsets[-1] - offsets[0])
-            null = np.repeat(null, np.diff(offsets)) | values.is_null().to_numpy(
-                zero_copy_only=False
-            )
+            array = values
+            continue
+        offsets = array.offsets.to_numpy(zero_copy_only=False).astype(np.int64)
+        lengths = np.diff(offsets)
+        present = lengths[~null]
+        fill = int(np.bincount(present).argmax()) if len(present) else 1
+        units = np.where(null, np.maximum(lengths, fill), lengths)
+        first = np.repeat(np.cumsum(units) - units, units)
+        within = np.arange(int(units.sum())) - first
+        parent = np.repeat(np.arange(len(units)), units)
+        source = offsets[:-1][parent] + within
+        placeholder = null[parent] | (within >= lengths[parent])
+        indices = pa.array(np.where(placeholder, 0, source), mask=placeholder)
+        values = (
+            array.values.take(indices)
+            if len(array.values)
+            else pa.nulls(len(indices), array.type.value_type)
+        )
+        null = placeholder | values.is_null().to_numpy(zero_copy_only=False)
         array = values
     return array, null
 

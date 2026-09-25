@@ -359,3 +359,22 @@ def test_coverage_counts_whole_null_vectors_as_missing(tmp_path):
     )
     result = _label_coverage(spec, table)
     assert result["units"] == 16 and result["coverage"] == pytest.approx(0.5)
+
+
+def test_coverage_counts_null_lists_read_back_from_parquet(tmp_path):
+    import pyarrow.parquet as pq
+
+    from conv_wm.data.labels.catalog import REGISTRY
+    from conv_wm.data.labels.coverage import _label_coverage
+    from conv_wm.data.labels.gridding import nullable_vectors
+
+    spec = next(s for s in REGISTRY if s.name == "social_native.face_track_bbox")
+    boxes = nullable_vectors(
+        np.ones((6, 4), np.float32),
+        np.asarray([True, False, True, True, False, True]),
+        pa.float32(),
+    )
+    column = pa.ListArray.from_arrays(pa.array([0, 3, 6], pa.int32()), boxes)
+    pq.write_table(pa.table({"face_track_bbox": column}), tmp_path / "grid.parquet")
+    result = _label_coverage(spec, pq.read_table(tmp_path / "grid.parquet"))
+    assert result["units"] == 24 and result["coverage"] == pytest.approx(2 / 6)
