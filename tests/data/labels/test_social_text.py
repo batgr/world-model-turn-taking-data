@@ -290,3 +290,72 @@ def test_missing_token_text_is_empty_never_the_word_nan():
     assert events[1]["text"] is None and events[1]["token_class"] == "empty"
     assert units[0]["word_count"] == 1 and units[0]["final_token"] == "okay"
     assert token_class(None) == "empty"
+
+
+def test_every_label_table_round_trips_through_parquet(social_case, tmp_path):
+    """Whole-null vectors (UNKNOWN cells, cells without a face box) must read back."""
+    import pyarrow.parquet as pq
+
+    from conv_wm.data.labels import media
+    from conv_wm.data.labels.registry import Table
+    from conv_wm.data.labels.speech import GridKeys, speech_tables
+    from conv_wm.data.labels.store import write_extractor
+
+    structure, social, tracks = social_case  # has an UNKNOWN region at the end
+    keys = GridKeys(np.arange(60), np.arange(60) * 0.1)
+    speech = speech_tables(
+        {"r1": structure}, {"r1": keys}, LabelConfig(), step_s=0.1
+    ).tables
+    tables = {
+        "speech": speech,
+        "social": {
+            Table.GRID: pa.table(
+                {
+                    "recording_id": ["r1"] * 60,
+                    **social_grid(structure, frame(), social, tracks),
+                }
+            )
+        },
+        "video": {
+            Table.GRID: pa.table(
+                {
+                    "frame_mean_rgb": media.nullable_vectors(
+                        np.zeros((60, 3), np.float32), np.arange(60) >= 10, pa.float32()
+                    )
+                }
+            )
+        },
+    }
+    for name, content in tables.items():
+        write_extractor(tmp_path / name, content, {"extractor": name})
+        for table in content:
+            path = tmp_path / name / f"{table}.parquet"
+            assert pq.read_table(path).equals(content[table]), (name, table)
+    grid = pq.read_table(tmp_path / "speech" / "grid.parquet")
+    occupancy = grid.column("joint_speech_state_occupancy").to_pylist()
+    assert occupancy[56] is None and occupancy[0] == pytest.approx([1.0, 0.0, 0.0, 0.0])
+    boxes = pq.read_table(tmp_path / "social" / "grid.parquet").column(
+        "face_track_bbox"
+    )
+    assert boxes[40].as_py()[0] is None
+
+
+def test_coverage_counts_whole_null_vectors_as_missing(tmp_path):
+    from conv_wm.data.labels.catalog import REGISTRY
+    from conv_wm.data.labels.coverage import _label_coverage
+    from conv_wm.data.labels.gridding import nullable_vectors
+
+    spec = next(
+        s for s in REGISTRY if s.name == "instantaneous.joint_speech_state_occupancy"
+    )
+    table = pa.table(
+        {
+            "joint_speech_state_occupancy": nullable_vectors(
+                np.ones((4, 4), np.float32),
+                np.asarray([False, True, False, True]),
+                pa.float32(),
+            )
+        }
+    )
+    result = _label_coverage(spec, table)
+    assert result["units"] == 16 and result["coverage"] == pytest.approx(0.5)

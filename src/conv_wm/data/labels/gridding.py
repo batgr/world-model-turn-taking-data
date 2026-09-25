@@ -176,6 +176,20 @@ def fixed(
     return pa.FixedSizeListArray.from_arrays(flat, size)
 
 
+def nullable_vectors(
+    values: np.ndarray, null: np.ndarray, kind: pa.DataType
+) -> pa.Array:
+    """``list<kind>`` of ``(rows, size)`` vectors, a whole row null where ``null``.
+
+    A variable-size list, not a fixed-size one: pyarrow writes a null
+    fixed-size list to Parquet but cannot read it back.
+    """
+    rows, size = values.shape
+    flat = pa.array(values.reshape(-1), type=kind)
+    offsets = pa.array(np.arange(rows + 1, dtype=np.int32) * size)
+    return pa.ListArray.from_arrays(offsets, flat, mask=pa.array(null))
+
+
 def per_participant(
     values: np.ndarray, null: np.ndarray | None, kind: pa.DataType
 ) -> pa.Array:
@@ -326,8 +340,7 @@ def _joint_occupancy(pieces: Pieces, frame: GridFrame) -> pa.Array:
     hidden = (
         Cumulative(pieces, ~known).between(frame.cell_start, frame.cell_end) > EPSILON_S
     )
-    flat = pa.array(fractions.astype(np.float32).reshape(-1), type=pa.float32())
-    return pa.FixedSizeListArray.from_arrays(flat, 4, mask=pa.array(hidden))
+    return nullable_vectors(fractions.astype(np.float32), hidden, pa.float32())
 
 
 def _event_subframes(
@@ -812,6 +825,7 @@ __all__ = [
     "IntervalCoverage",
     "fixed",
     "horizon_participants",
+    "nullable_vectors",
     "participant_list",
     "per_participant",
     "scalar",

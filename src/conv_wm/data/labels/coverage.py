@@ -60,8 +60,11 @@ def _leaves(array: pa.ChunkedArray | pa.Array) -> tuple[pa.Array, np.ndarray]:
                 zero_copy_only=False
             )
         else:
-            values = array.flatten()
-            null = values.is_null().to_numpy(zero_copy_only=False)
+            offsets = array.offsets.to_numpy(zero_copy_only=False)
+            values = array.values.slice(offsets[0], offsets[-1] - offsets[0])
+            null = np.repeat(null, np.diff(offsets)) | values.is_null().to_numpy(
+                zero_copy_only=False
+            )
         array = values
     return array, null
 

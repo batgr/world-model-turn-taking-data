@@ -39,7 +39,7 @@ from omegaconf import DictConfig
 from conv_wm.config import pipeline_paths
 from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.labels.catalog import PRAAT
-from conv_wm.data.labels.gridding import Cumulative, scalar
+from conv_wm.data.labels.gridding import Cumulative, nullable_vectors, scalar
 from conv_wm.data.labels.registry import Extractor, Table
 from conv_wm.data.labels.speech import GridKeys, key_columns
 from conv_wm.data.labels.timeline import (
@@ -706,12 +706,8 @@ def _video(
         columns: dict[str, pa.Array] = {}
         for name in ("frame_mean_rgb", "dominant_colour"):
             values = features[name]
-            columns[name] = pa.FixedSizeListArray.from_arrays(
-                pa.array(
-                    np.nan_to_num(values).astype(np.float32).reshape(-1), pa.float32()
-                ),
-                3,
-                mask=pa.array(~valid),
+            columns[name] = nullable_vectors(
+                np.nan_to_num(values).astype(np.float32), ~valid, pa.float32()
             )
         for name in (
             "brightness",

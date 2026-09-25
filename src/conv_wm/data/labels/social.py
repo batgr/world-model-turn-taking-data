@@ -32,6 +32,7 @@ from conv_wm.data.labels.gridding import (
     GridFrame,
     IntervalCoverage,
     fixed,
+    nullable_vectors,
     per_participant,
 )
 from conv_wm.data.labels.timeline import EPSILON_S, SPEAKING, RecordingStructure
@@ -195,9 +196,10 @@ def social_grid(
         out=np.zeros_like(box_sum),
         where=box_count[:, :, None] > 0,
     )
-    flat = pa.array(mean.astype(np.float32).reshape(-1), pa.float32())
-    boxes = pa.FixedSizeListArray.from_arrays(
-        flat, 4, mask=pa.array((box_count == 0).reshape(-1))
+    boxes = nullable_vectors(
+        mean.astype(np.float32).reshape(-1, 4),
+        (box_count == 0).reshape(-1),
+        pa.float32(),
     )
     offsets = pa.array(np.arange(count + 1, dtype=np.int32) * participants)
     columns["face_track_bbox"] = pa.ListArray.from_arrays(offsets, boxes)

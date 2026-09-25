@@ -582,7 +582,7 @@ INSTANTANEOUS = (
         "instantaneous.joint_speech_state_occupancy",
         "Fraction of the decision cell spent in each joint state "
         "(silence, ego only, others only, both), from native intervals.",
-        dtype="fixed_size_list<float32, 4>",
+        dtype="list<float32> (4 values)",
         shape="[joint_state]",
         level=Level.GRID,
         time_reference=CELL_REF,
@@ -1586,7 +1586,7 @@ SOCIAL_NATIVE = (
         "participant over its tracked frames in the cell.",
         requires=(facts.SPEECH, facts.FACE_TRACKS),
         modalities=(V,),
-        dtype="list<fixed_size_list<float32, 4>>",
+        dtype="list<list<float32>> (4 values)",
         shape="[participant, box]",
         level=Level.GRID,
         time_reference=CELL_REF,
@@ -1812,7 +1812,7 @@ _VIDEO_NUISANCE = (
     (
         "frame_mean_rgb",
         "Mean RGB of the cell's frames.",
-        "fixed_size_list<float32, 3>",
+        "list<float32> (3 values)",
         "[rgb]",
     ),
     ("brightness", "Mean Rec.709 luma of the cell's frames.", "float32", "[]"),
@@ -1822,7 +1822,7 @@ _VIDEO_NUISANCE = (
     (
         "dominant_colour",
         "Centre of the most frequent 4-level-per-channel RGB bin.",
-        "fixed_size_list<float32, 3>",
+        "list<float32> (3 values)",
         "[rgb]",
     ),
     (

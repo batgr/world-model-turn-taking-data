@@ -24,8 +24,13 @@ from typing import Any
 REGISTRY_VERSION = 1
 """Bumped when a label is added, removed, renamed or changes meaning."""
 
-LABEL_SCHEMA_VERSION = 1
-"""Bumped when the physical layout of the label artifacts changes."""
+LABEL_SCHEMA_VERSION = 2
+"""Bumped when the physical layout of the label artifacts changes.
+
+Version 2 stores vectors that may be null as a whole (joint-state occupancy,
+face boxes, frame colours) as variable-size lists: pyarrow cannot read a null
+fixed-size list back from Parquet.
+"""
 
 
 class Level(StrEnum):
