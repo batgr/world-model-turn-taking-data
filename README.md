@@ -3,6 +3,15 @@
 A reproducible data pipeline that turns egocentric conversation corpora into a
 versioned, model-ready turn-taking dataset.
 
+**Start here:** [public EgoCom dataset on Hugging Face](https://huggingface.co/datasets/batgre/conversational-dynamics-egocom) · [pipeline guide](docs/data_pipeline/README.md) · [companion model repository](https://github.com/batgr/world-model-turn-taking-model)
+
+The public EgoCom release contains the action grid, model-ready indexes and
+optional speech/text label sidecars; it does not redistribute raw media. A
+separate access-controlled release covers EgoCom + Ego4D. The current model
+study uses these artifacts to investigate turn-taking for social robots;
+the data pipeline makes no claim that observed vocal events are controllable
+robot actions.
+
 ## Overview
 
 Predicting when someone will start or stop speaking needs training data with
