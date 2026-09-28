@@ -73,6 +73,10 @@ raw annotations
 | **Label sidecars** | `conv-wm build labels --dataset all` | `labels/<dataset>/<extractor>/`, data in `${paths.processed}/labels/<dataset>/` ([`labels.md`](labels.md)) |
 | Label coverage audit | `conv-wm audit labels --dataset all` | `labels/coverage/` |
 
+For the pinned public EgoCom label status and audio-only evaluation labels,
+see [`label_inventory.md`](label_inventory.md). The inventory distinguishes
+published values from labels only registered or supported by source facts.
+
 Report paths are relative to `${paths.reports}` from `conf/config.yaml`. The
 media, video, audio, sync and annotation audits read the media metadata table;
 media reads the manifest; the native focal voice-state build reads the cleaned

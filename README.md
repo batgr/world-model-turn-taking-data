@@ -226,7 +226,10 @@ addressee, dominance, ...) are registered as `unsupported`, never fabricated.
 A consumer asks for none (the default, no I/O), exact labels, `family.*` or
 `all`, optionally filtered by modality, and reads only those columns. See
 [`labels.md`](docs/data_pipeline/labels.md) and the generated
-[`labels_registry.md`](docs/data_pipeline/labels_registry.md).
+[`labels_registry.md`](docs/data_pipeline/labels_registry.md). The
+[`label_inventory.md`](docs/data_pipeline/label_inventory.md) records which
+labels were present in the verified public EgoCom release and which audio
+extractors still need local corpus media.
 
 ## Reproducibility
 
