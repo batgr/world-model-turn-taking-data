@@ -1,5 +1,15 @@
 # world-model-turn-taking-data
 
+<p align="left">
+  <a href="https://github.com/batgr/world-model-turn-taking-data/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/batgr/world-model-turn-taking-data/ci.yml?branch=main&label=CI"></a>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.13%2B-3776AB?logo=python&logoColor=white">
+  <img alt="uv" src="https://img.shields.io/badge/uv-managed-DE5FE9?logo=uv&logoColor=white">
+  <img alt="Parquet" src="https://img.shields.io/badge/Parquet-PyArrow-4B8BBE">
+  <img alt="Ruff" src="https://img.shields.io/badge/lint-Ruff-D7FF64?logo=ruff&logoColor=111111">
+  <img alt="Pyright" src="https://img.shields.io/badge/types-Pyright-3178C6">
+  <img alt="pytest" src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white">
+</p>
+
 A reproducible data pipeline that turns egocentric conversation corpora into a
 versioned, model-ready turn-taking dataset.
 
@@ -87,6 +97,19 @@ notebooks/                       laboratory notebooks (evidence, not implementat
 tests/                           mirrors src/; no test needs the corpus
 scripts/                         check.sh and fix.sh
 ```
+
+## Tooling
+
+The maintained pipeline is built around:
+
+- **Python 3.13+** for the package and CLI
+- **uv** for environments and reproducible dependency locking
+- **pandas + PyArrow/Parquet** for columnar artifacts
+- **Pandera** for dataframe contracts
+- **OmegaConf** for configuration
+- **FFmpeg / ffprobe** for media inspection
+- **pytest, Ruff and Pyright** for testing, linting and static checks
+- **GitHub Actions** for continuous integration
 
 ## Installation
 
