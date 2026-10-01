@@ -41,6 +41,17 @@ def is_registered(name: str) -> bool:
     return name in _REGISTRY
 
 
+def select(selector: str, supported: tuple[str, ...]) -> tuple[str, ...]:
+    """Expand a CLI dataset selector (``all`` or one name) among ``supported``."""
+    if selector == "all":
+        return supported
+    if selector not in supported:
+        raise ValueError(
+            f"dataset must be one of {[*supported, 'all']}, got {selector!r}"
+        )
+    return (selector,)
+
+
 def names() -> list[str]:
     """Registered dataset names, sorted."""
     return sorted(_REGISTRY)

@@ -24,7 +24,6 @@ from omegaconf import DictConfig
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
 from conv_wm.data import datasets
-from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.audits.media_metadata import MEDIA_METADATA_TABLE
 from conv_wm.data.media.media_manifest import (
     COLUMN_SEMANTICS,
@@ -33,15 +32,13 @@ from conv_wm.data.media.media_manifest import (
     media_manifest_table,
     validate_media_manifest,
 )
-from conv_wm.data.pipeline.action_grid import GRID_TABLE
-from conv_wm.data.pipeline.action_grid import PROCESSED_ROOT as GRID_PROCESSED_ROOT
-from conv_wm.data.pipeline.action_grid import REPORT_FILE as GRID_REPORT_FILE
-from conv_wm.data.pipeline.action_grid import REPORT_ROOT as GRID_REPORT_ROOT
+from conv_wm.data.pipeline.action_grid import load_action_grid
 from conv_wm.data.pipeline.control_state import config_checksum
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
     load_checked_artifact,
+    require_file,
     sha256_file,
 )
 from conv_wm.data.vocal.action_grid import ACTION_SCHEMA_VERSION
@@ -55,7 +52,6 @@ REPORT_ROOT = Path("media_manifest")
 MEDIA_MANIFEST_TABLE = "media_manifest.parquet"
 REPORT_FILE = "report.json"
 BUILD_COMMAND = "conv-wm build media-manifest"
-GRID_BUILD_COMMAND = "conv-wm build vocal-action-grid"
 LINEAGE_CHAIN = (
     "raw media inventory",
     "media metadata audit",
@@ -97,14 +93,7 @@ def supported_datasets() -> tuple[str, ...]:
 
 def selected_datasets(dataset: str) -> tuple[str, ...]:
     """Expand the CLI selector (``all`` or one supported dataset)."""
-    supported = supported_datasets()
-    if dataset == "all":
-        return supported
-    if dataset not in supported:
-        raise ValueError(
-            f"dataset must be one of {[*supported, 'all']}, got {dataset!r}"
-        )
-    return (dataset,)
+    return datasets.select(dataset, supported_datasets())
 
 
 def table_path(cfg: DictConfig, dataset: str) -> Path:
@@ -115,20 +104,6 @@ def table_path(cfg: DictConfig, dataset: str) -> Path:
 def report_path(cfg: DictConfig, dataset: str) -> Path:
     """The report that vouches for the manifest of ``dataset``."""
     return pipeline_paths(cfg).reports / REPORT_ROOT / dataset / REPORT_FILE
-
-
-def load_grid(cfg: DictConfig, dataset: str) -> CheckedArtifact:
-    """Read one dataset's action grid, refusing an input its report disowns."""
-    paths = pipeline_paths(cfg)
-    return load_checked_artifact(
-        dataset=dataset,
-        table_path=paths.processed / GRID_PROCESSED_ROOT / dataset / GRID_TABLE,
-        report_path=paths.reports / GRID_REPORT_ROOT / dataset / GRID_REPORT_FILE,
-        schema_key="action_schema_version",
-        expected_version=ACTION_SCHEMA_VERSION,
-        artifact_key="grid",
-        produce_with=f"{GRID_BUILD_COMMAND} --dataset {dataset}",
-    )
 
 
 def load_media_manifest(cfg: DictConfig, dataset: str) -> CheckedArtifact:
@@ -188,12 +163,6 @@ def release_card_section(manifest: CheckedArtifact) -> JsonDict:
         },
         "raw_media_distributed": False,
     }
-
-
-def _require(path: Path, command: str) -> Path:
-    if not path.exists():
-        raise MissingPrerequisiteError(path, produce_with=command)
-    return path
 
 
 def _build_dataset(
@@ -273,14 +242,14 @@ def run_media_manifest_build(
     command: str | None = None,
 ) -> list[MediaManifestOutputs]:
     """Build the media manifest of every selected dataset."""
-    media_path = _require(
+    media_path = require_file(
         pipeline_paths(cfg).reports / MEDIA_METADATA_TABLE, "conv-wm audit media"
     )
     media = pd.read_parquet(media_path)
     invoked = command or f"{BUILD_COMMAND} --dataset {dataset}"
     outputs: list[MediaManifestOutputs] = []
     for name in selected_datasets(dataset):
-        grid = load_grid(cfg, name)
+        grid = load_action_grid(cfg, name)
         output = _build_dataset(
             grid, media, cfg=cfg, media_path=media_path, command=invoked
         )

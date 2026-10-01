@@ -24,7 +24,6 @@ the build dependencies.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -55,6 +54,7 @@ from conv_wm.data.labels.selection import (
     ResolvedSelection,
     resolve,
 )
+from conv_wm.data.pipeline_inputs import sha256_file
 
 MANIFEST_FILE = "manifest.json"
 REGISTRY_FILE = "registry.json"
@@ -70,15 +70,6 @@ class StaleLabelsError(ValueError):
 def table_file(table: Table) -> str:
     """File name of ``table`` inside an extractor directory."""
     return f"{table}.parquet"
-
-
-def sha256_file(path: Path) -> str:
-    """SHA-256 of a file, read in chunks."""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def canonical_json(document: Any) -> str:

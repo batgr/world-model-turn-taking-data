@@ -61,9 +61,10 @@ from conv_wm.data.vocal.native_state import (
     NativeStateInterval,
     SourceKind,
     VoiceState,
+    state_durations,
 )
 from conv_wm.provenance import collect_provenance
-from conv_wm.reports import JsonDict, write_summary, write_table
+from conv_wm.reports import JsonDict, quantile_summary, write_summary, write_table
 
 logger = logging.getLogger(__name__)
 
@@ -212,23 +213,14 @@ def _transform(
     return results
 
 
-def _durations(
-    rows: list[NativeStateInterval] | list[ControlStateInterval],
-) -> dict[str, float]:
-    totals = {str(state): 0.0 for state in VoiceState}
-    for row in rows:
-        totals[str(row.voice_state)] += row.duration_s
-    return totals
-
-
 def _summary_table(results: list[_RecordingResult], dataset: str) -> pd.DataFrame:
     """One row per recording: intervals and transitions before and after bridging."""
     rows: list[dict[str, object]] = []
     for result in results:
         native_states = [str(row.voice_state) for row in result.native]
         control_states = [str(row.voice_state) for row in result.control]
-        native_durations = _durations(result.native)
-        control_durations = _durations(result.control)
+        native_durations = state_durations(result.native)
+        control_durations = state_durations(result.control)
         first = result.control[0]
         rows.append(
             {
@@ -282,15 +274,6 @@ def _bridged_gaps_table(results: list[_RecordingResult]) -> pd.DataFrame:
     )
 
 
-def _quantiles(values: np.ndarray) -> dict[str, float] | None:
-    values = values[np.isfinite(values)]
-    if not len(values):
-        return None
-    keys = ("min", "q05", "median", "q95", "max")
-    quantiles = np.quantile(values, [0.0, 0.05, 0.5, 0.95, 1.0])
-    return {key: float(value) for key, value in zip(keys, quantiles, strict=True)}
-
-
 def _duration_histogram(
     values: np.ndarray, *, step_s: float = DECISION_STEP_S, bins: int = 10
 ) -> dict[str, int]:
@@ -331,7 +314,7 @@ def _statistics(
         "removed_transition_count": native_transitions - control_transitions,
         "bridged_gap_count": len(gaps),
         "bridged_gap_total_duration_s": float(durations.sum()),
-        "bridged_gap_duration_s": _quantiles(durations),
+        "bridged_gap_duration_s": quantile_summary(durations),
         "bridged_gap_duration_histogram_s": _duration_histogram(
             durations, step_s=step_s
         ),

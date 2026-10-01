@@ -9,7 +9,6 @@ annotation tables and the media metadata audit.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 from dataclasses import dataclass
@@ -20,8 +19,8 @@ from omegaconf import DictConfig
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
 from conv_wm.data import datasets
-from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.audits.media_metadata import MEDIA_METADATA_TABLE
+from conv_wm.data.pipeline_inputs import artifact_reference, require_file, sha256_file
 from conv_wm.data.vocal.native_source import NativeFocalVoiceSource
 from conv_wm.data.vocal.native_state import (
     NATIVE_STATE_SCHEMA_VERSION,
@@ -66,32 +65,7 @@ def supported_datasets() -> tuple[str, ...]:
 
 def selected_datasets(dataset: str) -> tuple[str, ...]:
     """Expand the CLI selector (``all`` or one supported dataset)."""
-    supported = supported_datasets()
-    if dataset == "all":
-        return supported
-    if dataset not in supported:
-        raise ValueError(
-            f"dataset must be one of {[*supported, 'all']}, got {dataset!r}"
-        )
-    return (dataset,)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _artifact(path: Path) -> dict[str, str]:
-    return {"path": str(path), "sha256": _sha256(path)}
-
-
-def _require(path: Path, command: str) -> Path:
-    if not path.exists():
-        raise MissingPrerequisiteError(path, produce_with=command)
-    return path
+    return datasets.select(dataset, supported_datasets())
 
 
 def _summary_row(
@@ -186,7 +160,7 @@ def _coverage_audit_reference(
     by_dataset = report.get("coverage_statistics_by_dataset", {})
     statistics = by_dataset.get(dataset, {}) if isinstance(by_dataset, dict) else {}
     return {
-        **_artifact(path),
+        **artifact_reference(path),
         "created_at": report.get("created_at"),
         "git_commit": report.get("git_commit"),
         "focal_annotation_coverage_ratio": statistics.get(
@@ -241,14 +215,16 @@ def _build_dataset(
             "cleaning_rule_version": source.cleaning_rule_version,
         },
         "input_artifacts": {
-            "dataset_manifest": _artifact(manifest_path),
-            "media_metadata": _artifact(media_path),
-            "native_annotations": [_artifact(path) for path in source.annotation_paths],
+            "dataset_manifest": artifact_reference(manifest_path),
+            "media_metadata": artifact_reference(media_path),
+            "native_annotations": [
+                artifact_reference(path) for path in source.annotation_paths
+            ],
         },
-        "uv_lock_checksum": _sha256(uv_lock) if uv_lock.exists() else None,
+        "uv_lock_checksum": sha256_file(uv_lock) if uv_lock.exists() else None,
         "output_artifacts": {
-            "timeline": _artifact(timeline_path),
-            "summary": _artifact(summary_path),
+            "timeline": artifact_reference(timeline_path),
+            "summary": artifact_reference(summary_path),
         },
         "statistics": {
             **_dataset_statistics(summary, timeline),
@@ -284,8 +260,10 @@ def run_native_focal_voice_state_build(
 ) -> list[NativeFocalVoiceStateOutputs]:
     """Build the native focal voice-state artifact of every selected dataset."""
     paths = pipeline_paths(cfg)
-    manifest_path = _require(Path(cfg.manifest.output), "conv-wm audit manifest")
-    media_path = _require(paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media")
+    manifest_path = require_file(Path(cfg.manifest.output), "conv-wm audit manifest")
+    media_path = require_file(
+        paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media"
+    )
     media = pd.read_parquet(media_path)
     invoked = command or f"conv-wm build native-focal-voice-state --dataset {dataset}"
     outputs: list[NativeFocalVoiceStateOutputs] = []

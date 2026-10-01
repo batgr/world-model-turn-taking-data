@@ -82,3 +82,13 @@ def _json_default(value: object) -> object:
     if isinstance(value, Path):
         return str(value)
     raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def quantile_summary(values: np.ndarray) -> dict[str, float] | None:
+    """Min, 5th percentile, median, 95th percentile and max of the finite values."""
+    values = values[np.isfinite(values)]
+    if not len(values):
+        return None
+    keys = ("min", "q05", "median", "q95", "max")
+    quantiles = np.quantile(values, [0.0, 0.05, 0.5, 0.95, 1.0])
+    return {key: float(value) for key, value in zip(keys, quantiles, strict=True)}

@@ -66,7 +66,7 @@ from conv_wm.data.vocal.action_grid import (
 from conv_wm.data.vocal.control_state import CONTROL_STATE_SCHEMA_VERSION
 from conv_wm.data.vocal.native_state import NATIVE_STATE_SCHEMA_VERSION
 from conv_wm.provenance import collect_provenance
-from conv_wm.reports import JsonDict, write_summary, write_table
+from conv_wm.reports import JsonDict, quantile_summary, write_summary, write_table
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,7 @@ SUMMARY_TABLE = "summary.parquet"
 COMPOUND_TABLE = "compound_slots.parquet"
 SUB_DELTA_TABLE = "sub_delta_gap_analysis.parquet"
 REPORT_FILE = "report.json"
+BUILD_COMMAND = "conv-wm build vocal-action-grid"
 
 IDENTITY_COLUMNS = ("dataset", "recording_id", "sync_group_id", "view_id", "wearer_id")
 CONTROL_BUILD_COMMAND = "conv-wm build control-focal-voice-state"
@@ -110,6 +111,20 @@ def load_control_state_input(cfg: DictConfig, dataset: str) -> CheckedArtifact:
         expected_version=CONTROL_STATE_SCHEMA_VERSION,
         artifact_key="timeline",
         produce_with=f"{CONTROL_BUILD_COMMAND} --dataset {dataset}",
+    )
+
+
+def load_action_grid(cfg: DictConfig, dataset: str) -> CheckedArtifact:
+    """Read one dataset's action grid, refusing an input its report disowns."""
+    paths = pipeline_paths(cfg)
+    return load_checked_artifact(
+        dataset=dataset,
+        table_path=paths.processed / PROCESSED_ROOT / dataset / GRID_TABLE,
+        report_path=paths.reports / REPORT_ROOT / dataset / REPORT_FILE,
+        schema_key="action_schema_version",
+        expected_version=ACTION_SCHEMA_VERSION,
+        artifact_key="grid",
+        produce_with=f"{BUILD_COMMAND} --dataset {dataset}",
     )
 
 
@@ -412,15 +427,6 @@ def _summary_table(results: list[_RecordingResult], dataset: str) -> pd.DataFram
     )
 
 
-def _quantiles(values: np.ndarray) -> dict[str, float] | None:
-    values = values[np.isfinite(values)]
-    if not len(values):
-        return None
-    keys = ("min", "q05", "median", "q95", "max")
-    quantiles = np.quantile(values, [0.0, 0.05, 0.5, 0.95, 1.0])
-    return {key: float(value) for key, value in zip(keys, quantiles, strict=True)}
-
-
 SHORT_BURST_PATTERN = "SILENT-SPEAKING-SILENT"
 """The compound pattern a short speech burst produces; kept, never filtered."""
 
@@ -510,8 +516,10 @@ def _statistics(
             if len(compound)
             else 0,
         },
-        "tau_s_onset": _quantiles(grid.loc[onset, "tau_s"].to_numpy(dtype=float)),
-        "tau_s_offset": _quantiles(grid.loc[offset, "tau_s"].to_numpy(dtype=float)),
+        "tau_s_onset": quantile_summary(grid.loc[onset, "tau_s"].to_numpy(dtype=float)),
+        "tau_s_offset": quantile_summary(
+            grid.loc[offset, "tau_s"].to_numpy(dtype=float)
+        ),
         "recording_count": len(summary),
         "recordings_with_compound_slot": int(
             (summary["compound_slot_count"] > 0).sum()
@@ -558,7 +566,9 @@ def _statistics(
             "within_grid_same_slot_count": int((~within_grid["cross_slot"]).sum())
             if len(within_grid)
             else 0,
-            "gap_duration_s": _quantiles(gaps["gap_duration_s"].to_numpy(dtype=float))
+            "gap_duration_s": quantile_summary(
+                gaps["gap_duration_s"].to_numpy(dtype=float)
+            )
             if len(gaps)
             else None,
         },

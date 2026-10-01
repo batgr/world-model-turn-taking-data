@@ -9,10 +9,14 @@ no detector, no speaker model, no completion. Timestamps stay continuous.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from itertools import pairwise
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from conv_wm.data.vocal.control_state import ControlStateInterval
 
 NATIVE_STATE_SCHEMA_VERSION = 1
 """Bumped when the columns or the state semantics of the timeline change."""
@@ -183,8 +187,10 @@ def _mergeable(previous: NativeStateInterval, current: NativeStateInterval) -> b
     )
 
 
-def state_durations(rows: list[NativeStateInterval]) -> dict[str, float]:
-    """Total seconds per state over ``rows``."""
+def state_durations(
+    rows: Iterable[NativeStateInterval] | Iterable[ControlStateInterval],
+) -> dict[str, float]:
+    """Total seconds per state over ``rows`` (native or control intervals)."""
     totals = {str(state): 0.0 for state in VoiceState}
     for row in rows:
         totals[str(row.voice_state)] += row.duration_s

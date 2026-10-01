@@ -24,16 +24,7 @@ from omegaconf import DictConfig
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
 from conv_wm.data import datasets
 from conv_wm.data.pipeline.action_grid import (
-    GRID_TABLE,
-)
-from conv_wm.data.pipeline.action_grid import (
-    PROCESSED_ROOT as GRID_PROCESSED_ROOT,
-)
-from conv_wm.data.pipeline.action_grid import (
-    REPORT_FILE as GRID_REPORT_FILE,
-)
-from conv_wm.data.pipeline.action_grid import (
-    REPORT_ROOT as GRID_REPORT_ROOT,
+    load_action_grid,
 )
 from conv_wm.data.pipeline.control_state import config_checksum
 from conv_wm.data.pipeline.media_manifest import (
@@ -43,7 +34,6 @@ from conv_wm.data.pipeline.media_manifest import (
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
-    load_checked_artifact,
     sha256_file,
 )
 from conv_wm.data.vocal.action_grid import ACTION_SCHEMA_VERSION, DECISION_STEP_S
@@ -71,7 +61,6 @@ METADATA_FILE = "metadata.json"
 SUMMARY_TABLE = "summary.parquet"
 REPORT_FILE = "report.json"
 
-GRID_BUILD_COMMAND = "conv-wm build vocal-action-grid"
 DEFAULT_SPEC = WindowSpec()
 """The prototype window geometry, used unless a caller passes its own."""
 DEFAULT_SPLIT_SPEC_SEED = 0
@@ -129,28 +118,7 @@ def supported_datasets() -> tuple[str, ...]:
 
 def selected_datasets(dataset: str) -> tuple[str, ...]:
     """Expand the CLI selector (``all`` or one supported dataset)."""
-    supported = supported_datasets()
-    if dataset == "all":
-        return supported
-    if dataset not in supported:
-        raise ValueError(
-            f"dataset must be one of {[*supported, 'all']}, got {dataset!r}"
-        )
-    return (dataset,)
-
-
-def load_action_grid_input(cfg: DictConfig, dataset: str) -> CheckedArtifact:
-    """Read one dataset's action grid, refusing an input its report disowns."""
-    paths = pipeline_paths(cfg)
-    return load_checked_artifact(
-        dataset=dataset,
-        table_path=paths.processed / GRID_PROCESSED_ROOT / dataset / GRID_TABLE,
-        report_path=paths.reports / GRID_REPORT_ROOT / dataset / GRID_REPORT_FILE,
-        schema_key="action_schema_version",
-        expected_version=ACTION_SCHEMA_VERSION,
-        artifact_key="grid",
-        produce_with=f"{GRID_BUILD_COMMAND} --dataset {dataset}",
-    )
+    return datasets.select(dataset, supported_datasets())
 
 
 def recording_splits(cfg: DictConfig, dataset: str) -> pd.Series | None:
@@ -865,7 +833,7 @@ def run_model_ready_build(
     invoked = command or f"conv-wm build model-ready --dataset {dataset}"
     outputs: list[ModelReadyOutputs] = []
     for name in selected_datasets(dataset):
-        source = load_action_grid_input(cfg, name)
+        source = load_action_grid(cfg, name)
         logger.info("%s: %d grid slots", name, len(source.table))
         outputs.append(
             _build_dataset(
@@ -942,7 +910,6 @@ __all__ = [
     "canonical_split",
     "contract_checks",
     "format_outputs",
-    "load_action_grid_input",
     "recording_splits",
     "run_model_ready_build",
     "selected_datasets",

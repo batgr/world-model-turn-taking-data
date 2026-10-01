@@ -28,6 +28,13 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def require_file(path: Path, command: str) -> Path:
+    """``path`` itself, or a MissingPrerequisiteError naming the command that makes it."""
+    if not path.exists():
+        raise MissingPrerequisiteError(path, produce_with=command)
+    return path
+
+
 def artifact_reference(path: Path) -> dict[str, str]:
     """The ``{path, sha256}`` pair every report records for an artifact."""
     return {"path": str(path), "sha256": sha256_file(path)}

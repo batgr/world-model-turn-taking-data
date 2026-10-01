@@ -16,8 +16,8 @@ import pandas as pd
 from omegaconf import DictConfig
 
 from conv_wm.config import get_path, pipeline_paths
-from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.vocal.intervals import clip
+from conv_wm.data.vocal.native_source import require_table
 from conv_wm.data.vocal.records import AudioSource, FocalRecording
 
 
@@ -31,12 +31,6 @@ class DatasetRecordingSet:
     identity_methods: tuple[str, ...]
     annotation_provenance: str
     limitations: tuple[str, ...]
-
-
-def _required_table(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        raise MissingPrerequisiteError(path, produce_with="conv-wm clean annotations")
-    return pd.read_parquet(path)
 
 
 def _media_index(media: pd.DataFrame, dataset: str) -> dict[str, dict[str, Any]]:
@@ -74,8 +68,8 @@ def load_egocom_recordings(cfg: DictConfig, media: pd.DataFrame) -> DatasetRecor
     """Map EgoCom POV metadata and word timings to one row per wearer/view."""
     info_path = get_path(cfg, "egocom", "interim", "video_info_clean")
     transcript_path = get_path(cfg, "egocom", "interim", "ground_truth_clean")
-    info = _required_table(info_path)
-    transcript = _required_table(transcript_path)
+    info = require_table(info_path)
+    transcript = require_table(transcript_path)
     media_by_stem = _media_index(media, "egocom")
     raw_root = pipeline_paths(cfg).raw
     info_by_group = {
@@ -198,9 +192,9 @@ def load_ego4d_recordings(cfg: DictConfig, media: pd.DataFrame) -> DatasetRecord
     clips_path = get_path(cfg, "ego4d", "interim", "clips_clean")
     persons_path = get_path(cfg, "ego4d", "interim", "persons_clean")
     voice_path = get_path(cfg, "ego4d", "interim", "voice_segments_clean")
-    clips = _required_table(clips_path)
-    persons = _required_table(persons_path)
-    voice = _required_table(voice_path)
+    clips = require_table(clips_path)
+    persons = require_table(persons_path)
+    voice = require_table(voice_path)
     media_by_stem = _media_index(media, "ego4d")
     raw_root = pipeline_paths(cfg).raw
     wearer_by_clip = {

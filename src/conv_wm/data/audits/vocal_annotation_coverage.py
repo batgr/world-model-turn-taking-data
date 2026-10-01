@@ -20,8 +20,8 @@ import pandas as pd
 from omegaconf import DictConfig
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
-from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.audits.media_metadata import MEDIA_METADATA_TABLE
+from conv_wm.data.pipeline_inputs import artifact_reference, require_file, sha256_file
 from conv_wm.data.vocal.audio import DecodedAudio, decode_audio
 from conv_wm.data.vocal.config import (
     DEFAULT_COVERAGE_CONFIG_PATH,
@@ -79,14 +79,6 @@ def selected_datasets(dataset: str) -> tuple[str, ...]:
     return (dataset,)
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _implementation_artifacts() -> list[Path]:
     """Source files whose content determines this audit's scientific output."""
     return sorted(
@@ -114,12 +106,6 @@ def _combined_checksum(paths: list[Path]) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
-
-
-def _require(path: Path, command: str) -> Path:
-    if not path.exists():
-        raise MissingPrerequisiteError(path, produce_with=command)
-    return path
 
 
 def _progress(
@@ -451,13 +437,12 @@ def build_report(
     input_artifacts: dict[str, object] = {
         "dataset_manifest": {
             "path": str(manifest_path),
-            "sha256": _sha256(manifest_path),
+            "sha256": sha256_file(manifest_path),
         },
-        "media_metadata": {"path": str(media_path), "sha256": _sha256(media_path)},
+        "media_metadata": artifact_reference(media_path),
         "annotations": {
             source.dataset: [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in source.annotation_paths
+                artifact_reference(path) for path in source.annotation_paths
             ]
             for source in sources
         },
@@ -481,11 +466,11 @@ def build_report(
         "implementation_artifacts": [
             {
                 "path": path.relative_to(PROJECT_ROOT).as_posix(),
-                "sha256": _sha256(path),
+                "sha256": sha256_file(path),
             }
             for path in implementation
         ],
-        "uv_lock_checksum": _sha256(uv_lock) if uv_lock.exists() else None,
+        "uv_lock_checksum": sha256_file(uv_lock) if uv_lock.exists() else None,
         "datasets": [source.dataset for source in sources],
         "detector_name": detector.name,
         "detector_version": detector.version(),
@@ -585,8 +570,10 @@ def run_vocal_annotation_coverage_audit(
 ) -> VocalCoverageOutputs:
     """Run the configured audit and write deterministic population artifacts."""
     paths = pipeline_paths(cfg)
-    manifest_path = _require(Path(cfg.manifest.output), "conv-wm audit manifest")
-    media_path = _require(paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media")
+    manifest_path = require_file(Path(cfg.manifest.output), "conv-wm audit manifest")
+    media_path = require_file(
+        paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media"
+    )
     media = pd.read_parquet(media_path)
     config = load_coverage_config(coverage_config_path)
     active_detector = detector or build_detector(config.detector)

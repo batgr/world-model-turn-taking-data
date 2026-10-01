@@ -82,11 +82,12 @@ from conv_wm.data.labels.timeline import (
     LabelConfig,
     RecordingStructure,
 )
+from conv_wm.data.pipeline.action_grid import load_action_grid
 from conv_wm.data.pipeline.control_state import config_checksum
-from conv_wm.data.pipeline.model_ready import load_action_grid_input
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
+    require_file,
     sha256_file,
 )
 from conv_wm.data.vocal.action_grid import DECISION_STEP_S
@@ -148,14 +149,7 @@ def supported_datasets() -> tuple[str, ...]:
 
 def selected_datasets(dataset: str) -> tuple[str, ...]:
     """Expand the CLI selector (``all`` or one supported dataset)."""
-    supported = supported_datasets()
-    if dataset == "all":
-        return supported
-    if dataset not in supported:
-        raise ValueError(
-            f"dataset must be one of {[*supported, 'all']}, got {dataset!r}"
-        )
-    return (dataset,)
+    return datasets.select(dataset, supported_datasets())
 
 
 def dataset_dir(cfg: DictConfig, dataset: str) -> Path:
@@ -195,12 +189,6 @@ class ExtractorOutput:
     report: JsonDict
     directory: Path
     report_path: Path
-
-
-def _require(path: Path, command: str) -> Path:
-    if not path.exists():
-        raise MissingPrerequisiteError(path, produce_with=command)
-    return path
 
 
 def check_upstream_annotations(grid: CheckedArtifact) -> list[dict[str, str]]:
@@ -465,9 +453,11 @@ class _DatasetInputs:
 
 def _load_inputs(cfg: DictConfig, dataset: str, config: LabelConfig) -> _DatasetInputs:
     paths = pipeline_paths(cfg)
-    grid = load_action_grid_input(cfg, dataset)
+    grid = load_action_grid(cfg, dataset)
     lineage = check_upstream_annotations(grid)
-    media_path = _require(paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media")
+    media_path = require_file(
+        paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media"
+    )
     spec = datasets.get(dataset).label_facts
     assert spec is not None
     source = spec.load(cfg, pd.read_parquet(media_path))
