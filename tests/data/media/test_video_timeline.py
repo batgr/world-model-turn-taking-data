@@ -142,6 +142,7 @@ def test_probe_video_timestamps_honours_read_intervals(synthetic_video):
     assert 0 < len(packets) < 60
 
 
+@pytest.mark.skipif(shutil.which("ffprobe") is None, reason="ffprobe not installed")
 def test_probe_video_timestamps_raises_on_missing_file(tmp_path):
     with pytest.raises(RuntimeError, match="ffprobe failed"):
         probe_video_timestamps(tmp_path / "missing.mp4")
