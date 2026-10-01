@@ -27,8 +27,6 @@ EXIT_FAILURE = 1
 EXIT_AUDIT_FAILED = 2
 """The audit ran and its verdict is FAIL (structural or annotation contracts)."""
 
-DATASET_CHOICES = ("egocom", "ego4d", "all")
-
 
 def configure_logging(verbose: bool) -> None:
     """Send library progress to stderr; command results stay on stdout."""
@@ -455,6 +453,10 @@ def _build_all(cfg: DictConfig, args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Argument parser for ``conv-wm``."""
+    from conv_wm.data import datasets
+
+    # Every registered dataset can be selected by name; no CLI edit is needed.
+    dataset_choices = (*datasets.names(), "all")
     parser = argparse.ArgumentParser(
         prog="conv-wm",
         description="Reproducible data pipeline for a multimodal turn-taking dataset.",
@@ -487,7 +489,7 @@ def build_parser() -> argparse.ArgumentParser:
         if command.supports_dataset:
             sub.add_argument(
                 "--dataset",
-                choices=("egocom", "ego4d", "all"),
+                choices=dataset_choices,
                 default="all",
                 help="dataset population to audit (default all)",
             )
@@ -515,7 +517,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub = build_subparsers.add_parser(command.name, help=command.help)
         sub.add_argument(
             "--dataset",
-            choices=DATASET_CHOICES,
+            choices=dataset_choices,
             default="all",
             help="dataset to build (default all)",
         )
@@ -527,7 +529,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_all.add_argument(
         "--dataset",
-        choices=DATASET_CHOICES,
+        choices=dataset_choices,
         default="all",
         help="dataset to build (default all)",
     )
@@ -577,7 +579,7 @@ def build_parser() -> argparse.ArgumentParser:
     label_status = label_subparsers.add_parser(
         "status", help="whether each built extractor is still current"
     )
-    label_status.add_argument("--dataset", choices=DATASET_CHOICES, default="all")
+    label_status.add_argument("--dataset", choices=dataset_choices, default="all")
     label_status.set_defaults(handler=_labels_status)
     datasets_parser = subparsers.add_parser("datasets", help="list registered datasets")
     datasets_parser.set_defaults(handler=_list_datasets)
