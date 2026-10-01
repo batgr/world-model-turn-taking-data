@@ -31,7 +31,12 @@ class VoiceState(StrEnum):
 
 
 class SourceKind(StrEnum):
-    """Which native evidence an interval is derived from."""
+    """The built-in names of the native evidence an interval is derived from.
+
+    An interval's ``source_kind`` is a plain string: a dataset adapter names
+    its own evidence (e.g. ``"mycorpus_voice_segments"``) without editing this
+    module. ``INVALID_OR_MISSING`` is reserved for UNKNOWN time.
+    """
 
     EGO4D_VOICE_SEGMENTS = "ego4d_voice_segments"
     EGOCOM_TRANSCRIPT = "egocom_transcript"
@@ -72,12 +77,16 @@ class NativeFocalRecording:
     end_s: float
     speaking: tuple[NativeAnnotation, ...]
     unknown: tuple[NativeAnnotation, ...]
-    source_kind: SourceKind
+    source_kind: str
     annotation_schema_version: str
 
     def __post_init__(self) -> None:
         if not self.end_s > self.start_s:
             raise ValueError(f"{self.recording_id}: empty canonical window")
+        if not self.source_kind or self.source_kind == SourceKind.INVALID_OR_MISSING:
+            raise ValueError(
+                f"{self.recording_id}: source_kind must name the native evidence"
+            )
 
     @property
     def duration_s(self) -> float:
@@ -97,7 +106,7 @@ class NativeStateInterval:
     canonical_start_s: float
     canonical_end_s: float
     voice_state: VoiceState
-    source_kind: SourceKind
+    source_kind: str
     source_annotation_id: str | None
     annotation_schema_version: str
     native_state_schema_version: int = NATIVE_STATE_SCHEMA_VERSION

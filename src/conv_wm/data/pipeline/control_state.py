@@ -59,7 +59,6 @@ from conv_wm.data.vocal.control_state import (
 from conv_wm.data.vocal.native_state import (
     NATIVE_STATE_SCHEMA_VERSION,
     NativeStateInterval,
-    SourceKind,
     VoiceState,
     state_durations,
 )
@@ -161,7 +160,7 @@ def native_intervals_by_recording(
             canonical_start_s=float(start_s),
             canonical_end_s=float(end_s),
             voice_state=VoiceState(str(voice_state)),
-            source_kind=SourceKind(str(source_kind)),
+            source_kind=str(source_kind),
             source_annotation_id=None if pd.isna(annotation_id) else str(annotation_id),
             annotation_schema_version=str(annotation_version),
             native_state_schema_version=int(state_version),
