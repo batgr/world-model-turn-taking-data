@@ -293,6 +293,7 @@ def moodlab(tmp_path, monkeypatch):
     config_path = tmp_path / "config.yaml"
     config_path.write_text(OmegaConf.to_yaml(cfg))
     resolved = OmegaConf.load(config_path)
+    assert isinstance(resolved, DictConfig)
     _write_raw(Path(resolved.paths.raw))
     _write_media_metadata(resolved)
     datasets.register(MOODLAB)
