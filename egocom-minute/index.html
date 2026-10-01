@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Une minute d'EgoCom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a lab notebook read top to bottom; each figure is a strip of real timeline with its own controls and a short caption. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5b6573;
+  --rule: #d9dee5;
+  --grid: #e8ebf0;
+  --ego: #c2570c;
+  --ego-soft: #f7d9c4;
+  --p1: #1f6f8b;
+  --p2: #6b5ca5;
+  --ctx: #d7e6f2;
+  --fut: #f3e3c3;
+  --anchor: #17202b;
+  --event: #b4231b;
+  --mimi: #2d7a4a;
+  --drop: #b4231b;
+  --wait: #c9d1dc;
+  --start: #2f8f4e;
+  --hold: #c2570c;
+  --stop: #b4231b;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --surface: #182029; --ink: #e6ebf1; --muted: #9aa5b3; --rule: #2c3641; --grid: #222b35;
+    --ego: #f08a3c; --ego-soft: #4a2e1a; --p1: #4fb3d4; --p2: #a596e0; --ctx: #1f3346; --fut: #45391f;
+    --anchor: #e6ebf1; --event: #ff6b5e; --mimi: #5fc489; --drop: #ff6b5e; --wait: #3a4553; --start: #5fc489; --hold: #f08a3c; --stop: #ff6b5e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --surface: #182029; --ink: #e6ebf1; --muted: #9aa5b3; --rule: #2c3641; --grid: #222b35;
+  --ego: #f08a3c; --ego-soft: #4a2e1a; --p1: #4fb3d4; --p2: #a596e0; --ctx: #1f3346; --fut: #45391f;
+  --anchor: #e6ebf1; --event: #ff6b5e; --mimi: #5fc489; --drop: #ff6b5e; --wait: #3a4553; --start: #5fc489; --hold: #f08a3c; --stop: #ff6b5e; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 56px; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(30px, 5vw, 46px)/1.05 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 22px/1.2 var(--display); margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; }
+.fact b { font: 600 26px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.fact span { color: var(--muted); font-size: 13px; }
+section { display: grid; gap: 12px; }
+.fig { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.scroll { overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; }
+svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+svg .lbl { fill: var(--ink); font-family: var(--body); font-size: 12px; font-weight: 600; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 13px; }
+.controls label { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+.controls input[type=range] { width: min(320px, 60vw); accent-color: var(--ego); }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { font: 500 12px/1 var(--mono); padding: 7px 10px; background: transparent; color: var(--ink); border: 0; border-right: 1px solid var(--rule); cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible, input:focus-visible { outline: 2px solid var(--ego); outline-offset: 2px; }
+.readout { font: 400 13px/1.5 var(--mono); color: var(--ink); display: flex; flex-wrap: wrap; gap: 6px 20px; font-variant-numeric: tabular-nums; }
+.readout em { font-style: normal; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 6px; }
+.cap { font-size: 13px; color: var(--muted); max-width: 80ch; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.two > * { min-width: 0; }
+footer { font-size: 12px; color: var(--muted); }
+.masked-swatch { background: repeating-linear-gradient(45deg, var(--surface) 0 3px, var(--muted) 3px 5px); border: 1px solid var(--rule); }
+code { font-family: var(--mono); font-size: .92em; }
+</style>
+<style>html{color-scheme:light dark}body{margin:0}footer a{color:inherit}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">EgoCom · validation · <span id="recName"></span></div>
+    <h1>Une minute d'EgoCom</h1>
+    <p class="lede">La minute 2:00 → 3:00 de l'enregistrement, vue par le porteur de la caméra (personne 3). Toutes les données sont réelles&nbsp;: activité vocale annotée, actions de l'ego et changements de tour de la release <code>conversational-dynamics-egocom@210a7de</code>.</p>
+  </header>
+
+  <div class="facts" id="facts"></div>
+
+  <section>
+    <h2>1. La minute entière</h2>
+    <div class="fig">
+      <div class="scroll"><svg id="timeline" viewBox="0 0 1000 210" role="img" aria-label="Activité vocale des trois participants sur une minute"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--ego)"></i>ego (porteur, P3)</span>
+        <span><i style="background:var(--p1)"></i>P1</span>
+        <span><i style="background:var(--p2)"></i>P2</span>
+        <span><i style="background:var(--event)"></i>action ego ▲ prise / ▼ fin de parole</span>
+        <span><i style="background:var(--muted)"></i>changement de tour</span>
+      </div>
+      <p class="cap">Chaque barre est une plage de parole annotée (résolution 33 ms). Une « décision » au sens des événements, c'est un ▲ ou un ▼ de l'ego&nbsp;: <b id="nDec"></b> dans cette minute. Clique sur la frise pour placer l'ancre de la figure 2.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Ancres, fenêtres et stride</h2>
+    <div class="fig">
+      <div class="controls">
+        <label for="anchorPos">ancre <input id="anchorPos" type="range" min="29" max="589" step="1" value="52"></label>
+        <span>stride&nbsp;<span class="seg" id="strideSeg" role="group" aria-label="Stride entre ancres"></span></span>
+      </div>
+      <div class="scroll"><svg id="windows" viewBox="0 0 1000 250" role="img" aria-label="Ancres et fenêtre contexte plus futur"></svg></div>
+      <div class="readout" id="strideReadout"></div>
+      <p class="cap">Une <b>ancre</b> est l'instant «&nbsp;maintenant&nbsp;» d'un exemple d'entraînement&nbsp;: le modèle voit les 30 cases qui finissent à l'ancre (3 s de contexte) et doit prédire les 10 suivantes (1 s). Aujourd'hui, chaque case de 100 ms est une ancre (stride 1)&nbsp;: deux exemples voisins partagent 39 cases sur 40.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Zoom sur une prise de parole&nbsp;: les échelles de temps</h2>
+    <div class="fig">
+      <div class="controls"><span>événement&nbsp;<span class="seg" id="eventSeg" role="group" aria-label="Choix de l'événement"></span></span></div>
+      <div class="scroll"><svg id="zoom" viewBox="0 0 1000 300" role="img" aria-label="Zoom de 2 secondes sur un événement"></svg></div>
+      <div class="readout" id="zoomReadout"></div>
+      <p class="cap">Mimi produit une trame toutes les 80 ms. La grille du modèle a une case toutes les 100 ms et prend la dernière trame Mimi disponible à la fin de chaque case&nbsp;: une trame sur cinq (hachurée) n'est jamais utilisée, et l'information a 0 à 60 ms de retard selon la case. L'heure exacte de l'événement est connue dans les données (<code>event_time_s</code>), mais la grille l'arrondit à sa case.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Combien de décisions par minute, et quelle variance&nbsp;?</h2>
+    <div class="two">
+      <div class="fig">
+        <svg id="histDec" viewBox="0 0 460 230" role="img" aria-label="Histogramme des décisions de l'ego par minute"></svg>
+        <p class="cap" id="capDec"></p>
+      </div>
+      <div class="fig">
+        <svg id="histFloor" viewBox="0 0 460 230" role="img" aria-label="Histogramme des changements de tour par minute"></svg>
+        <p class="cap" id="capFloor"></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Les actions case par case, à la fréquence choisie</h2>
+    <div class="fig">
+      <div class="controls">
+        <span>fréquence&nbsp;<span class="seg" id="freqSeg" role="group" aria-label="Fréquence de la grille"></span></span>
+        <label for="spanStart">début <input id="spanStart" type="range" min="0" max="54" step="0.5" value="1"></label>
+        <span>durée&nbsp;<span class="seg" id="spanSeg" role="group" aria-label="Durée affichée"></span></span>
+      </div>
+      <div class="scroll"><svg id="cells" viewBox="0 0 1000 250" role="img" aria-label="Actions de l'ego et activité des autres, case par case"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--wait)"></i>WAIT · silencieux, reste silencieux</span>
+        <span><i style="background:var(--start)"></i>START · commence à parler</span>
+        <span><i style="background:var(--hold)"></i>HOLD · parle, continue</span>
+        <span><i style="background:var(--stop)"></i>STOP · s'arrête de parler</span>
+        <span><i class="masked-swatch"></i>MASKED · début et fin dans la même case</span>
+      </div>
+      <div class="readout" id="cellsReadout"></div>
+      <p class="cap">Les actions sont recalculées pour la fréquence choisie à partir des heures exactes des prises et fins de parole de l'ego, avec les règles de la release&nbsp;: l'état avant la case donne WAIT ou HOLD, un événement dans la case donne START ou STOP, deux événements dans la même case donnent MASKED. Pour P1 et P2, l'opacité de chaque case est la part de la case où la personne parle. Leur annotation a une résolution de 33&nbsp;ms&nbsp;: au-delà de 30&nbsp;Hz, les cases ne contiennent pas d'information supplémentaire sur les autres.</p>
+    </div>
+  </section>
+
+  <footer>Données&nbsp;: <a href="https://github.com/facebookresearch/EgoCom-Dataset">EgoCom</a> (Northcutt et al., Facebook, licence MIT modifiée), annotations dérivées publiées dans <a href="https://huggingface.co/datasets/batgre/conversational-dynamics-egocom">batgre/conversational-dynamics-egocom</a>, pipeline&nbsp;: <a href="https://github.com/batgr/world-model-turn-taking-data">world-model-turn-taking-data</a>.<br>Statistiques sur toutes les minutes complètes d'EgoCom (train, validation, test), point de vue de chaque porteur. Une conversation filmée par trois porteurs compte trois fois.</footer>
+</div>
+
+<script>
+const DATA = {"minute":{"rec":"vid_028__day_1__con_2__person_3_part3","t0":120.0,"participants":["3","1","2"],"spk":["000000000000000000000000000000000000000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111000000000000000000000000000111111111111111111111100000111111111000001111111111110000111111111111111111111111111111111111111111111111111111111110000000000000000011111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111111111111111111111111111111110000011111111111111111111111111111111111111111111100000000001111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000111000000000011111111111111111111110000000000000000000000011111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111000000011111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","111111101111111111111111111000000000000000000000000001111111111111100111111111111111111111111111111111111111111111111110000000000111111111000000001111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111111111111111111111111111111110000000000000000001100011111111111111111111111111000000001111111111110000000000000000000000000000000000000000000000000001111111111111111111111111111111111100000000000000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111110000000000000000000000000000000000000000000000000000000100000000000001111111111111100000000000001111111111111111100000000000000000000000111111111111110000111111111111111111111111111111110000000000000000001111111111110000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111000000000000111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111000000011111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111110000000000000000000000000111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111111000000000000000000000001111111111111111"],"events":[{"i":13,"a":"ONSET","t":121.37},{"i":14,"a":"OFFSET","t":121.42},{"i":56,"a":"ONSET","t":125.65},{"i":65,"a":"OFFSET","t":126.55},{"i":241,"a":"ONSET","t":144.14},{"i":248,"a":"OFFSET","t":144.87},{"i":258,"a":"ONSET","t":145.81},{"i":265,"a":"OFFSET","t":146.53},{"i":267,"a":"ONSET","t":146.72},{"i":269,"a":"OFFSET","t":146.99},{"i":271,"a":"ONSET","t":147.17},{"i":275,"a":"OFFSET","t":147.54},{"i":277,"a":"ONSET","t":147.7},{"i":296,"a":"OFFSET","t":149.64},{"i":302,"a":"ONSET","t":150.24},{"i":312,"a":"OFFSET","t":151.22},{"i":377,"a":"ONSET","t":157.72},{"i":388,"a":"OFFSET","t":158.84},{"i":390,"a":"ONSET","t":159.05},{"i":405,"a":"OFFSET","t":160.51},{"i":408,"a":"ONSET","t":160.87},{"i":412,"a":"OFFSET","t":161.26},{"i":445,"a":"ONSET","t":164.56},{"i":452,"a":"OFFSET","t":165.24},{"i":460,"a":"ONSET","t":166.05},{"i":468,"a":"OFFSET","t":166.8},{"i":549,"a":"ONSET","t":174.97},{"i":550,"a":"OFFSET","t":175.07},{"i":553,"a":"ONSET","t":175.35},{"i":568,"a":"OFFSET","t":176.87}],"floor":[13,17,56,80,163,204,220,241,249,258,300,302,321,377,415,441,470,513,532,549,584],"othOn":[2,17,23,43,48,80,106,141,163,186,188,199,204,214,220,249,300,321,325,334,348,354,370,376,415,470,513,532,541,584,594],"masked":[441]},"stats":{"n_minutes":2234,"n_rec":170,"decisions":{"edges":[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85],"counts":[121,126,207,236,315,238,269,193,163,143,95,51,45,16,12,3,1],"mean":28.2,"std":15.6,"p10":8.0,"p50":27.0,"p90":49.0},"floor":{"edges":[0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45],"counts":[13,60,103,185,241,298,302,356,277,201,105,42,33,15,3],"mean":19.5,"std":7.7,"p10":9.0,"p50":20.0,"p90":29.0},"oth_on":{"edges":[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220],"counts":[24,135,370,493,399,168,63,67,82,73,77,72,50,43,33,26,24,16,8,6,3,2],"mean":56.2,"std":39.2,"p10":22.0,"p50":41.0,"p90":117.0},"ego_on":{"edges":[0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42],"counts":[79,92,133,159,222,229,211,194,208,167,132,129,88,67,41,37,26,9,8,2,1],"mean":14.1,"std":7.8,"p10":4.0,"p50":13.0,"p90":25.0},"between_rec_std":10.3,"within_rec_std":11.2}};
+const M = DATA.minute, ST = DATA.stats;
+const NS = "http://www.w3.org/2000/svg";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const fmt = s => { const m = Math.floor(s / 60), r = s - 60 * m; return `${m}:${r.toFixed(1).padStart(4, "0")}`; };
+const COLORS = ["var(--ego)", "var(--p1)", "var(--p2)"];
+const NAMES = ["ego · P3", "P1", "P2"];
+
+document.getElementById("recName").textContent = M.rec;
+const onsets = M.events.filter(e => e.a === "ONSET").length, offsets = M.events.filter(e => e.a === "OFFSET").length;
+document.getElementById("nDec").textContent = `${onsets + offsets} (${onsets} ▲, ${offsets} ▼)`;
+const facts = [
+  ["600", "cases de 100 ms = 600 points où le modèle choisit une action"],
+  [String(onsets + offsets), `décisions-événements de l'ego (${onsets} prises, ${offsets} fins)`],
+  [String(M.floor.length), "changements de tour"],
+  [String(M.othOn.length), "prises de parole des autres (cases)"],
+];
+const factsEl = document.getElementById("facts");
+for (const [b, s] of facts) { const d = document.createElement("div"); d.className = "fact"; d.innerHTML = `<b>${b}</b><span>${s}</span>`; factsEl.appendChild(d); }
+
+// speech runs from subframe strings (3 subframes per 100 ms cell)
+function runs(str) {
+  const out = []; let start = -1;
+  for (let i = 0; i <= str.length; i++) {
+    const on = str[i] === "1";
+    if (on && start < 0) start = i;
+    if (!on && start >= 0) { out.push([start / 30, i / 30]); start = -1; }
+  }
+  return out;
+}
+const RUNS = M.spk.map(runs);
+
+// ---------- Figure 1: timeline ----------
+const T = document.getElementById("timeline");
+const X0 = 70, X1 = 985, xs = t => X0 + (X1 - X0) * t / 60;
+let anchor = 52;
+function drawTimeline() {
+  T.innerHTML = "";
+  for (let s = 0; s <= 60; s += 5) {
+    el("line", { x1: xs(s), x2: xs(s), y1: 14, y2: 182, stroke: "var(--grid)", "stroke-width": 1 }, T);
+    el("text", { x: xs(s), y: 200, "text-anchor": "middle" }, T, fmt(M.t0 + s));
+  }
+  RUNS.forEach((rs, p) => {
+    const y = 22 + p * 38;
+    el("text", { x: X0 - 8, y: y + 16, "text-anchor": "end", class: "lbl" }, T, NAMES[p]);
+    el("rect", { x: X0, y, width: X1 - X0, height: 24, fill: "var(--grid)", rx: 2 }, T);
+    for (const [a, b] of rs) el("rect", { x: xs(a), y, width: Math.max(1, xs(b) - xs(a)), height: 24, fill: COLORS[p] }, T);
+  });
+  const yE = 140;
+  el("text", { x: X0 - 8, y: yE + 4, "text-anchor": "end", class: "lbl" }, T, "actions");
+  for (const e of M.events) {
+    const t = e.t - M.t0, x = xs(t);
+    const up = e.a === "ONSET";
+    el("path", { d: up ? `M${x - 5},${yE + 5} L${x + 5},${yE + 5} L${x},${yE - 5} Z` : `M${x - 5},${yE - 5} L${x + 5},${yE - 5} L${x},${yE + 5} Z`, fill: "var(--event)" }, T);
+  }
+  const yF = 166;
+  el("text", { x: X0 - 8, y: yF + 4, "text-anchor": "end", class: "lbl" }, T, "tours");
+  for (const i of M.floor) el("line", { x1: xs(i / 10 + .05), x2: xs(i / 10 + .05), y1: yF - 7, y2: yF + 7, stroke: "var(--muted)", "stroke-width": 1.5 }, T);
+  // current anchor window
+  const a = anchor;
+  el("rect", { x: xs((a - 29) / 10), y: 14, width: xs((a + 1) / 10) - xs((a - 29) / 10), height: 168, fill: "var(--ctx)", opacity: .35 }, T);
+  el("rect", { x: xs((a + 1) / 10), y: 14, width: xs((a + 11) / 10) - xs((a + 1) / 10), height: 168, fill: "var(--fut)", opacity: .5 }, T);
+  el("line", { x1: xs((a + 1) / 10), x2: xs((a + 1) / 10), y1: 10, y2: 186, stroke: "var(--anchor)", "stroke-width": 1.5 }, T);
+  const hit = el("rect", { x: X0, y: 10, width: X1 - X0, height: 180, fill: "transparent", style: "cursor:crosshair" }, T);
+  hit.addEventListener("click", ev => {
+    const pt = T.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    const p = pt.matrixTransform(T.getScreenCTM().inverse());
+    setAnchor(Math.round((p.x - X0) / (X1 - X0) * 600) - 1);
+  });
+}
+
+// ---------- Figure 2: anchors and stride ----------
+const W = document.getElementById("windows");
+const strides = [1, 2, 5, 10, 20, 40];
+let stride = 1;
+const seg = document.getElementById("strideSeg");
+for (const s of strides) {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = s; b.setAttribute("aria-pressed", s === stride);
+  b.addEventListener("click", () => { stride = s; [...seg.children].forEach(c => c.setAttribute("aria-pressed", c === b)); drawWindows(); });
+  seg.appendChild(b);
+}
+const slider = document.getElementById("anchorPos");
+slider.addEventListener("input", () => setAnchor(+slider.value));
+function setAnchor(a) { anchor = Math.min(589, Math.max(29, a)); slider.value = anchor; drawTimeline(); drawWindows(); }
+
+function drawWindows() {
+  W.innerHTML = "";
+  // overview: anchors over the minute
+  el("text", { x: X0 - 8, y: 30, "text-anchor": "end", class: "lbl" }, W, "ancres");
+  el("rect", { x: X0, y: 20, width: X1 - X0, height: 16, fill: "var(--grid)", rx: 2 }, W);
+  for (let i = 29; i < 590; i += 1) {
+    if ((i - 29) % stride) continue;
+    el("rect", { x: xs(i / 10), y: 20, width: Math.max(.6, (X1 - X0) / 600 * .7), height: 16, fill: "var(--anchor)", opacity: stride === 1 ? .55 : .9 }, W);
+  }
+  el("text", { x: X0, y: 52 }, W, `${fmt(M.t0)}`);
+  el("text", { x: X1, y: 52, "text-anchor": "end" }, W, `${fmt(M.t0 + 60)}`);
+
+  // zoom: 6 s around the selected anchor, cell by cell
+  const z0 = anchor - 34, z1 = anchor + 16; // cells shown
+  const zx = c => X0 + (X1 - X0) * (c - z0) / (z1 - z0);
+  const yS = 76;
+  RUNS.forEach((rs, p) => {
+    const y = yS + p * 18;
+    el("text", { x: X0 - 8, y: y + 11, "text-anchor": "end", class: "lbl" }, W, NAMES[p]);
+    for (const [a, b] of rs) {
+      const ca = a * 10, cb = b * 10;
+      if (cb < z0 || ca > z1) continue;
+      el("rect", { x: zx(Math.max(ca, z0)), y, width: Math.max(1, zx(Math.min(cb, z1)) - zx(Math.max(ca, z0))), height: 13, fill: COLORS[p] }, W);
+    }
+  });
+  const yC = 140;
+  el("text", { x: X0 - 8, y: yC + 13, "text-anchor": "end", class: "lbl" }, W, "cases");
+  for (let c = z0; c < z1; c++) {
+    let fill = "var(--surface)";
+    if (c >= anchor - 29 && c <= anchor) fill = "var(--ctx)";
+    if (c > anchor && c <= anchor + 10) fill = "var(--fut)";
+    el("rect", { x: zx(c) + .5, y: yC, width: zx(c + 1) - zx(c) - 1, height: 18, fill, stroke: "var(--rule)" }, W);
+  }
+  el("text", { x: (zx(anchor - 29) + zx(anchor + 1)) / 2, y: yC + 34, "text-anchor": "middle" }, W, "contexte · 30 cases · 3 s");
+  el("text", { x: (zx(anchor + 1) + zx(anchor + 11)) / 2, y: yC + 34, "text-anchor": "middle" }, W, "futur · 10 cases · 1 s");
+  el("line", { x1: zx(anchor + 1), x2: zx(anchor + 1), y1: 66, y2: yC + 22, stroke: "var(--anchor)", "stroke-width": 2 }, W);
+  el("text", { x: zx(anchor + 1), y: 64, "text-anchor": "middle", class: "lbl" }, W, `ancre ${fmt(M.t0 + (anchor + 1) / 10)}`);
+  // neighbouring anchors with this stride
+  const yN = 196;
+  el("text", { x: X0 - 8, y: yN + 8, "text-anchor": "end", class: "lbl" }, W, "voisines");
+  for (let k = -3; k <= 3; k++) {
+    if (!k) continue;
+    const a = anchor + k * stride;
+    const y = yN + (k > 0 ? k - 1 : -k - 1) * 7 - 2;
+    const left = zx(Math.max(z0, a - 29)), right = zx(Math.min(z1, a + 11));
+    if (right <= X0 || left >= X1 || right - left < 2) continue;
+    el("rect", { x: left, y, width: right - left, height: 4, fill: k > 0 ? "var(--p1)" : "var(--p2)", opacity: .55, rx: 2 }, W);
+  }
+  for (let c = z0; c <= z1; c += 10) el("text", { x: zx(c), y: 246, "text-anchor": "middle" }, W, fmt(M.t0 + c / 10));
+
+  const perMin = Math.floor(600 / stride);
+  const reuse = 40 / stride;
+  const shared = Math.max(0, 40 - stride);
+  document.getElementById("strideReadout").innerHTML =
+    `<span><em>ancres / minute</em> ${perMin}</span>` +
+    `<span><em>fenêtres voisines partagent</em> ${shared}/40 cases</span>` +
+    `<span><em>chaque case vue</em> ${reuse >= 1 ? reuse.toFixed(reuse % 1 ? 1 : 0) : reuse.toFixed(2)}× par epoch</span>` +
+    `<span><em>ancres train EgoCom</em> ≈ ${Math.round(1069665 / stride).toLocaleString("fr-FR")}</span>`;
+}
+
+// ---------- Figure 3: zoom on an event ----------
+const Z = document.getElementById("zoom");
+const evSeg = document.getElementById("eventSeg");
+const evChoices = M.events.filter((e, i) => i < 12);
+let evIdx = 2;
+evChoices.forEach((e, i) => {
+  const b = document.createElement("button"); b.type = "button";
+  b.textContent = `${e.a === "ONSET" ? "▲" : "▼"} ${fmt(e.t)}`; b.setAttribute("aria-pressed", i === evIdx);
+  b.addEventListener("click", () => { evIdx = i; [...evSeg.children].forEach(c => c.setAttribute("aria-pressed", c === b)); drawZoom(); });
+  evSeg.appendChild(b);
+});
+function drawZoom() {
+  Z.innerHTML = "";
+  const e = evChoices[evIdx];
+  const tc = e.t - M.t0;                 // seconds in minute
+  const a = Math.max(0, tc - 1.0), b = a + 2.0;
+  const zx = t => X0 + (X1 - X0) * (t - a) / (b - a);
+  const rows = { speech: 26, sub20: 96, cell: 136, mimi: 196, map: 236 };
+  // speech rows (ego and the others merged)
+  ["ego · P3", "autres"].forEach((name, r) => {
+    const y = rows.speech + r * 26;
+    el("text", { x: X0 - 8, y: y + 13, "text-anchor": "end", class: "lbl" }, Z, name);
+    const sets = r === 0 ? [RUNS[0]] : [RUNS[1], RUNS[2]];
+    sets.forEach((rs, k) => {
+      for (const [s0, s1] of rs) {
+        if (s1 < a || s0 > b) continue;
+        el("rect", { x: zx(Math.max(s0, a)), y, width: Math.max(1, zx(Math.min(s1, b)) - zx(Math.max(s0, a))), height: 18, fill: r === 0 ? COLORS[0] : COLORS[1 + k], opacity: r === 0 ? 1 : .85 }, Z);
+      }
+    });
+  });
+  // 20 ms grid
+  el("text", { x: X0 - 8, y: rows.sub20 + 10, "text-anchor": "end", class: "lbl" }, Z, "20 ms");
+  for (let t = Math.ceil(a / .02) * .02; t < b; t += .02) el("rect", { x: zx(t) + .3, y: rows.sub20, width: Math.max(.4, zx(t + .02) - zx(t) - .6), height: 14, fill: "var(--grid)" }, Z);
+  // 100 ms cells
+  el("text", { x: X0 - 8, y: rows.cell + 16, "text-anchor": "end", class: "lbl" }, Z, "cases 10 Hz");
+  const evCell = Math.floor(tc * 10 + 1e-9);
+  for (let c = Math.ceil(a * 10); c < b * 10; c++) {
+    el("rect", { x: zx(c / 10) + .5, y: rows.cell, width: zx((c + 1) / 10) - zx(c / 10) - 1, height: 24, fill: c === evCell ? "var(--ego-soft)" : "var(--surface)", stroke: "var(--rule)" }, Z);
+  }
+  // Mimi frames: frame i covers [i*0.08, (i+1)*0.08) of recording time; recording time = minute time + t0
+  el("text", { x: X0 - 8, y: rows.mimi + 14, "text-anchor": "end", class: "lbl" }, Z, "Mimi 80 ms");
+  const T0 = M.t0;
+  const used = new Set();
+  for (let c = Math.ceil(a * 10); c < b * 10; c++) {
+    const endRec = (T0 + (c + 1) / 10);
+    const i = Math.floor(endRec * 12.5 + 1e-8) - 1;
+    used.add(i);
+    const fEnd = (i + 1) * 0.08 - T0;
+    // link: cell end <- frame availability
+    el("line", { x1: zx(fEnd), y1: rows.mimi + 20, x2: zx((c + 1) / 10) - 2, y2: rows.cell + 24, stroke: "var(--mimi)", "stroke-width": 1, opacity: .7 }, Z);
+  }
+  const defs = el("defs", {}, Z);
+  const pat = el("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+  el("rect", { width: 6, height: 6, fill: "var(--surface)" }, pat);
+  el("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--drop)", "stroke-width": 2 }, pat);
+  for (let i = Math.ceil((T0 + a) * 12.5); (i) * 0.08 - T0 < b; i++) {
+    const s = i * 0.08 - T0, e2 = (i + 1) * 0.08 - T0;
+    if (e2 > b) break;
+    el("rect", { x: zx(s) + .5, y: rows.mimi, width: zx(e2) - zx(s) - 1, height: 20, fill: used.has(i) ? "var(--mimi)" : "url(#hatch)", opacity: used.has(i) ? .8 : 1, stroke: "var(--rule)" }, Z);
+  }
+  // event line
+  const xe = zx(tc);
+  el("line", { x1: xe, x2: xe, y1: 14, y2: rows.mimi + 26, stroke: "var(--event)", "stroke-width": 2, "stroke-dasharray": "4 3" }, Z);
+  el("text", { x: xe + 4, y: 14, fill: "var(--event)", style: "fill:var(--event)" }, Z, `${e.a === "ONSET" ? "prise de parole" : "fin de parole"} · ${e.t.toFixed(3)} s`);
+  for (let t = Math.ceil(a * 2) / 2; t <= b + 1e-9; t += .5) el("text", { x: zx(t), y: rows.map + 30, "text-anchor": "middle" }, Z, fmt(M.t0 + t));
+
+  const cellStart = evCell / 10, cellEnd = (evCell + 1) / 10;
+  const err = ((cellEnd - tc) * 1000).toFixed(0);
+  const endRec = T0 + cellEnd, fi = Math.floor(endRec * 12.5 + 1e-8) - 1, lag = ((endRec - (fi + 1) * 0.08) * 1000).toFixed(0);
+  document.getElementById("zoomReadout").innerHTML =
+    `<span><em>événement</em> ${e.t.toFixed(3)} s</span>` +
+    `<span><em>case 10 Hz</em> ${(T0 + cellStart).toFixed(1)}–${(T0 + cellEnd).toFixed(1)} s</span>` +
+    `<span><em>vu par la grille</em> ${err} ms après l'événement</span>` +
+    `<span><em>trame Mimi utilisée</em> n° ${fi}, ${lag} ms de retard</span>`;
+}
+
+// ---------- Figure 4: histograms ----------
+function hist(svgId, h, label, mark, capId, unit) {
+  const S = document.getElementById(svgId); S.innerHTML = "";
+  const L = 46, R = 445, Tp = 18, B = 190;
+  const maxC = Math.max(...h.counts);
+  const xmax = h.edges[h.edges.length - 1];
+  const hx = v => L + (R - L) * v / xmax, hy = c => B - (B - Tp) * c / maxC;
+  for (let k = 0; k <= 4; k++) {
+    const c = Math.round(maxC * k / 4);
+    el("line", { x1: L, x2: R, y1: hy(c), y2: hy(c), stroke: "var(--grid)" }, S);
+    el("text", { x: L - 6, y: hy(c) + 4, "text-anchor": "end" }, S, c);
+  }
+  h.counts.forEach((c, i) => {
+    el("rect", { x: hx(h.edges[i]) + .5, y: hy(c), width: Math.max(1, hx(h.edges[i + 1]) - hx(h.edges[i]) - 1), height: B - hy(c), fill: "var(--p1)", opacity: .75 }, S);
+  });
+  const step = xmax > 60 ? 20 : 10;
+  for (let v = 0; v <= xmax; v += step) el("text", { x: hx(v), y: B + 16, "text-anchor": "middle" }, S, v);
+  el("text", { x: (L + R) / 2, y: B + 34, "text-anchor": "middle" }, S, label);
+  const xm = hx(h.mean);
+  el("line", { x1: xm, x2: xm, y1: Tp, y2: B, stroke: "var(--ink)", "stroke-width": 1.5, "stroke-dasharray": "3 3" }, S);
+  el("text", { x: xm + 4, y: Tp + 10, style: "fill:var(--ink)" }, S, `moyenne ${h.mean}`);
+  const xk = hx(mark + .5);
+  el("line", { x1: xk, x2: xk, y1: Tp + 16, y2: B, stroke: "var(--ego)", "stroke-width": 2 }, S);
+  el("text", { x: xk + 4, y: Tp + 28, style: "fill:var(--ego)" }, S, `cette minute ${mark}`);
+  document.getElementById(capId).innerHTML =
+    `${unit}&nbsp;: moyenne <b>${h.mean}</b>, écart-type <b>${h.std}</b>, 80&nbsp;% des minutes entre <b>${h.p10}</b> et <b>${h.p90}</b> (${ST.n_minutes.toLocaleString("fr-FR")} minutes, ${ST.n_rec} enregistrements).`;
+}
+
+// ---------- Figure 5: actions cell by cell at a chosen frequency ----------
+// Ego speech intervals from the exact event times (minute-relative seconds).
+const EGO = (() => {
+  const evs = M.events.map(e => ({ t: e.t - M.t0, a: e.a })).sort((x, y) => x.t - y.t);
+  const out = []; let start = evs.length && evs[0].a === "OFFSET" ? 0 : null;
+  for (const e of evs) {
+    if (e.a === "ONSET" && start === null) start = e.t;
+    else if (e.a === "OFFSET" && start !== null) { out.push([start, e.t]); start = null; }
+  }
+  if (start !== null) out.push([start, 60]);
+  return { evs, out };
+})();
+const speakingAt = t => EGO.out.some(([a, b]) => t >= a && t < b);
+function actionsAt(f, a, b) {
+  const cells = [];
+  const k0 = Math.floor(a * f + 1e-9), k1 = Math.ceil(b * f - 1e-9);
+  for (let k = k0; k < k1; k++) {
+    const s = k / f, e = (k + 1) / f;
+    const inCell = EGO.evs.filter(x => x.t >= s && x.t < e);
+    let act;
+    if (inCell.length >= 2) act = "MASKED";
+    else if (inCell.length === 1) act = inCell[0].a === "ONSET" ? "START" : "STOP";
+    else act = speakingAt(s) ? "HOLD" : "WAIT";
+    cells.push({ k, s, e, act });
+  }
+  return cells;
+}
+function occupancy(runsList, s, e) {
+  let tot = 0;
+  for (const [a, b] of runsList) tot += Math.max(0, Math.min(b, e) - Math.max(a, s));
+  return Math.min(1, tot / (e - s));
+}
+const FREQS = [2, 5, 10, 12.5, 20, 30, 50];
+const SPANS = [3, 6, 12];
+let freq = 10, span = 6;
+function segButtons(id, values, current, unit, onPick) {
+  const host = document.getElementById(id);
+  for (const v of values) {
+    const b = document.createElement("button"); b.type = "button";
+    b.textContent = `${String(v).replace(".", ",")}${unit}`; b.setAttribute("aria-pressed", v === current);
+    b.addEventListener("click", () => { [...host.children].forEach(c => c.setAttribute("aria-pressed", c === b)); onPick(v); });
+    host.appendChild(b);
+  }
+}
+segButtons("freqSeg", FREQS, freq, " Hz", v => { freq = v; drawCells(); });
+segButtons("spanSeg", SPANS, span, " s", v => { span = v; spanSlider.max = 60 - v; if (+spanSlider.value > 60 - v) spanSlider.value = 60 - v; drawCells(); });
+const spanSlider = document.getElementById("spanStart");
+spanSlider.addEventListener("input", drawCells);
+const ACT_FILL = { WAIT: "var(--wait)", START: "var(--start)", HOLD: "var(--hold)", STOP: "var(--stop)", MASKED: "url(#maskHatch)" };
+const ACT_GLYPH = { WAIT: "W", START: "▲", HOLD: "H", STOP: "▼", MASKED: "?" };
+
+function drawCells() {
+  const C = document.getElementById("cells"); C.innerHTML = "";
+  const defs = el("defs", {}, C);
+  const pat = el("pattern", { id: "maskHatch", width: 5, height: 5, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+  el("rect", { width: 5, height: 5, fill: "var(--surface)" }, pat);
+  el("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--muted)", "stroke-width": 2 }, pat);
+
+  const a = +spanSlider.value, b = a + span;
+  const cx = t => X0 + (X1 - X0) * (t - a) / (b - a);
+  const rows = { ego: 20, act: 54, p1: 112, p2: 146, oth: 180 };
+  // continuous reference: ego speech and event times
+  el("text", { x: X0 - 8, y: rows.ego + 12, "text-anchor": "end", class: "lbl" }, C, "ego (réel)");
+  el("rect", { x: X0, y: rows.ego, width: X1 - X0, height: 16, fill: "var(--grid)", rx: 2 }, C);
+  for (const [s, e] of EGO.out) {
+    if (e < a || s > b) continue;
+    el("rect", { x: cx(Math.max(s, a)), y: rows.ego, width: Math.max(1, cx(Math.min(e, b)) - cx(Math.max(s, a))), height: 16, fill: "var(--ego)" }, C);
+  }
+  for (const e of EGO.evs) {
+    if (e.t < a || e.t > b) continue;
+    el("line", { x1: cx(e.t), x2: cx(e.t), y1: rows.ego - 4, y2: rows.act + 30, stroke: "var(--event)", "stroke-width": 1.2, "stroke-dasharray": "3 2" }, C);
+  }
+  // actions at the chosen frequency
+  const cells = actionsAt(freq, a, b);
+  const cw = (X1 - X0) / (span * freq);
+  el("text", { x: X0 - 8, y: rows.act + 17, "text-anchor": "end", class: "lbl" }, C, `action ${String(freq).replace(".", ",")} Hz`);
+  for (const c of cells) {
+    const x = cx(Math.max(c.s, a)), w = cx(Math.min(c.e, b)) - x;
+    el("rect", { x: x + (cw > 3 ? .5 : 0), y: rows.act, width: Math.max(.5, w - (cw > 3 ? 1 : 0)), height: 26, fill: ACT_FILL[c.act] }, C);
+    if (cw >= 14) el("text", { x: x + w / 2, y: rows.act + 17, "text-anchor": "middle", style: `fill:${c.act === "WAIT" || c.act === "MASKED" ? "var(--ink)" : "var(--surface)"};font-size:${cw >= 22 ? 11 : 9}px` }, C, ACT_GLYPH[c.act]);
+  }
+  // others: occupancy per cell
+  [["P1", RUNS[1], "var(--p1)", rows.p1], ["P2", RUNS[2], "var(--p2)", rows.p2], ["autres", [...RUNS[1], ...RUNS[2]], "var(--ink)", rows.oth]].forEach(([name, rs, col, y]) => {
+    el("text", { x: X0 - 8, y: y + 15, "text-anchor": "end", class: "lbl" }, C, name);
+    for (const c of cells) {
+      const x = cx(Math.max(c.s, a)), w = cx(Math.min(c.e, b)) - x;
+      const occ = name === "autres"
+        ? Math.max(occupancy(RUNS[1], c.s, c.e), occupancy(RUNS[2], c.s, c.e))
+        : occupancy(rs, c.s, c.e);
+      el("rect", { x: x + (cw > 3 ? .5 : 0), y, width: Math.max(.5, w - (cw > 3 ? 1 : 0)), height: 22, fill: "var(--grid)" }, C);
+      if (occ > 0) el("rect", { x: x + (cw > 3 ? .5 : 0), y, width: Math.max(.5, w - (cw > 3 ? 1 : 0)), height: 22, fill: col, opacity: (.25 + .75 * occ).toFixed(2) }, C);
+    }
+  });
+  for (let t = Math.ceil(a); t <= b + 1e-9; t += span > 6 ? 2 : 1) el("text", { x: cx(t), y: 228, "text-anchor": "middle" }, C, fmt(M.t0 + t));
+  el("text", { x: X1, y: 246, "text-anchor": "end" }, C, `1 case = ${(1000 / freq).toFixed(freq === 12.5 || freq === 30 ? 1 : 0).replace(".", ",")} ms`);
+
+  // whole-minute counts at this frequency
+  const all = actionsAt(freq, 0, 60);
+  const n = { WAIT: 0, START: 0, HOLD: 0, STOP: 0, MASKED: 0 };
+  for (const c of all) n[c.act]++;
+  const ev = n.START + n.STOP;
+  document.getElementById("cellsReadout").innerHTML =
+    `<span><em>cases / minute</em> ${all.length}</span>` +
+    `<span><em>WAIT</em> ${n.WAIT}</span><span><em>HOLD</em> ${n.HOLD}</span>` +
+    `<span><em>START</em> ${n.START}</span><span><em>STOP</em> ${n.STOP}</span>` +
+    `<span><em>MASKED</em> ${n.MASKED}</span>` +
+    `<span><em>cases avec événement</em> ${(100 * ev / all.length).toFixed(1).replace(".", ",")} %</span>` +
+    `<span><em>1 s de futur</em> = ${String(freq).replace(".", ",")} pas de rollout</span>`;
+}
+
+function drawAll() {
+  drawTimeline(); drawWindows(); drawZoom(); drawCells();
+  hist("histDec", ST.decisions, "décisions de l'ego par minute (prises + fins de parole)", onsets + offsets, "capDec", "Décisions de l'ego");
+  hist("histFloor", ST.floor, "changements de tour par minute", M.floor.length, "capFloor", "Changements de tour");
+  document.getElementById("capDec").innerHTML += ` Entre enregistrements, l'écart-type de la moyenne est de ${ST.between_rec_std}&nbsp;; à l'intérieur d'un même enregistrement, d'une minute à l'autre, il est de ${ST.within_rec_std}.`;
+}
+drawAll();
+</script>
+
+</body>
+</html>
