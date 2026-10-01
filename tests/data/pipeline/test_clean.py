@@ -9,6 +9,8 @@ from conv_wm.data.datasets.ego4d_cleaning import (
     MISSING_VOICE_COLUMNS,
     PERSON_COLUMNS,
     SOCIAL_COLUMNS,
+    TRACK_COLUMNS,
+    TRACKING_PATH_COLUMNS,
     TRANSCRIPTION_COLUMNS,
     VOICE_COLUMNS,
     clean_annotation_tables,
@@ -121,6 +123,8 @@ def _clean_ego4d(
         "social_segments_looking": pd.DataFrame.from_records(
             looking or [_social_row()], columns=SOCIAL_COLUMNS
         ),
+        "tracking_paths": pd.DataFrame(columns=(*TRACKING_PATH_COLUMNS, "suspect")),
+        "tracks": pd.DataFrame(columns=TRACK_COLUMNS),
     }
     return {result.name: result for result in clean_annotation_tables(sources)}
 
@@ -278,6 +282,57 @@ def test_clip_validity_wearer_and_missing_voice_regions_are_extracted():
     results = {r.name: r for r in clean_annotation_tables(tables)}
     assert results["clips"].statistics == {"invalid_clip_rows": 1}
     assert results["missing_voice_segments"].output_rows == 1
+
+
+def test_face_tracks_are_extracted_and_boxes_without_extent_removed():
+    point = {"x": 1.5, "y": 2.0, "width": 3.0, "height": 4.0, "video_frame": 31}
+    tables = extract_annotation_tables(
+        [
+            {
+                "clips": [
+                    {
+                        **_clip_row(),
+                        "persons": [
+                            {
+                                "person_id": "0",
+                                "camera_wearer": True,
+                                "tracking_paths": [],
+                            },
+                            {
+                                "person_id": "1",
+                                "camera_wearer": False,
+                                "tracking_paths": [
+                                    {
+                                        "track_id": "track_1",
+                                        "suspect": True,
+                                        "unmapped_frames_count": 0,
+                                        "unmapped_frames": [],
+                                        "track": [
+                                            {**point, "frame": 0, "clip_frame": None},
+                                            {**point, "width": 0.0, "frame": 1},
+                                        ],
+                                    }
+                                ],
+                            },
+                        ],
+                    }
+                ]
+            }
+        ]
+    )
+
+    results = {r.name: r for r in clean_annotation_tables(tables)}
+    paths, points = results["tracking_paths"], results["tracks"]
+    assert list(paths.table.columns) == list(TRACKING_PATH_COLUMNS)
+    assert paths.table["person_id"].tolist() == ["1"]
+    assert paths.statistics == {"suspect_tracks": 1}
+    assert list(points.table.columns) == list(TRACK_COLUMNS)
+    assert points.table[["clip_frame", "video_frame", "x"]].values.tolist() == [
+        [0, 31, 1.5]
+    ]
+    assert points.removed_by_reason == {"non_positive_box": 1}
+    paths.validate_accounting()
+    points.validate_accounting()
 
 
 def test_cleaning_orchestration_writes_accounted_table_and_report(tmp_path):

@@ -80,6 +80,32 @@ SOCIAL_COLUMNS = (
     "is_at_me",
 )
 
+TRACKING_PATH_COLUMNS = (
+    "clip_uid",
+    "person_id",
+    "track_id",
+    "unmapped_frames_count",
+    "unmapped_frames",
+)
+"""One row per face track of a person; its points are in ``tracks``. The
+release's ``suspect`` flag is counted in the report, not kept."""
+
+TRACK_COLUMNS = (
+    "clip_uid",
+    "person_id",
+    "track_id",
+    "x",
+    "y",
+    "width",
+    "height",
+    "clip_frame",
+    "video_frame",
+)
+"""One row per face-box point of a track. The release's per-point ``frame``
+is the clip frame; its own ``clip_frame`` field is always null and dropped."""
+
+TRACK_RULE_VERSION = "ego4d-track-cleaning-v1"
+
 CLIP_REQUIRED = CLIP_COLUMNS
 PERSON_REQUIRED = PERSON_COLUMNS
 MISSING_VOICE_REQUIRED = ("clip_uid", "start_time", "end_time")
@@ -155,7 +181,10 @@ def extract_annotation_tables(
         "transcriptions": [],
         "social_segments_talking": [],
         "social_segments_looking": [],
+        "tracking_paths": [],
     }
+    # Millions of track points: filled column by column.
+    tracks: dict[str, list[Any]] = {column: [] for column in TRACK_COLUMNS}
     for video in videos:
         for clip_value in _collection(video, "clips"):
             if not isinstance(clip_value, Mapping):
@@ -189,6 +218,32 @@ def extract_annotation_tables(
                         "is_camera_wearer": person_value.get("camera_wearer"),
                     }
                 )
+                person_id = person_value.get("person_id")
+                for path_value in _collection(person_value, "tracking_paths"):
+                    if not isinstance(path_value, Mapping):
+                        raise TypeError("Ego4D tracking paths must be JSON objects")
+                    track_id = path_value.get("track_id")
+                    records["tracking_paths"].append(
+                        {
+                            "clip_uid": clip_uid,
+                            "person_id": person_id,
+                            "track_id": track_id,
+                            "unmapped_frames_count": path_value.get(
+                                "unmapped_frames_count"
+                            ),
+                            "unmapped_frames": path_value.get("unmapped_frames"),
+                            "suspect": path_value.get("suspect"),
+                        }
+                    )
+                    for point in _collection(path_value, "track"):
+                        if not isinstance(point, Mapping):
+                            raise TypeError("Ego4D track points must be JSON objects")
+                        tracks["clip_uid"].append(clip_uid)
+                        tracks["person_id"].append(person_id)
+                        tracks["track_id"].append(track_id)
+                        for key in ("x", "y", "width", "height", "video_frame"):
+                            tracks[key].append(point.get(key))
+                        tracks["clip_frame"].append(point.get("frame"))
                 for segment_value in _collection(person_value, "voice_segments"):
                     if not isinstance(segment_value, Mapping):
                         raise TypeError("Ego4D voice segments must be JSON objects")
@@ -236,6 +291,10 @@ def extract_annotation_tables(
         "social_segments_looking": pd.DataFrame.from_records(
             records["social_segments_looking"], columns=SOCIAL_COLUMNS
         ),
+        "tracking_paths": pd.DataFrame.from_records(
+            records["tracking_paths"], columns=(*TRACKING_PATH_COLUMNS, "suspect")
+        ),
+        "tracks": pd.DataFrame(tracks, columns=TRACK_COLUMNS),
     }
 
 
@@ -348,6 +407,49 @@ def clean_annotation_tables(
             "without the required person identity or temporal coordinates are unusable."
         ),
     )
+    paths_source = sources["tracking_paths"]
+    paths = _clean_table(
+        paths_source.drop(columns="suspect"),
+        name="tracking_paths",
+        required=("clip_uid", "person_id", "track_id"),
+        optional=(),
+        decision="NO FILTER NEEDED",
+        reason="One row per face track of an annotated person; every track is kept.",
+    )
+    paths = replace(
+        paths,
+        cleaning_rule=TRACK_RULE_VERSION,
+        transformations=(
+            *paths.transformations,
+            "drop the per-point track (in tracks) and the release suspect flag",
+        ),
+        statistics={"suspect_tracks": int(paths_source["suspect"].eq(True).sum())},
+    )
+    points = _clean_table(
+        sources["tracks"],
+        name="tracks",
+        required=TRACK_COLUMNS,
+        optional=(),
+        decision="KEEP CURRENT FILTER",
+        reason=(
+            "Face-box points of every track; boxes with a non-positive width or "
+            "height have no extent and are removed."
+        ),
+    )
+    positive = (points.table["width"] > 0) & (points.table["height"] > 0)
+    points = replace(
+        points,
+        table=points.table.loc[positive].reset_index(drop=True),
+        removed_by_reason={
+            **points.removed_by_reason,
+            "non_positive_box": int((~positive).sum()),
+        },
+        cleaning_rule=TRACK_RULE_VERSION,
+        transformations=(
+            *points.transformations,
+            "take clip_frame from the release's per-point frame",
+        ),
+    )
     talking_table = talking.table
     looking_table = looking.table
     return [
@@ -388,6 +490,8 @@ def clean_annotation_tables(
                 "is_at_me_false_rows": int(looking_table["is_at_me"].eq(False).sum()),
             },
         ),
+        paths,
+        points,
     ]
 
 
