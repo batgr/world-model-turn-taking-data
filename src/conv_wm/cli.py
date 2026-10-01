@@ -330,13 +330,17 @@ def _build_model_ready(cfg: DictConfig, args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _clean_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
+def _clean_annotations(cfg: DictConfig, args: argparse.Namespace) -> int:
+    from conv_wm.data import datasets
     from conv_wm.data.pipeline.clean import (
         format_annotation_cleaning_summary,
         run_annotation_cleaning,
     )
 
-    outputs = run_annotation_cleaning(cfg)
+    names = None if args.dataset == "all" else [args.dataset]
+    if names is not None and datasets.get(args.dataset).annotation_cleaner is None:
+        raise ValueError(f"dataset {args.dataset!r} declares no annotation cleaner")
+    outputs = run_annotation_cleaning(cfg, dataset_names=names)
     print(format_annotation_cleaning_summary(outputs))
     return EXIT_OK
 
@@ -507,6 +511,12 @@ def build_parser() -> argparse.ArgumentParser:
     clean_subparsers = clean.add_subparsers(dest="clean", required=True)
     clean_annotations = clean_subparsers.add_parser(
         "annotations", help="clean registered annotation sources into interim tables"
+    )
+    clean_annotations.add_argument(
+        "--dataset",
+        choices=dataset_choices,
+        default="all",
+        help="dataset to clean (default all)",
     )
     clean_annotations.set_defaults(handler=_clean_annotations)
     build = subparsers.add_parser(

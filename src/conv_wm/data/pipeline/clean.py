@@ -7,6 +7,7 @@ derived interim tables plus one provenance-stamped report.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,6 +187,15 @@ def run_annotation_cleaning(
         },
     }
     summary_path = pipeline_paths(cfg).reports / REPORT_PATH
+    if dataset_names is not None and summary_path.exists():
+        # Cleaning a subset keeps the other datasets' accounts as they were.
+        previous = json.loads(summary_path.read_text(encoding="utf-8"))
+        kept = {
+            name: entry
+            for name, entry in (previous.get("datasets") or {}).items()
+            if name not in names
+        }
+        payload["datasets"] = dict(sorted({**kept, **payload["datasets"]}.items()))
     summary = write_summary(
         summary_path,
         payload,

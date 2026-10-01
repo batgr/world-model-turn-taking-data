@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -370,11 +371,17 @@ def test_cleaning_orchestration_writes_accounted_table_and_report(tmp_path):
             },
         }
     )
+    # A previous run's account of another dataset survives a partial cleaning.
+    summary_path = reports / "cleaning" / "annotations" / "summary.json"
+    summary_path.parent.mkdir(parents=True)
+    summary_path.write_text(json.dumps({"datasets": {"other": {"tables": {}}}}))
     datasets.register(DatasetSpec(name="synthetic", annotation_cleaner=cleaner))
     try:
         outputs = run_annotation_cleaning(cfg, dataset_names=["synthetic"])
     finally:
         datasets.unregister("synthetic")
+
+    assert set(outputs.summary["datasets"]) == {"other", "synthetic"}
 
     account = outputs.summary["datasets"]["synthetic"]["tables"]["events"]
     assert account["source_rows"] == 2
