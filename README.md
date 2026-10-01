@@ -307,10 +307,13 @@ recording boundary.
    `<name>_native_voice.py`, `<name>_media.py` and `<name>_splits.py` next to it.
 3. Register it in `data/datasets/__init__.py` and add its paths to
    `conf/config.yaml`.
-4. Run `conv-wm audit structure`, then `conv-wm build all`.
+4. Run `conv-wm clean annotations --dataset <name>`, `conv-wm audit structure`,
+   then `conv-wm build all --dataset <name>`.
 
-No core module changes. `tests/data/test_third_dataset_extensibility.py` holds
-a synthetic dataset that proves the generic code never branches on a name.
+No core module changes. `tests/test_new_dataset_end_to_end.py` takes a
+synthetic dataset with its own raw format from raw annotations to the release
+through the CLI; the [pipeline guide](docs/data_pipeline/README.md#adding-a-dataset)
+lists every adapter and what each stage needs.
 
 Where code belongs:
 

@@ -179,6 +179,8 @@ registry (`conv_wm.data.datasets.get(name)`):
 | `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field, known limitations) and cross-source comparisons | annotation integrity |
 | `annotation_cleaner` | dataset-specific, explicitly validated minimal transformations | annotation cleaning |
 | `native_focal_voice` | cleaned native annotations mapped to one focal voice recording per (view, wearer) | native focal voice-state build |
+| `media_records` | each canonical `recording_id` resolved to its raw video/audio files and media offset | media manifest |
+| `recording_splits` | the dataset's own `recording_id` → `train`/`val`/`test` assignment | model-ready index (otherwise unsplit) |
 | `label_facts: LabelFactsSpec` | every participant's native speech, UNKNOWN regions, transcripts, social segments, face tracks, and the facts it provides | label sidecars ([`labels.md`](labels.md)) |
 | `audio: AudioInterpretation` | a known boundary grid, extra decoded-validation windows, a dataset summary section | audio timeline audit (relabelling), video timeline audit (extra windows) |
 
@@ -189,25 +191,48 @@ media-audited with an empty spec.
 
 1. Put the raw files below `${paths.raw}/<Name>/`; the directory name,
    lower-cased, is the dataset key. Add its stage paths and file keys to
-   `conf/config.yaml` under `datasets.<key>`.
-2. Create `src/conv_wm/data/datasets/<key>.py` with a `DatasetSpec`:
-   - `StructuralSpec`: one `TableSpec` per table (a Pandera schema plus a
-     `csv_table`/`parquet_table` loader) and the `RelationSpec`s between them;
-   - `AnnotationSpec`: one `AnnotationSourceSpec` per annotation table and the
-     `CrossSourceComparison`s that make sense;
-   - `AudioInterpretation` only if the recordings have known joins or a
-     regime worth decoding systematically;
-   - `native_focal_voice` (`<key>_native_voice.py`): the wearer's native
-     speech intervals and declared `UNKNOWN` regions per recording, if the
-     dataset takes part in the vocal pipeline.
-3. Register it in `conv_wm/data/datasets/__init__.py` (built-ins) or from a
-   test/fixture with `datasets.register(spec)`.
-4. Run `conv-wm audit structure` and `conv-wm audit annotations`; document
-   the findings on the capability page.
+   `conf/config.yaml` under `datasets.<key>`, and the key to `release.public`
+   and/or `release.full` if it is to be released.
+2. Create `src/conv_wm/data/datasets/<key>.py` with a `DatasetSpec`. Every
+   field is optional; a stage simply skips a dataset that does not declare
+   what it needs.
+   - audits: `StructuralSpec` (one `TableSpec` per table, a Pandera schema plus
+     a `csv_table`/`parquet_table` loader, and the `RelationSpec`s between
+     them), `AnnotationSpec` (one `AnnotationSourceSpec` per annotation table),
+     `AudioInterpretation` only for known recording joins;
+   - `annotation_cleaner` (`<key>_cleaning.py`): raw annotations to interim
+     tables, every removed row accounted for (`CleanedAnnotationTable`);
+   - `native_focal_voice` (`<key>_native_voice.py`): per recording, the
+     wearer's SPEAKING intervals, the UNKNOWN regions, and a `source_kind`
+     string naming the evidence (e.g. `"<key>_voice_segments"`);
+   - `media_records` (`<key>_media.py`): recording id to media files and offset;
+   - `recording_splits` (`<key>_splits.py`): the dataset's own splits;
+   - `label_facts` (`<key>_labels.py`): every participant's speech and the
+     facts the dataset `provides`; labels needing a fact it lacks are reported
+     unavailable, never guessed.
+3. Register it in `conv_wm/data/datasets/__init__.py`.
+4. Run the pipeline for it alone:
 
-No generic module changes. `tests/data/test_third_dataset_extensibility.py`
-does exactly this with a synthetic affect dataset (video-level mood ratings
-and confidence-scored model-inferred intervals) and is the reference example.
+   ```bash
+   uv run conv-wm audit manifest
+   uv run conv-wm audit media
+   uv run conv-wm clean annotations --dataset <key>
+   uv run conv-wm audit structure        # if it declares a StructuralSpec
+   uv run conv-wm build all --dataset <key>
+   uv run conv-wm release
+   ```
+
+No generic module changes. Two tests are the reference examples:
+`tests/test_new_dataset_end_to_end.py` takes a synthetic corpus with its own
+raw format from raw annotations to the release through the CLI, and
+`tests/data/test_third_dataset_extensibility.py` puts a dataset with unusual
+annotation types (video-level mood ratings, confidence-scored model-inferred
+intervals) through the structural, annotation and audio audits.
+
+Still specific to EgoCom and Ego4D: the diagnostic vocal annotation coverage
+audit (`conv-wm audit vocal-annotation-coverage`, outside the build). In the
+model repository, `turn_wm.data.source.DATASETS` lists the Hub releases a run
+can load; a new release, and its Mimi feature cache, are added there.
 
 ## Provenance
 
