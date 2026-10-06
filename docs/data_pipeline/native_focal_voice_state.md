@@ -24,7 +24,7 @@ temporal semantics, and the layer does not hide it:
 
 | Dataset | `SPEAKING` means | `SILENT` means | `UNKNOWN` means |
 | --- | --- | --- | --- |
-| Ego4D | inside an official AV `voice_segments` interval of the camera wearer — a native vocal *episode*, which may absorb short internal pauses | outside every wearer voice segment | clip flagged `valid = false`, an entry of the release's `missing_voice_segments` (for the wearer or unattributed), or clip time the source video's audio does not cover |
+| Ego4D | inside an official AV `voice_segments` interval of the camera wearer — a native vocal *episode*, which may absorb short internal pauses | outside every wearer voice segment | clip flagged `valid = false`, an entry of the release's `missing_voice_segments` (for the wearer or unattributed), clip time the source video's audio does not cover, or an audio dropout of at least 100 ms in it (see below) |
 | EgoCom | inside a timed transcript token attributed to the wearer — a transcript-derived speaker interval; gaps between consecutive tokens are `SILENT`, however short | outside every timed wearer token | media the audit could not probe, or video time its audio does not cover |
 
 Boundaries are the official ones. Ego4D segments are never split or refined
@@ -60,6 +60,16 @@ Both limitations belong in the Dataset Card.
   `video_info_clean`, `ground_truth_clean`;
 - the media metadata audit (`conv-wm audit media`), which decides whether a
   recording's audio exists and which part of the annotated window it covers;
+- for Ego4D, the audio packet-timeline audit (`conv-wm audit audio`): every
+  `audio_dropout` event of at least 100 ms becomes a `media_audio_dropout`
+  `UNKNOWN` region. The audio packet timestamps jump forward there while the
+  decoded samples stay contiguous, so no recorded audio exists for that
+  time; the model's media reader fills the same gaps (≥ 100 ms) with
+  silence. The region ends at the event's time (the timestamp of the packet
+  after the jump) and starts `dropout_duration_samples` earlier, shifted to
+  the clip timeline by the clip's media offset. The Ego4D label facts declare
+  the same regions UNKNOWN for everyone. Every probed Ego4D video must have a
+  measured packet timeline, or the build stops;
 - the raw manifest (`conv-wm audit manifest`), checksummed into the report.
 
 A missing prerequisite stops the command and names the command that produces
@@ -87,7 +97,7 @@ overlap; tests enforce all of it.
 | `canonical_start_s`, `canonical_end_s` | continuous seconds on the canonical timeline (Ego4D clip-relative, EgoCom conversation-part-relative) |
 | `voice_state` | `SPEAKING`, `SILENT`, `UNKNOWN` |
 | `source_kind` | `ego4d_voice_segments`, `egocom_transcript`, `invalid_or_missing` |
-| `source_annotation_id` | `<clean table>#<row index>` of the native rows (joined by `|`), a declared reason for `UNKNOWN` (`clip_invalid`, `missing_voice_segments_clean#<row>`, `media_missing`, `media_unprobed`, `media_uncovered`), null for `SILENT` |
+| `source_annotation_id` | `<clean table>#<row index>` of the native rows (joined by `|`), a declared reason for `UNKNOWN` (`clip_invalid`, `missing_voice_segments_clean#<row>`, `media_missing`, `media_unprobed`, `media_uncovered`, `media_audio_dropout`), null for `SILENT` |
 | `annotation_schema_version` | `ego4d-av-v2-voice_segments` / `egocom-ground_truth_transcriptions-v1` |
 | `native_state_schema_version` | this layer's schema version |
 

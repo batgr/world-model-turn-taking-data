@@ -74,7 +74,50 @@ def _media(rows):
     )
 
 
-def _write_ego4d(cfg, *, valid=True, missing=(), media_start=10.0, media_duration=20.0):
+def _write_audio_timeline(cfg, *, measured=("video-1",), dropouts=()):
+    """The audio audit's tables; ``dropouts`` are (category, media end s, ms)."""
+    root = Path(cfg.paths.reports) / "temporal" / "audio_timeline"
+    root.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "dataset": ["ego4d"] * len(measured),
+            "relative_path": [f"Ego4D/{uid}.mp4" for uid in measured],
+            "timeline_status": ["measured"] * len(measured),
+        }
+    ).to_parquet(root / "audio_packet_timeline_files.parquet")
+    pd.DataFrame.from_records(
+        [
+            {
+                "dataset": "ego4d",
+                "relative_path": "Ego4D/video-1.mp4",
+                "sample_rate_hz": 48_000,
+                "event_category": category,
+                "event_time_sec": end_s,
+                "dropout_duration_samples": duration_ms * 48.0,
+            }
+            for category, end_s, duration_ms in dropouts
+        ],
+        columns=[
+            "dataset",
+            "relative_path",
+            "sample_rate_hz",
+            "event_category",
+            "event_time_sec",
+            "dropout_duration_samples",
+        ],
+    ).to_parquet(root / "audio_packet_timeline_events.parquet")
+
+
+def _write_ego4d(
+    cfg,
+    *,
+    valid=True,
+    missing=(),
+    media_start=10.0,
+    media_duration=20.0,
+    dropouts=(),
+):
+    _write_audio_timeline(cfg, dropouts=dropouts)
     root = Path(cfg.datasets.ego4d.interim)
     root.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -220,6 +263,41 @@ def test_ego4d_media_not_covering_the_clip_is_unknown_at_the_edges(tmp_path):
     assert _states(build_native_timeline(missing_media.recordings[0])) == [
         (0.0, 20.0, "UNKNOWN")
     ]
+
+
+def test_ego4d_audio_dropouts_are_unknown_on_the_clip_timeline(tmp_path):
+    cfg = _config(tmp_path)
+    # Clip time 0 is video time 10. Only dropouts of at least 100 ms count;
+    # other timeline events are not missing audio.
+    media = _write_ego4d(
+        cfg,
+        dropouts=[
+            ("audio_dropout", 16.5, 500.0),
+            ("audio_dropout", 22.0, 99.0),
+            ("compensated_timestamp_cadence", 24.0, 300.0),
+            ("audio_dropout", 30.25, 400.0),  # straddles the clip end
+        ],
+    )
+    source = load_ego4d_native_voice(cfg, media)
+    [recording] = source.recordings
+    unknown = [
+        (round(a.start_s, 6), round(a.end_s, 6))
+        for a in recording.unknown
+        if a.annotation_id == "media_audio_dropout"
+    ]
+
+    assert unknown == [(6.0, 6.5), (19.85, 20.0)]
+    assert (6.0, 6.5, "UNKNOWN") in _states(build_native_timeline(recording))
+    assert source.statistics["clips_with_audio_dropouts"] == 1
+
+
+def test_ego4d_video_without_a_measured_audio_timeline_is_refused(tmp_path):
+    cfg = _config(tmp_path)
+    media = _write_ego4d(cfg)
+    _write_audio_timeline(cfg, measured=())
+
+    with pytest.raises(ValueError, match="no measured audio timeline"):
+        load_ego4d_native_voice(cfg, media)
 
 
 # --- EgoCom --------------------------------------------------------------
