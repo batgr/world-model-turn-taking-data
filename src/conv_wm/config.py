@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -44,13 +45,33 @@ def get_path(cfg: DictConfig, dataset: str, stage: Stage, key: str) -> Path:
     return Path(ds[stage]) / ds.files[key]
 
 
-def load_config(config_path: str | Path | None = None) -> DictConfig:
-    """Load the project configuration (``conf/config.yaml`` by default)."""
+def load_config(
+    config_path: str | Path | None = None, overrides: Sequence[str] = ()
+) -> DictConfig:
+    """Load the project configuration (``conf/config.yaml`` by default).
+
+    ``overrides`` are ``key=value`` dotted paths applied on top, e.g.
+    ``grid.decision_step_s=0.08`` or ``labels.subframes_per_step=2``; a key
+    the configuration does not have is refused, so a typo never goes unseen.
+    """
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
     config = OmegaConf.load(path)
     if not isinstance(config, DictConfig):
         raise TypeError(f"Configuration root must be a mapping: {path}")
+    for override in overrides:
+        key, separator, _ = override.partition("=")
+        if not separator or not key:
+            raise ValueError(f"Expected key=value, got {override!r}")
+        if OmegaConf.select(config, key, default=_MISSING) is _MISSING:
+            raise KeyError(f"Unknown configuration key {key!r} in {path}")
+    if overrides:
+        merged = OmegaConf.merge(config, OmegaConf.from_dotlist(list(overrides)))
+        assert isinstance(merged, DictConfig)
+        config = merged
     return config
+
+
+_MISSING = object()
 
 
 @dataclass(frozen=True)

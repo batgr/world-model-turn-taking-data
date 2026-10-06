@@ -87,10 +87,11 @@ from conv_wm.data.pipeline.control_state import config_checksum
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
+    decision_step_s,
+    require_decision_step,
     require_file,
     sha256_file,
 )
-from conv_wm.data.vocal.action_grid import DECISION_STEP_S
 from conv_wm.provenance import collect_provenance
 from conv_wm.reports import JsonDict, write_summary
 
@@ -309,6 +310,7 @@ def _manifest(
     dataset: str,
     extractor: Extractor,
     config: LabelConfig,
+    step_s: float,
     materialized: list[str],
     unavailable: dict[str, str],
     inputs: dict[str, Any],
@@ -327,9 +329,9 @@ def _manifest(
         "config_digest": config_digest(config),
         "time": {
             "clock": "the recording's canonical clock (native focal voice state)",
-            "decision_step_s": DECISION_STEP_S,
+            "decision_step_s": step_s,
             "subframes_per_step": config.subframes_per_step,
-            "subframe_s": DECISION_STEP_S / config.subframes_per_step,
+            "subframe_s": step_s / config.subframes_per_step,
             "cell": "[t_k, t_k + step), t_k = decision_index * step",
             "reference_instant": "cell end r_k = t_k + step (timing, next speaker, future)",
             "future_horizons_s": list(config.future_horizons_s),
@@ -367,6 +369,7 @@ def _social_tables(
     grid_keys: Mapping[str, GridKeys],
     source: LabelSource,
     config: LabelConfig,
+    step_s: float,
 ) -> dict[Table, pa.Table]:
     social = (
         source.social
@@ -387,9 +390,7 @@ def _social_tables(
     for recording_id in sorted(structures):
         structure = structures[recording_id]
         keys = grid_keys[recording_id]
-        frame = GridFrame(
-            keys.decision_index, DECISION_STEP_S, config.subframes_per_step
-        )
+        frame = GridFrame(keys.decision_index, step_s, config.subframes_per_step)
         own_social = social_by.get(recording_id, social.iloc[0:0])
         own_tracks = tracks_by.get(recording_id, tracks.iloc[0:0])
         grids.append(
@@ -449,11 +450,19 @@ class _DatasetInputs:
     structures: dict[str, RecordingStructure]
     annotation_lineage: list[dict[str, str]]
     agreement: dict[str, Any]
+    step_s: float
+    """The grid's decision step, checked against the configuration."""
 
 
 def _load_inputs(cfg: DictConfig, dataset: str, config: LabelConfig) -> _DatasetInputs:
     paths = pipeline_paths(cfg)
     grid = load_action_grid(cfg, dataset)
+    step_s = decision_step_s(cfg)
+    require_decision_step(
+        grid,
+        step_s,
+        produce_with=f"conv-wm build vocal-action-grid --dataset {dataset}",
+    )
     lineage = check_upstream_annotations(grid)
     media_path = require_file(
         paths.reports / MEDIA_METADATA_TABLE, "conv-wm audit media"
@@ -477,7 +486,9 @@ def _load_inputs(cfg: DictConfig, dataset: str, config: LabelConfig) -> _Dataset
             f"focal voice state in {agreement['recordings_mismatched']} recordings "
             f"(e.g. {agreement['examples']}); rerun conv-wm build all --dataset {dataset}"
         )
-    return _DatasetInputs(grid, source, grid_keys, structures, lineage, agreement)
+    return _DatasetInputs(
+        grid, source, grid_keys, structures, lineage, agreement, step_s
+    )
 
 
 def build_extractor(
@@ -500,12 +511,16 @@ def build_extractor(
     if materialized:
         if extractor is Extractor.SPEECH:
             result = speech_tables(
-                inputs.structures, inputs.grid_keys, config, step_s=DECISION_STEP_S
+                inputs.structures, inputs.grid_keys, config, step_s=inputs.step_s
             )
             tables, statistics = result.tables, result.statistics
         elif extractor is Extractor.SOCIAL:
             tables = _social_tables(
-                inputs.structures, inputs.grid_keys, inputs.source, config
+                inputs.structures,
+                inputs.grid_keys,
+                inputs.source,
+                config,
+                inputs.step_s,
             )
         elif extractor is Extractor.TEXT:
             tables = _text_tables(inputs.structures, inputs.source)
@@ -521,6 +536,7 @@ def build_extractor(
                 config,
                 grid_sha256=inputs.grid.table_sha256,
                 external=external,
+                step_s=inputs.step_s,
             )
             tables = result_media.tables
             statistics = result_media.statistics
@@ -540,6 +556,7 @@ def build_extractor(
             dataset=dataset,
             extractor=extractor,
             config=config,
+            step_s=inputs.step_s,
             materialized=materialized,
             unavailable=unavailable,
             inputs=_inputs(inputs.grid, inputs.source, extra_inputs),

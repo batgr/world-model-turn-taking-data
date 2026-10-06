@@ -44,6 +44,7 @@ from conv_wm.data.pipeline.native_state import (
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
+    decision_step_s,
     load_checked_artifact,
     sha256_file,
 )
@@ -528,7 +529,11 @@ def run_control_focal_voice_state_build(
     for name in selected_datasets(dataset):
         source = load_native_state_input(cfg, name)
         logger.info("%s: %d native intervals", name, len(source.table))
-        outputs.append(_build_dataset(source, cfg=cfg, command=invoked))
+        outputs.append(
+            _build_dataset(
+                source, cfg=cfg, command=invoked, step_s=decision_step_s(cfg)
+            )
+        )
     return outputs
 
 

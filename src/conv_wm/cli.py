@@ -128,9 +128,7 @@ def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) 
         run_vocal_annotation_coverage_audit,
     )
 
-    command = ["conv-wm"]
-    if args.config is not None:
-        command += ["--config", str(args.config)]
+    command = ["conv-wm", *_config_arguments(args)]
     command += [
         "audit",
         "vocal-annotation-coverage",
@@ -196,10 +194,16 @@ def _audit_labels(cfg: DictConfig, args: argparse.Namespace) -> int:
 
 def _stage_command(args: argparse.Namespace, stage: str) -> str:
     """The exact command line that produced an artifact, for its report."""
-    parts = ["conv-wm"]
-    if args.config is not None:
-        parts += ["--config", str(args.config)]
+    parts = ["conv-wm", *_config_arguments(args)]
     return " ".join([*parts, "build", stage, "--dataset", args.dataset])
+
+
+def _config_arguments(args: argparse.Namespace) -> list[str]:
+    """``--config`` and ``--set`` as given, so a report records its exact command."""
+    parts = [] if args.config is None else ["--config", str(args.config)]
+    for override in args.set:
+        parts += ["--set", override]
+    return parts
 
 
 def _build_native_state(cfg: DictConfig, args: argparse.Namespace) -> int:
@@ -421,7 +425,7 @@ BUILD_COMMANDS: tuple[BuildCommand, ...] = (
     ),
     BuildCommand(
         "vocal-action-grid",
-        "sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
+        "sample the control vocal state on the decision grid (grid.decision_step_s) as NO_EVENT/ONSET/OFFSET",
         _build_action_grid,
     ),
     BuildCommand(
@@ -470,6 +474,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=f"configuration file (default: {DEFAULT_CONFIG_PATH})",
+    )
+    parser.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help=(
+            "override one configuration value, repeatable, e.g. "
+            "--set grid.decision_step_s=0.08 --set labels.subframes_per_step=2"
+        ),
     )
     parser.add_argument(
         "--verbose",
@@ -677,7 +691,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     configure_logging(args.verbose)
     try:
-        cfg = load_config(args.config)
+        cfg = load_config(args.config, args.set)
         return int(args.handler(cfg, args))
     except (MissingPrerequisiteError, FFprobeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

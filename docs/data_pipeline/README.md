@@ -109,6 +109,30 @@ both grids: bridging takes EgoCom's compound slots from 34 495 to 2 083 (valid
 action ratio 97.44 % → 99.78 %) and Ego4D's from 20 to 1. What survives is the
 short speech bursts, which are kept on purpose.
 
+### The decision step Δ
+
+Δ is `grid.decision_step_s` in `conf/config.yaml` (100 ms by default; 80 ms
+gives a 12.5 Hz grid, one cell per Mimi frame). The control state, the action
+grid, the model-ready windows and the labels are all built at it; each layer
+records `decision_step_s` in its report and refuses an input built at another
+step, so changing Δ means rebuilding from the control state on (`conv-wm build
+all`) into a separate data root. The native state does not depend on Δ. Window
+durations (`grid.min_context_s`, `max_context_s`, `future_s`) are rounded up
+to whole steps: 1 / 5 / 1 s are 10 / 50 / 10 steps at 100 ms and 13 / 63 / 13
+at 80 ms.
+
+Any configuration value can be overridden on the command line with `--set`,
+repeatable, without editing `conf/config.yaml`; every report records the exact
+command. For example, a 12.5 Hz build with two label subframes per cell:
+
+```bash
+conv-wm --set grid.decision_step_s=0.08 --set labels.subframes_per_step=2 build all
+```
+
+Each label cell is divided into `labels.subframes_per_step` equal subframes
+(default 3: 33.3 ms at 100 ms, one per frame of a 30 fps video; 26.7 ms at
+80 ms, which no longer falls on video frames).
+
 ## Diagnostic audit (not part of v0)
 
 | Capability | Command | Report |

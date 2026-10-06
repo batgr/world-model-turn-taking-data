@@ -133,3 +133,20 @@ def test_the_window_spec_refuses_an_impossible_geometry():
 def test_the_prototype_geometry_is_one_to_five_seconds_of_context():
     assert (SPEC.min_context_seconds, SPEC.max_context_seconds) == (1.0, 5.0)
     assert SPEC.future_seconds == pytest.approx(1.0)
+
+
+def test_window_durations_become_whole_steps_covering_them():
+    ten_hz = WindowSpec.from_durations(
+        0.1, min_context_s=1.0, max_context_s=5.0, future_s=1.0
+    )
+    assert ten_hz == SPEC  # the 10 Hz prototype geometry, unchanged
+
+    mimi_rate = WindowSpec.from_durations(
+        0.08, min_context_s=1.0, max_context_s=5.0, future_s=1.0
+    )
+    assert (
+        mimi_rate.min_context_steps,
+        mimi_rate.max_context_steps,
+        mimi_rate.future_steps,
+    ) == (13, 63, 13)
+    assert mimi_rate.future_seconds == pytest.approx(1.04)

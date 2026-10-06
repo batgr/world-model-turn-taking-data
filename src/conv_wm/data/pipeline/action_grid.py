@@ -44,7 +44,9 @@ from conv_wm.data.pipeline.control_state import (
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
+    decision_step_s,
     load_checked_artifact,
+    require_decision_step,
     sha256_file,
 )
 from conv_wm.data.vocal.action_grid import (
@@ -162,7 +164,7 @@ class _RecordingResult:
     invalid_reason: str | None
 
 
-def _recording_results(timeline: pd.DataFrame) -> list[_RecordingResult]:
+def _recording_results(timeline: pd.DataFrame, step_s: float) -> list[_RecordingResult]:
     """Grid every recording of one dataset's timeline, in stable recording order."""
     ordered = timeline.sort_values(
         ["recording_id", "canonical_start_s"], kind="stable", ignore_index=True
@@ -186,10 +188,10 @@ def _recording_results(timeline: pd.DataFrame) -> list[_RecordingResult]:
         )
         invalid_reason = recording.validity_error()
         if invalid_reason is not None:
-            grid = masked_grid(recording, MaskReason.INVALID_TIMELINE)
+            grid = masked_grid(recording, MaskReason.INVALID_TIMELINE, step_s)
             results.append(_RecordingResult(identity, grid, 0, 0, [], invalid_reason))
             continue
-        grid = build_action_grid(recording)
+        grid = build_action_grid(recording, step_s)
         resolved_count = int(grid.transitions.resolved.sum())
         represented_or_masked = int(grid.resolved_transitions_in_slot.sum())
         results.append(
@@ -198,7 +200,7 @@ def _recording_results(timeline: pd.DataFrame) -> list[_RecordingResult]:
                 grid,
                 resolved_count,
                 resolved_count - represented_or_masked,
-                sub_delta_gaps(recording, grid.bounds),
+                sub_delta_gaps(recording, grid.bounds, step_s),
                 None,
             )
         )
@@ -622,12 +624,12 @@ def check_invariants(grid: pd.DataFrame, step_s: float = DECISION_STEP_S) -> Non
 
 
 def _dataset_tables(
-    timeline: pd.DataFrame, dataset: str
+    timeline: pd.DataFrame, dataset: str, step_s: float
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Grid one timeline and assemble its four tables (grid, summary, compound, gaps)."""
-    results = _recording_results(timeline)
+    results = _recording_results(timeline, step_s)
     grid = _grid_table(results, dataset)
-    check_invariants(grid)
+    check_invariants(grid, step_s)
     return (
         grid,
         _summary_table(results, dataset),
@@ -657,7 +659,10 @@ COMPARED_STATISTICS = (
 
 
 def _native_comparison(
-    native_timeline: pd.DataFrame, control: dict[str, object], dataset: str
+    native_timeline: pd.DataFrame,
+    control: dict[str, object],
+    dataset: str,
+    step_s: float,
 ) -> dict[str, object]:
     """Grid the native timeline too, so the report states what bridging changed.
 
@@ -665,7 +670,7 @@ def _native_comparison(
     slot count is identical to the control one — bridging removes interval
     boundaries, never time — so the two columns are directly comparable.
     """
-    native = _statistics(*_dataset_tables(native_timeline, dataset))
+    native = _statistics(*_dataset_tables(native_timeline, dataset, step_s))
     return {
         "native": {key: native[key] for key in COMPARED_STATISTICS},
         "control": {key: control[key] for key in COMPARED_STATISTICS},
@@ -696,7 +701,17 @@ def _build_dataset(
     command: str,
 ) -> VocalActionGridOutputs:
     paths = pipeline_paths(cfg)
-    grid, summary, compound, gaps = _dataset_tables(source.table, source.dataset)
+    step_s = decision_step_s(cfg)
+    # Sub-step silences were bridged at the control layer's step: the grid
+    # must use the same one.
+    require_decision_step(
+        source,
+        step_s,
+        produce_with=f"{CONTROL_BUILD_COMMAND} --dataset {source.dataset}",
+    )
+    grid, summary, compound, gaps = _dataset_tables(
+        source.table, source.dataset, step_s
+    )
 
     processed_dir = paths.processed / PROCESSED_ROOT / source.dataset
     report_dir = paths.reports / REPORT_ROOT / source.dataset
@@ -717,7 +732,7 @@ def _build_dataset(
         "action_schema_version": ACTION_SCHEMA_VERSION,
         "source_control_state_schema_version": CONTROL_STATE_SCHEMA_VERSION,
         "source_native_state_schema_version": NATIVE_STATE_SCHEMA_VERSION,
-        "decision_step_s": DECISION_STEP_S,
+        "decision_step_s": step_s,
         "boundary_convention": "half-open [t_k, t_k + step)",
         "action_space": list(ACTIONS),
         "mask_reasons": list(MASK_REASONS),
@@ -771,7 +786,7 @@ def _build_dataset(
         },
         "statistics": statistics,
         "native_grid_comparison": _native_comparison(
-            native_timeline, statistics, source.dataset
+            native_timeline, statistics, source.dataset, step_s
         ),
         "action_semantics": {
             "NO_EVENT": "hold the current vocal state for this decision step",

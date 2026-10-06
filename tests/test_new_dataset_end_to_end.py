@@ -344,6 +344,78 @@ def test_a_new_dataset_runs_from_raw_annotations_to_the_release(moodlab):
         assert (release / "data" / "model_ready" / f"{split}.parquet").is_file()
 
 
+def _with_grid_step(cfg: DictConfig, config_path: Path, step_s: float) -> None:
+    cfg.grid.decision_step_s = step_s
+    config_path.write_text(OmegaConf.to_yaml(cfg))
+
+
+def test_the_decision_grid_step_is_configurable_end_to_end(moodlab, capsys):
+    cfg, config_path = moodlab
+    _with_grid_step(cfg, config_path, 0.08)  # 12.5 Hz, Mimi's frame rate
+
+    _run(config_path, "audit", "manifest")
+    _run(config_path, "clean", "annotations", "--dataset", DATASET)
+    _run(config_path, "build", "all", "--dataset", DATASET)
+    _run(config_path, "audit", "labels", "--dataset", DATASET)
+    _run(config_path, "release")
+
+    processed = Path(cfg.paths.processed)
+    grid = pd.read_parquet(
+        processed / "vocal_action_grid" / DATASET / "vocal_action_grid.parquet"
+    )
+    assert grid["decision_time_s"].to_numpy() == pytest.approx(
+        grid["decision_index"].to_numpy() * 0.08
+    )
+    # Sessions last 120 s: 1,500 cells of 80 ms each.
+    assert grid.groupby("recording_id").size().eq(1500).all()
+
+    metadata = json.loads(
+        (Path(cfg.paths.model_ready) / DATASET / "metadata.json").read_text()
+    )
+    assert metadata["grid"]["frequency_hz"] == 12.5
+    assert metadata["windows"]["future_steps"] == 13  # 1 s, rounded up to 1.04 s
+
+    speech = json.loads(
+        (processed / "labels" / DATASET / "speech" / "manifest.json").read_text()
+    )
+    assert speech["time"]["decision_step_s"] == 0.08
+
+    # A layer built at 80 ms is refused by a configuration asking for 100 ms.
+    _with_grid_step(cfg, config_path, 0.1)
+    capsys.readouterr()
+    refused = cli.main(
+        ["--config", str(config_path), "build", "model-ready", "--dataset", DATASET]
+    )
+    assert refused != 0
+    assert "built on a 0.08 s decision grid" in capsys.readouterr().err
+
+
+def test_subframes_are_overridden_from_the_command_line(moodlab):
+    cfg, config_path = moodlab
+    override = ["--set", "labels.subframes_per_step=2"]
+
+    _run(config_path, "audit", "manifest")
+    _run(config_path, "clean", "annotations", "--dataset", DATASET)
+    _run(config_path, *override, "build", "all", "--dataset", DATASET)
+
+    speech = json.loads(
+        (
+            Path(cfg.paths.processed) / "labels" / DATASET / "speech" / "manifest.json"
+        ).read_text()
+    )
+    assert speech["time"]["subframes_per_step"] == 2
+    assert speech["time"]["subframe_s"] == 0.05
+    report = json.loads(
+        (
+            Path(cfg.paths.reports)
+            / "control_focal_voice_state"
+            / DATASET
+            / "report.json"
+        ).read_text()
+    )
+    assert "--set labels.subframes_per_step=2" in report["command"]
+
+
 def test_a_registered_dataset_is_offered_by_the_cli(moodlab):
     _, config_path = moodlab
 

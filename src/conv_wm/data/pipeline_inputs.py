@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from omegaconf import DictConfig
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
+from conv_wm.data.vocal.action_grid import DECISION_STEP_S
 from conv_wm.reports import JsonDict
 
 
@@ -97,9 +100,38 @@ def load_checked_artifact(
     )
 
 
+def decision_step_s(cfg: DictConfig) -> float:
+    """The decision grid step, ``grid.decision_step_s`` (default 100 ms, 10 Hz).
+
+    Every layer from the control state on is built at this step and records
+    it; a consumer refuses an input built at another one
+    (:func:`require_decision_step`).
+    """
+    grid = cfg.get("grid") or {}
+    step = float(grid.get("decision_step_s", DECISION_STEP_S))
+    if not math.isfinite(step) or step <= 0:
+        raise ValueError(f"grid.decision_step_s must be positive, got {step}")
+    return step
+
+
+def require_decision_step(
+    artifact: CheckedArtifact, step_s: float, *, produce_with: str
+) -> None:
+    """Stop unless ``artifact`` was built at the configured decision step."""
+    built = artifact.report.get("decision_step_s")
+    if built is None or not math.isclose(float(built), step_s, abs_tol=1e-12):
+        raise ValueError(
+            f"{artifact.report_path}: built on a {built} s decision grid, the "
+            f"configuration asks for {step_s} s (grid.decision_step_s); "
+            f"rerun {produce_with}"
+        )
+
+
 __all__ = [
     "CheckedArtifact",
     "artifact_reference",
+    "decision_step_s",
     "load_checked_artifact",
+    "require_decision_step",
     "sha256_file",
 ]
