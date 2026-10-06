@@ -2,20 +2,26 @@
 
 Semantics (v0): inside a camera-wearer voice segment the wearer is
 ``SPEAKING``; outside every valid wearer segment the wearer is ``SILENT``; a
-clip flagged invalid by the release, an explicitly missing voice region, or
-time the media does not cover is ``UNKNOWN``. Voice segments keep their native
+clip flagged invalid by the release, an explicitly missing voice region,
+time the media does not cover, or an audio dropout of the source video is
+``UNKNOWN``. Voice segments keep their native
 AV convention: one annotated vocal episode may absorb short internal pauses
 and is never split acoustically.
 """
 
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
+from pathlib import Path
+
 import pandas as pd
 from omegaconf import DictConfig
 
-from conv_wm.config import get_path
+from conv_wm.config import get_path, pipeline_paths
 from conv_wm.data.datasets.ego4d_cleaning import RULE_VERSION
 from conv_wm.data.datasets.ego4d_media import clip_media_offset_s
+from conv_wm.data.pipeline_inputs import require_file
 from conv_wm.data.vocal.native_source import (
     MediaCoverage,
     NativeFocalVoiceSource,
@@ -32,6 +38,13 @@ from conv_wm.data.vocal.native_state import (
 ANNOTATION_SCHEMA_VERSION = "ego4d-av-v2-voice_segments"
 """Ego4D v2 AV benchmark release (``av_train.json`` / ``av_val.json``)."""
 
+AUDIO_TIMELINE_DIR = Path("temporal") / "audio_timeline"
+"""Where ``conv-wm audit audio`` writes its packet-timeline tables."""
+AUDIO_DROPOUT_MIN_S = 0.100
+"""Shortest dropout declared UNKNOWN: the model's media reader fills every
+decoded PTS gap at least this long with silence, so the audio there is not
+the recording's."""
+
 
 def load_ego4d_native_voice(
     cfg: DictConfig, media: pd.DataFrame
@@ -46,6 +59,7 @@ def load_ego4d_native_voice(
     voice = require_table(voice_path)
     missing = require_table(missing_path)
     coverage = media_coverage_by_stem(media, "ego4d")
+    dropouts = load_audio_dropouts(cfg, coverage)
 
     wearer_by_clip = {
         str(row["clip_uid"]): str(row["person_id"])
@@ -64,6 +78,7 @@ def load_ego4d_native_voice(
     invalid_clips = 0
     clips_with_missing_regions = 0
     clips_without_media = 0
+    clips_with_audio_dropouts = 0
     for row in clips.sort_values("clip_uid").to_dict(orient="records"):
         clip_uid = str(row["clip_uid"])
         wearer_id = wearer_by_clip.get(clip_uid)
@@ -106,6 +121,15 @@ def load_ego4d_native_voice(
         ):
             clips_without_media += 1
         unknown.extend(media_unknown_regions)
+        dropout_regions = dropout_unknown(
+            dropouts.get(str(row["video_uid"]), ()),
+            clip_start_s=start_s,
+            clip_end_s=end_s,
+            media_offset_s=clip_media_offset_s(row),
+        )
+        if dropout_regions:
+            clips_with_audio_dropouts += 1
+        unknown.extend(dropout_regions)
         recordings.append(
             NativeFocalRecording(
                 dataset="ego4d",
@@ -124,7 +148,13 @@ def load_ego4d_native_voice(
     return NativeFocalVoiceSource(
         dataset="ego4d",
         recordings=recordings,
-        annotation_paths=(clips_path, persons_path, voice_path, missing_path),
+        annotation_paths=(
+            clips_path,
+            persons_path,
+            voice_path,
+            missing_path,
+            *audio_timeline_tables(cfg),
+        ),
         annotation_schema_version=ANNOTATION_SCHEMA_VERSION,
         cleaning_rule_version=RULE_VERSION,
         statistics={
@@ -133,6 +163,7 @@ def load_ego4d_native_voice(
             "invalid_clips": invalid_clips,
             "clips_with_missing_voice_regions": clips_with_missing_regions,
             "clips_without_usable_media": clips_without_media,
+            "clips_with_audio_dropouts": clips_with_audio_dropouts,
         },
         limitations=(
             (
@@ -179,4 +210,87 @@ def media_unknown(
     return output
 
 
-__all__ = ["ANNOTATION_SCHEMA_VERSION", "load_ego4d_native_voice", "media_unknown"]
+def audio_timeline_tables(cfg: DictConfig) -> tuple[Path, Path]:
+    """The audio audit's per-file and per-event tables the dropouts come from."""
+    root = pipeline_paths(cfg).reports / AUDIO_TIMELINE_DIR
+    return (
+        root / "audio_packet_timeline_files.parquet",
+        root / "audio_packet_timeline_events.parquet",
+    )
+
+
+def load_audio_dropouts(
+    cfg: DictConfig, coverage: dict[str, MediaCoverage]
+) -> dict[str, list[tuple[float, float]]]:
+    """Audio dropouts of at least ``AUDIO_DROPOUT_MIN_S`` per source video.
+
+    Intervals are on the media timeline of ``media_unknown``. A dropout event
+    is stamped at the PTS of the packet after the jump; the decoded audio
+    stops ``dropout_duration_samples`` earlier. Every Ego4D video whose audio
+    was probed must have a measured packet timeline, so no dropout goes
+    undeclared because the audit is stale or failed on a file.
+    """
+    command = "conv-wm audit audio"
+    files_path, events_path = audio_timeline_tables(cfg)
+    files = pd.read_parquet(require_file(files_path, command))
+    events = pd.read_parquet(require_file(events_path, command))
+    files = files.loc[files["dataset"].eq("ego4d")]
+    measured = {
+        Path(str(path)).stem
+        for path in files.loc[files["timeline_status"].eq("measured"), "relative_path"]
+    }
+    unmeasured = sorted(
+        stem
+        for stem, item in coverage.items()
+        if item.probe_ok and stem not in measured
+    )
+    if unmeasured:
+        raise ValueError(
+            f"{len(unmeasured)} Ego4D videos have no measured audio timeline "
+            f"(first: {unmeasured[:3]}); rerun `{command}`"
+        )
+    rows = events.loc[
+        events["dataset"].eq("ego4d")
+        & events["event_category"].eq("audio_dropout")
+        & (events["dropout_duration_samples"] / events["sample_rate_hz"]).ge(
+            AUDIO_DROPOUT_MIN_S
+        )
+    ]
+    output: dict[str, list[tuple[float, float]]] = {}
+    for row in rows.to_dict(orient="records"):
+        end = float(row["event_time_sec"])
+        duration = float(row["dropout_duration_samples"]) / int(row["sample_rate_hz"])
+        if not math.isfinite(end) or not math.isfinite(duration):
+            raise ValueError(f"Non-finite audio dropout in {row['relative_path']}")
+        output.setdefault(Path(str(row["relative_path"])).stem, []).append(
+            (end - duration, end)
+        )
+    return output
+
+
+def dropout_unknown(
+    dropouts: Sequence[tuple[float, float]],
+    *,
+    clip_start_s: float,
+    clip_end_s: float,
+    media_offset_s: float,
+) -> list[NativeAnnotation]:
+    """The part of each media-time dropout inside the clip, on the clip timeline."""
+    output = []
+    for media_start, media_end in dropouts:
+        start = max(media_start - media_offset_s, clip_start_s)
+        end = min(media_end - media_offset_s, clip_end_s)
+        if end > start:
+            output.append(NativeAnnotation(start, end, "media_audio_dropout"))
+    return output
+
+
+__all__ = [
+    "ANNOTATION_SCHEMA_VERSION",
+    "AUDIO_DROPOUT_MIN_S",
+    "audio_timeline_tables",
+    "dropout_unknown",
+    "load_audio_dropouts",
+    "load_ego4d_native_voice",
+    "media_unknown",
+]

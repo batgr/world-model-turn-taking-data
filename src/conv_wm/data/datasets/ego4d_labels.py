@@ -4,8 +4,8 @@ One recording per clip with a camera wearer, on the clip timeline of the
 native focal voice state. Participants are the clip's annotated persons
 (``persons``), identified by their Ego4D person id; each speaks inside their
 own ``voice_segments``, so the wearer's activity is identical to the native
-focal voice state. An invalid clip and time the source video's audio does not
-cover are UNKNOWN for everyone; an explicitly missing voice region is UNKNOWN
+focal voice state. An invalid clip, time the source video's audio does not
+cover and its audio dropouts are UNKNOWN for everyone; an explicitly missing voice region is UNKNOWN
 for the person it names, or for everyone when it names nobody.
 
 Voice segments of a person absent from ``persons`` become that person's own
@@ -25,6 +25,9 @@ from conv_wm.data.datasets.ego4d_cleaning import RULE_VERSION
 from conv_wm.data.datasets.ego4d_media import EGO4D_FPS, clip_media_offset_s
 from conv_wm.data.datasets.ego4d_native_voice import (
     ANNOTATION_SCHEMA_VERSION,
+    audio_timeline_tables,
+    dropout_unknown,
+    load_audio_dropouts,
     media_unknown,
 )
 from conv_wm.data.labels import facts
@@ -87,6 +90,7 @@ def load_ego4d_label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource:
     clips = tables["clips_clean"]
     persons = tables["persons_clean"]
     coverage = media_coverage_by_stem(media, "ego4d")
+    dropouts = load_audio_dropouts(cfg, coverage)
     persons_by_clip = _groups(persons)
     voice_by_clip = _groups(tables["voice_segments_clean"])
     missing_by_clip = _groups(tables["missing_voice_segments_clean"])
@@ -171,6 +175,14 @@ def load_ego4d_label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource:
                 media_offset_s=clip_media_offset_s(row),
             )
         )
+        unknown.extend(
+            dropout_unknown(
+                dropouts.get(str(row["video_uid"]), ()),
+                clip_start_s=start_s,
+                clip_end_s=end_s,
+                media_offset_s=clip_media_offset_s(row),
+            )
+        )
         clip_participants[clip_uid] = ids | extra
         recordings.append(
             RecordingFacts(
@@ -191,7 +203,7 @@ def load_ego4d_label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource:
     return LabelSource(
         dataset="ego4d",
         recordings=recordings,
-        annotation_paths=tuple(paths.values()),
+        annotation_paths=(*paths.values(), *audio_timeline_tables(cfg)),
         annotation_schema_version=ANNOTATION_SCHEMA_VERSION,
         cleaning_rule_version=RULE_VERSION,
         tokens=_tokens(tables["transcriptions_clean"], kept),
