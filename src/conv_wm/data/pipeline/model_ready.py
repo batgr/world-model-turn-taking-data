@@ -34,9 +34,11 @@ from conv_wm.data.pipeline.media_manifest import (
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
+    decision_step_s,
+    require_decision_step,
     sha256_file,
 )
-from conv_wm.data.vocal.action_grid import ACTION_SCHEMA_VERSION, DECISION_STEP_S
+from conv_wm.data.vocal.action_grid import ACTION_SCHEMA_VERSION
 from conv_wm.data.vocal.windows import (
     GRID_SORT_COLUMNS,
     WINDOW_SCHEMA_VERSION,
@@ -546,7 +548,7 @@ def _statistics(
         if not index.empty
         else 0,
         "window_geometry": {
-            "decision_step_s": DECISION_STEP_S,
+            "decision_step_s": spec.step_s,
             "min_context_steps": spec.min_context_steps,
             "max_context_steps": spec.max_context_steps,
             "future_steps": spec.future_steps,
@@ -608,8 +610,8 @@ def _dataset_metadata(
         },
         "media": release_card_section(media) if media else None,
         "grid": {
-            "frequency_hz": round(1.0 / DECISION_STEP_S, 6),
-            "timestep_seconds": DECISION_STEP_S,
+            "frequency_hz": round(1.0 / spec.step_s, 6),
+            "timestep_seconds": spec.step_s,
             "slot_count": statistics["grid_slot_count"],
             "sequence_key": list(GRID_SORT_COLUMNS),
         },
@@ -819,6 +821,25 @@ def _build_dataset(
     )
 
 
+def window_spec(cfg: DictConfig) -> WindowSpec:
+    """The window geometry of ``cfg``: the ``grid`` durations in whole steps.
+
+    Durations default to the prototype's 1 s / 5 s / 1 s, so the 10 Hz grid
+    keeps its 10 / 50 / 10 steps.
+    """
+    grid = cfg.get("grid") or {}
+    return WindowSpec.from_durations(
+        decision_step_s(cfg),
+        min_context_s=float(
+            grid.get("min_context_s", DEFAULT_SPEC.min_context_seconds)
+        ),
+        max_context_s=float(
+            grid.get("max_context_s", DEFAULT_SPEC.max_context_seconds)
+        ),
+        future_s=float(grid.get("future_s", DEFAULT_SPEC.future_seconds)),
+    )
+
+
 def run_model_ready_build(
     cfg: DictConfig,
     *,
@@ -827,13 +848,22 @@ def run_model_ready_build(
     split_spec: SplitSpec | None = None,
     command: str | None = None,
 ) -> list[ModelReadyOutputs]:
-    """Build the model-ready window index of every selected dataset."""
-    geometry = spec or DEFAULT_SPEC
+    """Build the model-ready window index of every selected dataset.
+
+    The window geometry defaults to :func:`window_spec` of ``cfg``; it must be
+    on the step the action grid was built at.
+    """
+    geometry = spec or window_spec(cfg)
     splits = split_spec or SplitSpec(seed=DEFAULT_SPLIT_SPEC_SEED)
     invoked = command or f"conv-wm build model-ready --dataset {dataset}"
     outputs: list[ModelReadyOutputs] = []
     for name in selected_datasets(dataset):
         source = load_action_grid(cfg, name)
+        require_decision_step(
+            source,
+            geometry.step_s,
+            produce_with=f"conv-wm build vocal-action-grid --dataset {name}",
+        )
         logger.info("%s: %d grid slots", name, len(source.table))
         outputs.append(
             _build_dataset(
@@ -877,11 +907,11 @@ def format_outputs(outputs: list[ModelReadyOutputs]) -> str:
         )
         lines.append("")
         lines.append(
-            f"Context support: {geometry['min_context_seconds']:.1f}-"
-            f"{geometry['max_context_seconds']:.1f} s"
+            f"Context support: {geometry['min_context_seconds']:.2f}-"
+            f"{geometry['max_context_seconds']:.2f} s"
         )
-        lines.append(f"Future horizon: {geometry['future_seconds']:.1f} s")
-        lines.append(f"Grid: {round(1.0 / geometry['decision_step_s'])} Hz")
+        lines.append(f"Future horizon: {geometry['future_seconds']:.2f} s")
+        lines.append(f"Grid: {1.0 / geometry['decision_step_s']:g} Hz")
         lines.append("")
         for check, passed in statistics["contract_checks"].items():
             lines.append(

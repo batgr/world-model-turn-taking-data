@@ -7,9 +7,11 @@ context = [t - L + 1, ..., t]        L ∈ [min_context_steps, max_context_steps
 future  = [t + 1, ..., t + H]        H = future_steps
 ```
 
-Steps are grid slots of :data:`~conv_wm.data.vocal.action_grid.DECISION_STEP_S`
-(100 ms, so 10 Hz); the prototype defaults are 1 s of minimum context, 5 s of
-maximum context and a 1 s future horizon.
+Steps are grid slots of ``step_s`` (by default
+:data:`~conv_wm.data.vocal.action_grid.DECISION_STEP_S`, 100 ms, so 10 Hz); the
+prototype defaults are 1 s of minimum context, 5 s of maximum context and a
+1 s future horizon (:meth:`WindowSpec.from_durations` keeps these durations at
+another step).
 
 A window never crosses a session boundary, and never crosses a discontinuity
 inside a session either: anchors are computed per *segment*, a maximal run of
@@ -18,6 +20,7 @@ consecutive ``decision_index`` values of one recording.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -82,6 +85,8 @@ class WindowSpec:
     future_steps: int = FUTURE_STEPS
     min_context_valid_ratio: float = MIN_CONTEXT_VALID_RATIO
     min_future_valid_ratio: float = MIN_FUTURE_VALID_RATIO
+    step_s: float = DECISION_STEP_S
+    """The grid step the step counts are in (only converts them to seconds)."""
     feature_columns: tuple[str, ...] = ()
     """Extra per-step numeric grid columns to expose as ``context_features``.
 
@@ -101,21 +106,49 @@ class WindowSpec:
             value = getattr(self, name)
             if not 0.0 <= value <= 1.0:
                 raise ValueError(f"{name} must be in [0, 1], got {value}")
+        if not self.step_s > 0:
+            raise ValueError(f"step_s must be positive, got {self.step_s}")
+
+    @classmethod
+    def from_durations(
+        cls,
+        step_s: float,
+        *,
+        min_context_s: float,
+        max_context_s: float,
+        future_s: float,
+    ) -> WindowSpec:
+        """The geometry covering at least these durations on a ``step_s`` grid.
+
+        Each duration becomes the smallest whole number of steps that covers
+        it: at 100 ms, 1 s / 5 s / 1 s are 10 / 50 / 10 steps; at 80 ms
+        (12.5 Hz) they are 13 / 63 / 13 steps (1.04 / 5.04 / 1.04 s).
+        """
+
+        def steps(seconds: float) -> int:
+            return math.ceil(seconds / step_s - 1e-9)
+
+        return cls(
+            min_context_steps=steps(min_context_s),
+            max_context_steps=steps(max_context_s),
+            future_steps=steps(future_s),
+            step_s=step_s,
+        )
 
     @property
     def min_context_seconds(self) -> float:
         """Minimum context duration in seconds."""
-        return self.min_context_steps * DECISION_STEP_S
+        return self.min_context_steps * self.step_s
 
     @property
     def max_context_seconds(self) -> float:
         """Maximum context duration in seconds."""
-        return self.max_context_steps * DECISION_STEP_S
+        return self.max_context_steps * self.step_s
 
     @property
     def future_seconds(self) -> float:
         """Future horizon in seconds."""
-        return self.future_steps * DECISION_STEP_S
+        return self.future_steps * self.step_s
 
 
 def canonical_grid(grid: pd.DataFrame) -> pd.DataFrame:

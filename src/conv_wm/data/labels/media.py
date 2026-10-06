@@ -471,6 +471,7 @@ def media_tables(
     *,
     grid_sha256: str,
     external: bool,
+    step_s: float = DECISION_STEP_S,
     decode: Callable[[Path, float, float, int], np.ndarray] | None = None,
     frames: Callable[[Path, float, float, float, int], Iterator[np.ndarray]]
     | None = None,
@@ -489,8 +490,9 @@ def media_tables(
             inputs,
             external,
             decode or decode_audio,
+            step_s,
         )
-    return _video(grid_keys, config, files, inputs, frames or iter_video_frames)
+    return _video(grid_keys, config, files, inputs, frames or iter_video_frames, step_s)
 
 
 def _audio(
@@ -501,6 +503,7 @@ def _audio(
     inputs: dict[str, Any],
     external: bool,
     decode: Callable[[Path, float, float, int], np.ndarray],
+    step: float,
 ) -> MediaResult:
     rate = config.audio_sample_rate_hz
     parselmouth = (
@@ -508,7 +511,6 @@ def _audio(
         if external
         else None
     )
-    step = DECISION_STEP_S
     parts: list[pa.Table] = []
     missing: list[str] = []
     for recording_id in sorted(structures):
@@ -579,7 +581,7 @@ def _audio(
         )
         if parselmouth is not None:
             f0, voiced = _praat(
-                parselmouth, finite, rate, structure, starts, fraction, config
+                parselmouth, finite, rate, structure, starts, fraction, config, step
             )
             f0 = np.where(valid, f0, np.nan)
             voiced = np.where(valid, voiced, np.nan)
@@ -639,6 +641,7 @@ def _praat(
     starts: np.ndarray,
     fraction: np.ndarray,
     config: LabelConfig,
+    step: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     settings = PRAAT.config
     if len(samples) < rate * 0.1:
@@ -661,7 +664,7 @@ def _praat(
         mask,
         fraction,
         starts,
-        DECISION_STEP_S,
+        step,
         config.audio_min_mask_fraction,
     )
 
@@ -672,8 +675,8 @@ def _video(
     files: Mapping[str, MediaFile],
     inputs: dict[str, Any],
     frames: Callable[[Path, float, float, float, int], Iterator[np.ndarray]],
+    step: float,
 ) -> MediaResult:
-    step = DECISION_STEP_S
     subframes = config.subframes_per_step
     rate = subframes / step
     parts: list[pa.Table] = []

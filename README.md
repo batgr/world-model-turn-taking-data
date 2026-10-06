@@ -239,7 +239,9 @@ future  = [anchor_idx + 1, ..., anchor_idx + future_steps]
 The anchor belongs to the context; prediction starts at `anchor_idx + 1`. The
 consumer picks `L` at load time, so changing the context length needs no
 rebuild. Prototype geometry: 10–50 steps of context (1–5 s), a fixed 10-step
-horizon (1 s), at 10 Hz.
+horizon (1 s), at 10 Hz. The step is configurable (`grid.decision_step_s`, see
+[the pipeline guide](docs/data_pipeline/README.md#the-decision-step-δ)): at
+80 ms (12.5 Hz) the same durations are 13–63 steps and a 13-step horizon.
 
 Each row carries `recording_id`, `conversation_id`, `split`, `anchor_idx`,
 `max_context_steps`, `context_valid_ratio`, `future_valid_ratio`,

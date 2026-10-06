@@ -421,7 +421,7 @@ BUILD_COMMANDS: tuple[BuildCommand, ...] = (
     ),
     BuildCommand(
         "vocal-action-grid",
-        "sample the control vocal state on the 100 ms grid as NO_EVENT/ONSET/OFFSET",
+        "sample the control vocal state on the decision grid (grid.decision_step_s) as NO_EVENT/ONSET/OFFSET",
         _build_action_grid,
     ),
     BuildCommand(

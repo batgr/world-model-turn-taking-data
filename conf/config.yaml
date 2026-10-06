@@ -49,6 +49,16 @@ manifest:
   compute_checksum: false
   output: ${paths.reports}/manifest/raw_manifest.parquet
 
+# Decision grid, from the control state on (conv-wm build control-focal-voice-state,
+# vocal-action-grid, model-ready, labels). Every layer records its step and
+# refuses an input built at another one. Window durations are rounded up to
+# whole steps: 1 / 5 / 1 s are 10 / 50 / 10 steps at 0.1 s, 13 / 63 / 13 at 0.08 s.
+grid:
+  decision_step_s: 0.1     # 10 Hz; 0.08 for 12.5 Hz (Mimi's frame rate)
+  min_context_s: 1.0       # model-ready: shortest context an anchor needs
+  max_context_s: 5.0       # model-ready: longest context an anchor may use
+  future_s: 1.0            # model-ready: future horizon of every window
+
 # Hugging Face release directories (conv-wm release). Raw media is never
 # included; each dataset ships its media manifest of corpus-relative paths.
 release:
@@ -61,7 +71,7 @@ release:
 # one marks the built labels stale (conv-wm labels status). Label *selection*
 # belongs to the consumer (LabelSelection), not to this file.
 labels:
-  subframes_per_step: 3                  # 30 Hz subframes in each 100 ms cell
+  subframes_per_step: 3                  # subframes per decision cell (30 Hz at 0.1 s)
   future_horizons_s: [0.1, 0.5, 1.0]     # future.* targets, one value per horizon
   simultaneous_onset_tolerance_s: 0.03333333333333333   # one 30 Hz subframe
   turn_max_internal_pause_s: 0.3         # pause closure of turns.turns
