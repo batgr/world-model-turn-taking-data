@@ -71,7 +71,8 @@ release:
 # one marks the built labels stale (conv-wm labels status). Label *selection*
 # belongs to the consumer (LabelSelection), not to this file.
 labels:
-  subframes_per_step: 3                  # subframes per decision cell (30 Hz at 0.1 s)
+  subframes_per_step: 3                  # subframes per decision cell (30 Hz at 0.1 s,
+                                         # 37.5 Hz at 0.08 s); --set labels.subframes_per_step=N
   future_horizons_s: [0.1, 0.5, 1.0]     # future.* targets, one value per horizon
   simultaneous_onset_tolerance_s: 0.03333333333333333   # one 30 Hz subframe
   turn_max_internal_pause_s: 0.3         # pause closure of turns.turns

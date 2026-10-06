@@ -121,6 +121,18 @@ durations (`grid.min_context_s`, `max_context_s`, `future_s`) are rounded up
 to whole steps: 1 / 5 / 1 s are 10 / 50 / 10 steps at 100 ms and 13 / 63 / 13
 at 80 ms.
 
+Any configuration value can be overridden on the command line with `--set`,
+repeatable, without editing `conf/config.yaml`; every report records the exact
+command. For example, a 12.5 Hz build with two label subframes per cell:
+
+```bash
+conv-wm --set grid.decision_step_s=0.08 --set labels.subframes_per_step=2 build all
+```
+
+Each label cell is divided into `labels.subframes_per_step` equal subframes
+(default 3: 33.3 ms at 100 ms, one per frame of a 30 fps video; 26.7 ms at
+80 ms, which no longer falls on video frames).
+
 ## Diagnostic audit (not part of v0)
 
 | Capability | Command | Report |

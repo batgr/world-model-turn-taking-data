@@ -390,6 +390,32 @@ def test_the_decision_grid_step_is_configurable_end_to_end(moodlab, capsys):
     assert "built on a 0.08 s decision grid" in capsys.readouterr().err
 
 
+def test_subframes_are_overridden_from_the_command_line(moodlab):
+    cfg, config_path = moodlab
+    override = ["--set", "labels.subframes_per_step=2"]
+
+    _run(config_path, "audit", "manifest")
+    _run(config_path, "clean", "annotations", "--dataset", DATASET)
+    _run(config_path, *override, "build", "all", "--dataset", DATASET)
+
+    speech = json.loads(
+        (
+            Path(cfg.paths.processed) / "labels" / DATASET / "speech" / "manifest.json"
+        ).read_text()
+    )
+    assert speech["time"]["subframes_per_step"] == 2
+    assert speech["time"]["subframe_s"] == 0.05
+    report = json.loads(
+        (
+            Path(cfg.paths.reports)
+            / "control_focal_voice_state"
+            / DATASET
+            / "report.json"
+        ).read_text()
+    )
+    assert "--set labels.subframes_per_step=2" in report["command"]
+
+
 def test_a_registered_dataset_is_offered_by_the_cli(moodlab):
     _, config_path = moodlab
 
