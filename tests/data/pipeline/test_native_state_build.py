@@ -396,11 +396,10 @@ def test_build_writes_one_artifact_per_dataset_with_shared_schema_and_lineage(tm
             + statistics["silent_duration_s"]
             + statistics["unknown_duration_s"]
         )
-    ego4d, egocom = outputs
+    ego4d, _ = outputs
     assert (
         ego4d.report["statistics"]["adapter"]["clips_with_missing_voice_regions"] == 0
     )
-    assert "83.49" in " ".join(egocom.report["limitations"])
 
 
 def test_build_is_deterministic_and_needs_no_acoustic_model(tmp_path):

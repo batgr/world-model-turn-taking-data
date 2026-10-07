@@ -142,7 +142,6 @@ def write_native_state(
                     "annotation_schema_version": f"{dataset}-test-v1",
                     "cleaning_rule_version": f"{dataset}-cleaning-v1",
                 },
-                "limitations": [f"{dataset} upstream limitation"],
             }
         )
     )

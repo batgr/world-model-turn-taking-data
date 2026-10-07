@@ -331,9 +331,6 @@ ANNOTATIONS = AnnotationSpec(
             identity=("clip_uid", "person_id"),
             entity_references=(_CLIP_REF,),
             value_fields=("is_camera_wearer",),
-            known_limitations=(
-                "The camera wearer has no face track and no looking annotation.",
-            ),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",
@@ -364,13 +361,6 @@ ANNOTATIONS = AnnotationSpec(
             entity_references=(_CLIP_REF, _person_ref("person_id", "-1")),
             bounds=_CLIP_DURATION_BOUNDS,
             value_fields=("transcription",),
-            known_limitations=(
-                (
-                    "Transcriptions and voice segments are independent annotations; "
-                    "join them by temporal overlap and person, never by equal timestamps."
-                ),
-                "Some clips have no transcription at all.",
-            ),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",
@@ -387,18 +377,6 @@ ANNOTATIONS = AnnotationSpec(
             ),
             bounds=_CLIP_DURATION_BOUNDS,
             value_fields=("target", "is_at_me"),
-            known_limitations=(
-                "`target` is release-defined nullable payload and is never imputed.",
-                (
-                    "Two retained rows name source person IDs absent from the clip's "
-                    "persons collection; this is reported as a warning, not rewritten."
-                ),
-                (
-                    "Addressee information is asymmetric with respect to the camera "
-                    "wearer; population statistics, rather than an invented target, "
-                    "describe unavailable explicit targets."
-                ),
-            ),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",
@@ -412,7 +390,6 @@ ANNOTATIONS = AnnotationSpec(
             entity_references=(_CLIP_REF, _person_ref("person", "-1")),
             bounds=_CLIP_DURATION_BOUNDS,
             value_fields=("target", "is_at_me"),
-            known_limitations=("`target` is nullable throughout the current release.",),
         ),
         AnnotationSourceSpec(
             dataset="ego4d",

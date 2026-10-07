@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from invariants import model_ready_contract
 from state_layers import (
     build_action_grid,
     config_for,
@@ -26,7 +27,6 @@ from conv_wm.data.pipeline.model_ready import (
     apply_splits,
     assign_conversations,
     build_index,
-    contract_checks,
     run_model_ready_build,
     split_leakage,
 )
@@ -274,8 +274,9 @@ def test_build_writes_the_index_and_reports_its_statistics(tmp_path):
         "max_context_seconds": pytest.approx(5.0),
         "future_seconds": pytest.approx(1.0),
     }
-    assert all(statistics["contract_checks"].values())
-    assert contract_checks(output.index, _read_grid(cfg, "ego4d"), WindowSpec()) == {
+    assert model_ready_contract(
+        output.index, _read_grid(cfg, "ego4d"), WindowSpec()
+    ) == {
         "no_recording_in_multiple_splits": True,
         "every_anchor_has_minimum_context": True,
         "every_anchor_has_full_future": True,
@@ -286,7 +287,6 @@ def test_build_writes_the_index_and_reports_its_statistics(tmp_path):
     assert report["input_artifacts"]["vocal_action_grid"]["sha256"]
     assert report["output_artifacts"]["index"]["sha256"]
     assert report["config_checksum"]
-    assert report["policy"]["windows_cross_recording_boundary"] is False
     assert not output.index.duplicated(["sample_id"]).any()
     assert output.index["split"].eq("train").all()
     assert output.index["split_source"].eq("upstream").all()
@@ -318,7 +318,6 @@ def test_build_writes_the_index_and_reports_its_statistics(tmp_path):
     assert metadata["splits"]["names"] == list(CANONICAL_SPLITS)
     assert metadata["counts"]["recordings"] == 1
     assert metadata["source"]["vocal_action_grid"]["sha256"]
-    assert all(metadata["contract_checks"].values())
 
 
 def _strings(value):

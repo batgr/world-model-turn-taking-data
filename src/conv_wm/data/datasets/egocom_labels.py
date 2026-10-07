@@ -164,19 +164,6 @@ def load_egocom_label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource
             "participant_rows_without_view": participants_without_view,
             "untimed_token_rows": int((~timed).sum()),
         },
-        limitations=(
-            (
-                "Every participant's SPEAKING is the union of their timed transcript "
-                "tokens; untimed tokens (punctuation, empty and some words) carry no "
-                "time and never create speech, so absence of annotation is SILENT."
-            ),
-            (
-                "Seven two-speaker conversations attribute speech to speaker 3, who "
-                "has no recording; that speaker is kept as a participant with their "
-                "own id (never merged into another participant), its status being "
-                "unresolved in the corpus."
-            ),
-        ),
     )
 
 

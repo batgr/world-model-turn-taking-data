@@ -366,59 +366,6 @@ def split_leakage(index: pd.DataFrame) -> dict[str, list[str]]:
     }
 
 
-def contract_checks(
-    index: pd.DataFrame, grid: pd.DataFrame, spec: WindowSpec
-) -> dict[str, bool]:
-    """Re-verify the index's promises against the grid it was built from.
-
-    Cheap and independent of the code that produced the index, so a regression
-    in anchor generation shows up as a failed check in the report rather than
-    as a silently wrong dataset.
-    """
-    if index.empty:
-        return dict.fromkeys(
-            (
-                "no_recording_in_multiple_splits",
-                "every_anchor_has_minimum_context",
-                "every_anchor_has_full_future",
-                "no_anchor_crosses_a_recording_boundary",
-            ),
-            True,
-        )
-    ordered = canonical_grid(grid)
-    bounds = ordered.groupby("recording_id", observed=True)["decision_index"].agg(
-        ["min", "max"]
-    )
-    recording = index["recording_id"]
-    first = recording.map(bounds["min"]).to_numpy()
-    last = recording.map(bounds["max"]).to_numpy()
-    anchor = index["anchor_idx"].to_numpy()
-    context_start = anchor - index["max_context_steps"].to_numpy() + 1
-    future_end = anchor + index["future_steps"].to_numpy()
-    rows = ordered["recording_id"].to_numpy()
-    return {
-        "no_recording_in_multiple_splits": bool(
-            index.groupby("recording_id", observed=True)["split"]
-            .nunique(dropna=False)
-            .le(1)
-            .all()
-        )
-        and not split_leakage(index),
-        "every_anchor_has_minimum_context": bool(
-            (index["max_context_steps"] >= spec.min_context_steps).all()
-            and (index["max_context_steps"] <= spec.max_context_steps).all()
-        ),
-        "every_anchor_has_full_future": bool((future_end <= last).all()),
-        "no_anchor_crosses_a_recording_boundary": bool(
-            (context_start >= first).all()
-            and (future_end <= last).all()
-            and np.array_equal(
-                rows[index["anchor_row"].to_numpy()], recording.to_numpy()
-            )
-        ),
-    }
-
-
 def _summary_table(index: pd.DataFrame, dataset: str) -> pd.DataFrame:
     """One row per recording: anchors, classes, splits and trainability."""
     if index.empty:
@@ -527,7 +474,6 @@ def _statistics(
             if not trainable.empty
             else {}
         ),
-        "contract_checks": contract_checks(index, grid, spec),
         "split_source_recordings": (
             {
                 str(key): int(group["recording_id"].nunique())
@@ -632,15 +578,11 @@ def _dataset_metadata(
         },
         "splits": {
             "names": list(CANONICAL_SPLITS),
-            "level": "conversation (never an individual anchor)",
+            "level": "conversation",
             "fallback_seed": split_spec.seed,
             "anchors": statistics["split_counts"],
             "recordings": statistics["recordings_per_split"],
             "sessions_by_source": statistics["split_source_recordings"],
-            "note": (
-                "a split absent from this listing is absent from the release "
-                "upstream; it is never synthesised from another split"
-            ),
         },
         "counts": {
             "recordings": statistics["recording_count"],
@@ -666,7 +608,6 @@ def _dataset_metadata(
                 source.report.get("source_annotation_versions", {})
             ),
         },
-        "contract_checks": statistics["contract_checks"],
     }
 
 
@@ -769,29 +710,6 @@ def _build_dataset(
             "summary": artifact_reference(summary_path),
         },
         "statistics": statistics,
-        "policy": {
-            "sliding_windows_materialized": False,
-            "grid_features_duplicated": False,
-            "windows_cross_recording_boundary": False,
-            "windows_cross_segment_boundary": False,
-            "upstream_splits_recomputed": False,
-            "anchors_split_individually": False,
-            "classes_rebalanced": False,
-            "future_horizon_varies": False,
-        },
-        "limitations": [
-            (
-                "The prototype exposes the vocal action grid only: there is no "
-                "multimodal feature column yet, so a window's per-step observation "
-                "is the focal state and action sequence."
-            ),
-            (
-                "context_valid_ratio is measured over the largest context an anchor "
-                "allows; a shorter sampled context may have a different ratio, which "
-                "is why every sample carries its per-step validity mask."
-            ),
-            *grid_report.get("limitations", []),
-        ],
     }
     report = write_summary(report_dir / REPORT_FILE, payload, provenance=provenance)
     metadata_path = processed_dir / METADATA_FILE
@@ -913,10 +831,6 @@ def format_outputs(outputs: list[ModelReadyOutputs]) -> str:
         lines.append(f"Future horizon: {geometry['future_seconds']:.2f} s")
         lines.append(f"Grid: {1.0 / geometry['decision_step_s']:g} Hz")
         lines.append("")
-        for check, passed in statistics["contract_checks"].items():
-            lines.append(
-                f"  [{'ok' if passed else 'FAILED'}] {check.replace('_', ' ')}"
-            )
         if statistics["split_leakage"]:
             lines.append(f"  [FAILED] split leakage: {statistics['split_leakage']}")
         lines.append("")
@@ -938,7 +852,6 @@ __all__ = [
     "assign_conversations",
     "build_index",
     "canonical_split",
-    "contract_checks",
     "format_outputs",
     "recording_splits",
     "run_model_ready_build",

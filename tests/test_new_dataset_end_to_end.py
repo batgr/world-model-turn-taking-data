@@ -182,7 +182,6 @@ def _native_voice(cfg: DictConfig, media: pd.DataFrame) -> NativeFocalVoiceSourc
         annotation_schema_version=SCHEMA,
         cleaning_rule_version=RULE,
         statistics={"sessions": len(recordings)},
-        limitations=("synthetic corpus",),
     )
 
 
@@ -253,7 +252,6 @@ def _label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource:
         cleaning_rule_version=RULE,
         tokens=pd.DataFrame(columns=list(facts.TOKEN_COLUMNS)),
         statistics={"recordings": len(recordings)},
-        limitations=("synthetic corpus",),
     )
 
 

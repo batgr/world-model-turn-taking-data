@@ -121,7 +121,6 @@ def test_build_all_produces_a_model_ready_index(tmp_path, capsys):
     assert set(index["split"]) == {"train", "validation", "test"}
     assert index.groupby("recording_id")["split"].nunique().eq(1).all()
     assert index.groupby("conversation_id")["split"].nunique().eq(1).all()
-    assert all(metadata["contract_checks"].values())
     assert metadata["splits"]["anchors"].keys() == {"train", "validation", "test"}
 
 
@@ -242,13 +241,9 @@ def test_one_conversation_split_across_splits_is_reported_as_leakage(tmp_path):
         ]
     )
 
-    metadata = json.loads(
-        (Path(cfg.paths.model_ready) / DATASET / "metadata.json").read_text()
-    )
     report = json.loads(
         (Path(cfg.paths.reports) / "model_ready" / DATASET / "report.json").read_text()
     )
-    assert metadata["contract_checks"]["no_recording_in_multiple_splits"] is False
     assert report["statistics"]["split_leakage"] == {
         "shared": ["test", "train", "validation"]
     }

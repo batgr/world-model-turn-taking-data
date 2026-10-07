@@ -11,12 +11,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
+from invariants import check_action_grid
 from state_layers import build_control_state, config_for, write_native_state
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
 from conv_wm.data.pipeline.action_grid import (
     GRID_TABLE,
-    check_invariants,
     run_vocal_action_grid_build,
 )
 from conv_wm.data.vocal.action_grid import (
@@ -88,14 +88,14 @@ def test_grid_labels_states_actions_and_masks_of_a_complete_timeline(tmp_path):
     assert 0.0 <= dropped < STEP
 
 
-def test_invariants_hold_and_are_enforced(tmp_path):
+def test_the_built_grid_holds_its_invariants(tmp_path):
     cfg = config_for(tmp_path)
     write_native_state(cfg, "ego4d")
 
     [output] = _build(cfg, "ego4d")
     grid = output.grid
 
-    check_invariants(grid)
+    check_action_grid(grid)
     valid = grid.loc[grid["action_valid"]]
     masked = grid.loc[~grid["action_valid"]]
     assert set(valid["action"]) <= set(ACTIONS)
@@ -107,12 +107,6 @@ def test_invariants_hold_and_are_enforced(tmp_path):
     assert ((events["tau_s"] >= 0) & (events["tau_s"] < STEP)).all()
     assert not grid.duplicated(["recording_id", "decision_index"]).any()
     assert np.allclose(grid["decision_time_s"], grid["decision_index"] * STEP)
-
-    broken = grid.copy()
-    broken.loc[broken.index[0], "action"] = "TAKE"
-    broken.loc[broken.index[0], "action_valid"] = True
-    with pytest.raises(ValueError, match="outside the vocabulary"):
-        check_invariants(broken)
 
 
 def test_statistics_report_the_compounds_bridging_left_behind(tmp_path):
@@ -252,10 +246,6 @@ def test_build_is_deterministic_and_records_lineage(tmp_path):
         == "ego4d-test-v1"
     )
     assert report["source_annotation_versions"]["native_state_git_commit"] == "abc123"
-    assert "ego4d upstream limitation" in report["limitations"]
-    assert report["policy"]["sub_delta_gaps_merged_in_this_build"] is False
-    assert report["policy"]["sub_delta_gaps_bridged_upstream"] is True
-    assert report["policy"]["short_speaking_bursts_filtered"] is False
     assert {"git_commit", "git_dirty", "command", "created_at"} <= set(report)
     assert (
         report["output_artifacts"]["grid"]["sha256"]

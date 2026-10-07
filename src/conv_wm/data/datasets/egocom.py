@@ -191,9 +191,6 @@ ANNOTATIONS = AnnotationSpec(
                 "background_music",
                 "duration_seconds",
             ),
-            known_limitations=(
-                "`duration_seconds` is an integer declared duration, not the measured stream length.",
-            ),
         ),
         AnnotationSourceSpec(
             dataset="egocom",
@@ -226,17 +223,6 @@ ANNOTATIONS = AnnotationSpec(
             ),
             identity=("source_row",),
             value_fields=("word",),
-            known_limitations=(
-                (
-                    "About half of the rows are untimed tokens; they include formatting, "
-                    "lexical material, and annotation markers."
-                ),
-                "Timestamps are relative to the conversation part, not to the 20-minute video.",
-                (
-                    "video_info enumerates available participant POVs, not every audible "
-                    "participant; speech without an own POV is valid annotation."
-                ),
-            ),
         ),
     ),
 )

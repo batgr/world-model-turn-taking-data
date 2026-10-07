@@ -204,12 +204,6 @@ def _build_dataset(
             **_dataset_statistics(summary, timeline),
             "adapter": source.statistics,
         },
-        "state_semantics": {
-            "SPEAKING": "inside a native annotation interval of the wearer",
-            "SILENT": "valid time outside every native wearer annotation",
-            "UNKNOWN": "invalid clip, explicitly missing annotation, or media not covering the window",
-        },
-        "limitations": list(source.limitations),
     }
     report = write_summary(report_dir / REPORT_FILE, payload, provenance=provenance)
     return NativeFocalVoiceStateOutputs(

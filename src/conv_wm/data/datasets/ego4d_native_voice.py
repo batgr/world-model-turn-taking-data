@@ -165,18 +165,6 @@ def load_ego4d_native_voice(
             "clips_without_usable_media": clips_without_media,
             "clips_with_audio_dropouts": clips_with_audio_dropouts,
         },
-        limitations=(
-            (
-                "SPEAKING is the native AV3 vocal-episode state: one camera-wearer "
-                "voice segment may absorb short internal pauses; boundaries are the "
-                "official ones and are never refined acoustically."
-            ),
-            (
-                "Wearer speech the annotators did not mark is SILENT in v0; no "
-                "independent focal-specific completeness measurement exists for Ego4D "
-                "(vocal annotation coverage audit)."
-            ),
-        ),
     )
 
 

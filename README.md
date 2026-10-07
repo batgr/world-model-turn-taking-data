@@ -142,7 +142,7 @@ uv run conv-wm build all --dataset all       # the build stages, in order (label
 uv run conv-wm audit media-manifest          # optional: every media path exists locally
 ```
 
-`build all` prints the final statistics and the contract checks. To rerun from
+`build all` prints the final statistics and any split leakage. To rerun from
 one stage on, for instance after changing the control step:
 
 ```bash
@@ -275,7 +275,7 @@ The same raw data, config, code revision and seed produce the same artifacts.
   schema versions and the `lineage_chain`. A stage refuses an input whose
   checksum no longer matches the report that produced it.
 - **Dataset card** — `metadata.json` next to the index is self-contained:
-  geometry, thresholds, counts per split, contract checks and source checksums.
+  geometry, thresholds, counts per split and source checksums.
 
 ## Validation and tests
 

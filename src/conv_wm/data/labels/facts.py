@@ -184,7 +184,6 @@ class LabelSource:
     tracks: pd.DataFrame | None = None
     """:data:`TRACK_COLUMNS` rows, or ``None`` without face tracks."""
     statistics: dict[str, int] = field(default_factory=dict)
-    limitations: tuple[str, ...] = ()
 
 
 LabelFactsLoader = Callable[["DictConfig", pd.DataFrame], LabelSource]

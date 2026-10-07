@@ -52,7 +52,6 @@ from conv_wm.data.pipeline_inputs import (
 from conv_wm.data.vocal.action_grid import (
     ACTION_SCHEMA_VERSION,
     ACTIONS,
-    DECISION_STEP_S,
     MASK_REASONS,
     STATE_NAMES,
     Action,
@@ -577,59 +576,12 @@ def _statistics(
     }
 
 
-def check_invariants(grid: pd.DataFrame, step_s: float = DECISION_STEP_S) -> None:
-    """Fail the build if any contract of the action grid is violated."""
-    if grid.empty:
-        return
-    valid = grid.loc[grid["action_valid"]]
-    masked = grid.loc[~grid["action_valid"]]
-    problems: list[str] = []
-    if not valid["action"].isin(ACTIONS).all():
-        problems.append("a valid slot carries an action outside the vocabulary")
-    if masked["action"].notna().any() or masked["mask_reason"].isna().any():
-        problems.append("a masked slot carries an action or no mask reason")
-    if valid["mask_reason"].notna().any():
-        problems.append("a valid slot carries a mask reason")
-    no_event = valid.loc[valid["action"].eq(str(Action.NO_EVENT))]
-    if no_event["event_time_s"].notna().any() or no_event["tau_s"].notna().any():
-        problems.append("NO_EVENT carries an event time")
-    if not no_event["focal_state_before"].isin(STATE_NAMES[:2]).all():
-        problems.append("NO_EVENT with an UNKNOWN state before")
-    for action, state in ((Action.ONSET, "SILENT"), (Action.OFFSET, "SPEAKING")):
-        rows = valid.loc[valid["action"].eq(str(action))]
-        if not rows["focal_state_before"].eq(state).all():
-            problems.append(f"{action} from a state other than {state}")
-        tau = rows["tau_s"].to_numpy(dtype=float)
-        if len(tau) and (np.any(tau < 0.0) or np.any(tau >= step_s)):
-            problems.append(f"{action} tau outside [0, {step_s})")
-        event = rows["event_time_s"].to_numpy(dtype=float)
-        if len(event) and not np.allclose(
-            event - rows["decision_time_s"].to_numpy(dtype=float), tau
-        ):
-            problems.append(f"{action} event time inconsistent with tau")
-    if grid.duplicated(["recording_id", "decision_index"]).any():
-        problems.append("duplicate (recording_id, decision_index)")
-    expected = grid["decision_index"].to_numpy(dtype=float) * step_s
-    if not np.allclose(
-        grid["decision_time_s"].to_numpy(dtype=float), expected, atol=1e-9
-    ):
-        problems.append("decision_time_s is not decision_index * step")
-    increasing = grid.groupby("recording_id", sort=False)["decision_index"].apply(
-        lambda values: bool(values.is_monotonic_increasing)
-    )
-    if not increasing.all():
-        problems.append("decision_index is not strictly increasing within a recording")
-    if problems:
-        raise ValueError("action grid invariants violated: " + "; ".join(problems))
-
-
 def _dataset_tables(
     timeline: pd.DataFrame, dataset: str, step_s: float
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Grid one timeline and assemble its four tables (grid, summary, compound, gaps)."""
     results = _recording_results(timeline, step_s)
     grid = _grid_table(results, dataset)
-    check_invariants(grid, step_s)
     return (
         grid,
         _summary_table(results, dataset),
@@ -685,10 +637,6 @@ def _native_comparison(
                 "valid_action_slots",
             )
         },
-        "note": (
-            "native is the diagnostic grid of the untransformed native timeline; "
-            "control is the production grid written by this build"
-        ),
     }
 
 
@@ -733,7 +681,6 @@ def _build_dataset(
         "source_control_state_schema_version": CONTROL_STATE_SCHEMA_VERSION,
         "source_native_state_schema_version": NATIVE_STATE_SCHEMA_VERSION,
         "decision_step_s": step_s,
-        "boundary_convention": "half-open [t_k, t_k + step)",
         "action_space": list(ACTIONS),
         "mask_reasons": list(MASK_REASONS),
         "dataset": source.dataset,
@@ -788,35 +735,6 @@ def _build_dataset(
         "native_grid_comparison": _native_comparison(
             native_timeline, statistics, source.dataset, step_s
         ),
-        "action_semantics": {
-            "NO_EVENT": "hold the current vocal state for this decision step",
-            "ONSET": "the single resolved SILENT -> SPEAKING transition of this step",
-            "OFFSET": "the single resolved SPEAKING -> SILENT transition of this step",
-            "masked": "action is null and action_valid is false; never a fourth action",
-            "tau_s": "event_time_s - t_k, the position of the event inside the step",
-        },
-        "policy": {
-            "native_timestamps_rounded": False,
-            "sub_delta_gaps_merged_in_this_build": False,
-            "sub_delta_gaps_bridged_upstream": True,
-            "short_speaking_bursts_filtered": False,
-            "compound_slots_relabelled": False,
-            "unknown_transitions_are_actions": False,
-            "partial_trailing_slot_emitted": False,
-            "acoustic_evidence_used": False,
-        },
-        "limitations": [
-            (
-                "Actions are observational logged behaviour proxies derived from native "
-                "annotations, not randomized causal interventions."
-            ),
-            (
-                "Dataset conventions differ upstream and are not harmonized here: Ego4D "
-                "SPEAKING is a native vocal episode, EgoCom SPEAKING is a transcript-derived "
-                "speaker interval."
-            ),
-            *control_report.get("limitations", []),
-        ],
     }
     report = write_summary(report_dir / REPORT_FILE, payload, provenance=provenance)
     return VocalActionGridOutputs(
@@ -889,7 +807,6 @@ def format_outputs(outputs: list[VocalActionGridOutputs]) -> str:
 
 __all__ = [
     "VocalActionGridOutputs",
-    "check_invariants",
     "compound_pattern",
     "format_outputs",
     "load_control_state_input",

@@ -119,18 +119,6 @@ def load_egocom_native_voice(
             "conversation_parts": len(pov_speakers),
             "transcript_speakers_without_pov": speakers_without_pov,
         },
-        limitations=(
-            (
-                "SPEAKING is the union of the wearer's timed transcript tokens: a "
-                "transcript-derived speaker interval, not a vocal-episode annotation; "
-                "gaps between consecutive tokens are SILENT, however short."
-            ),
-            (
-                "Absence of annotation is SILENT in v0 although the vocal annotation "
-                "coverage audit measured a conditional focal-specific coverage of "
-                "83.49 % on the EgoCom sub-population where it could be measured."
-            ),
-        ),
     )
 
 

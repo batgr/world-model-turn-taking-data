@@ -214,22 +214,6 @@ def load_ego4d_label_facts(cfg: DictConfig, media: pd.DataFrame) -> LabelSource:
         ),
         tracks=_tracks(tables["tracks_clean"], clip_participants),
         statistics={"recordings": len(recordings), **statistics},
-        limitations=(
-            (
-                "Every participant's SPEAKING is their native AV voice segments; a "
-                "segment may absorb short internal pauses and is never refined "
-                "acoustically. Speech the annotators did not mark is SILENT."
-            ),
-            (
-                "Transcriptions are timed per utterance only: word-level labels "
-                "(speech rate) are unsupported for Ego4D."
-            ),
-            (
-                "Looking-At-Me is only defined on tracked faces and Talking-To-Me only "
-                "inside native talking segments; the raw 'target' field is preserved "
-                "and never interpreted as an addressee."
-            ),
-        ),
     )
 
 

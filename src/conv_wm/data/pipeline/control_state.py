@@ -17,7 +17,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass
-from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -336,69 +335,6 @@ def _statistics(
     }
 
 
-def check_invariants(
-    results: list[_RecordingResult], *, tolerance_s: float = BOUNDARY_TOLERANCE_S
-) -> None:
-    """Fail the build rather than write a control timeline that is not a requantization.
-
-    Bridging may only remove interior boundaries, so the control intervals must
-    partition the native ones in order and keep the same span and total
-    duration. A degenerate native timeline (a gap or an overlap) is copied
-    through unchanged; refusing it is the action grid's job, which masks that
-    recording as ``invalid_timeline``.
-    """
-    problems: list[str] = []
-    for result in results:
-        native, control = result.native, result.control
-        if not control:
-            problems.append(f"{result.recording_id}: empty control timeline")
-            continue
-        if (
-            abs(control[0].canonical_start_s - native[0].canonical_start_s)
-            > tolerance_s
-            or abs(control[-1].canonical_end_s - native[-1].canonical_end_s)
-            > tolerance_s
-        ):
-            problems.append(
-                f"{result.recording_id}: control window differs from native"
-            )
-        covered = sum(row.duration_s for row in control)
-        if abs(covered - sum(row.duration_s for row in native)) > tolerance_s:
-            problems.append(f"{result.recording_id}: total duration changed")
-        indices = [
-            (row.source_native_index_first, row.source_native_index_last)
-            for row in control
-        ]
-        expected = [(0, indices[0][1])] + [
-            (previous[1] + 1, current[1]) for previous, current in pairwise(indices)
-        ]
-        if indices != expected or indices[-1][1] != len(native) - 1:
-            problems.append(
-                f"{result.recording_id}: control intervals do not partition the native ones"
-            )
-        if any(
-            row.voice_state != VoiceState.SPEAKING and row.transform_kind is not None
-            for row in control
-        ):
-            problems.append(
-                f"{result.recording_id}: a non-SPEAKING interval was bridged"
-            )
-        bridged = sum(row.bridged_gap_count for row in control)
-        if bridged != len(result.gaps):
-            problems.append(
-                f"{result.recording_id}: bridged gap provenance is incomplete"
-            )
-        if any(
-            row.source_native_index_last < row.source_native_index_first
-            for row in control
-        ):
-            problems.append(f"{result.recording_id}: reversed native index range")
-    if problems:
-        raise ValueError(
-            "control focal voice state invariants violated: " + "; ".join(problems[:10])
-        )
-
-
 def _build_dataset(
     source: CheckedArtifact,
     *,
@@ -408,7 +344,6 @@ def _build_dataset(
 ) -> ControlFocalVoiceStateOutputs:
     paths = pipeline_paths(cfg)
     results = _transform(source.table, step_s=step_s)
-    check_invariants(results)
     timeline = _timeline_table(results)
     summary = _summary_table(results, source.dataset)
     gaps = _bridged_gaps_table(results)
@@ -437,19 +372,8 @@ def _build_dataset(
         "lineage_chain": list(LINEAGE_CHAIN),
         "transform": {
             "transform_kind": str(TransformKind.SUB_STEP_SILENCE_BRIDGE),
-            "pattern": "SPEAKING -> SILENT (g < decision_step_s) -> SPEAKING",
-            "becomes": "SPEAKING continuous",
-            "condition": "gap_duration_s < decision_step_s",
-            "condition_is_strict": True,
             "comparison_tolerance_s": BOUNDARY_TOLERANCE_S,
             "decision_step_s": step_s,
-            "rationale": (
-                "quantization to the controller's temporal resolution, not a "
-                "correction of the annotation"
-            ),
-            "speech_bursts_filtered": False,
-            "native_timestamps_modified": False,
-            "native_artifact_modified": False,
         },
         "input_artifacts": {
             "native_focal_voice_state_timeline": {
@@ -481,27 +405,6 @@ def _build_dataset(
             "bridged_gaps": artifact_reference(gaps_path),
         },
         "statistics": _statistics(results, summary, gaps, step_s=step_s),
-        "state_semantics": {
-            "SPEAKING": (
-                "native SPEAKING, possibly extended over sub-step silences the "
-                "controller cannot represent"
-            ),
-            "SILENT": "native SILENT lasting at least one decision step",
-            "UNKNOWN": "native UNKNOWN, never bridged across",
-        },
-        "limitations": [
-            (
-                "The control timeline is a requantization of the native timeline at "
-                "decision_step_s: silences shorter than one control step are absorbed "
-                "into the surrounding speech and are no longer recoverable from this "
-                "layer alone (bridged_gaps.parquet keeps their provenance)."
-            ),
-            (
-                "Short SPEAKING bursts are deliberately kept: the symmetric rule is "
-                "not applied, so bursts can still put two transitions in one slot."
-            ),
-            *native_report.get("limitations", []),
-        ],
     }
     report = write_summary(report_dir / REPORT_FILE, payload, provenance=provenance)
     return ControlFocalVoiceStateOutputs(
@@ -557,7 +460,6 @@ def format_outputs(outputs: list[ControlFocalVoiceStateOutputs]) -> str:
 
 __all__ = [
     "ControlFocalVoiceStateOutputs",
-    "check_invariants",
     "config_checksum",
     "format_outputs",
     "load_native_state_input",

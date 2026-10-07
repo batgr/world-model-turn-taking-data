@@ -7,6 +7,7 @@ import json
 
 import pandas as pd
 import pytest
+from invariants import check_control_partition
 from state_layers import TIMELINE, build_control_state, config_for, write_native_state
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
@@ -83,7 +84,15 @@ def test_the_native_artifact_is_never_modified(tmp_path):
     pd.testing.assert_frame_equal(pd.read_parquet(native_path), native_before)
     assert output.timeline_path != native_path
     assert output.timeline_path.name == TIMELINE_TABLE
-    assert output.report["transform"]["native_artifact_modified"] is False
+
+
+def test_the_control_timeline_partitions_the_native_one(tmp_path):
+    from conv_wm.data.pipeline.control_state import _transform
+
+    cfg = config_for(tmp_path)
+    for dataset in ("ego4d", "egocom"):
+        native = pd.read_parquet(write_native_state(cfg, dataset))
+        check_control_partition(_transform(native, step_s=DECISION_STEP_S))
 
 
 def test_timeline_duration_and_window_are_preserved(tmp_path):
@@ -154,10 +163,6 @@ def test_build_is_deterministic_and_records_its_lineage(tmp_path):
     ]
     transform = report["transform"]
     assert transform["transform_kind"] == str(TransformKind.SUB_STEP_SILENCE_BRIDGE)
-    assert transform["condition"] == "gap_duration_s < decision_step_s"
-    assert transform["condition_is_strict"] is True
-    assert transform["speech_bursts_filtered"] is False
-    assert transform["native_timestamps_modified"] is False
     inputs = report["input_artifacts"]
     assert inputs["native_focal_voice_state_timeline"]["path"] == str(native_path)
     assert (
@@ -171,7 +176,6 @@ def test_build_is_deterministic_and_records_its_lineage(tmp_path):
     )
     assert report["config_checksum"]
     assert {"git_commit", "git_dirty", "command", "created_at"} <= set(report)
-    assert "ego4d upstream limitation" in report["limitations"]
     assert (
         report["source_annotation_versions"]["annotation_schema_version"]
         == "ego4d-test-v1"

@@ -23,7 +23,6 @@ class NativeFocalVoiceSource:
     annotation_schema_version: str
     cleaning_rule_version: str
     statistics: dict[str, int] = field(default_factory=dict)
-    limitations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -157,14 +157,10 @@ uv run conv-wm build model-ready --dataset all
 The build refuses an action grid whose checksum no longer matches its own
 report, and prints per dataset the recording and anchor counts per split, the
 event/background counts and ratio, the supported context range, the horizon,
-the grid frequency, and four contract checks re-verified against the grid:
-
-```text
-no recording in multiple splits
-every anchor has minimum context
-every anchor has full future
-no anchor crosses a recording boundary
-```
+the grid frequency, and any split leakage (a recording in several splits).
+The tests re-derive the index's other promises from the grid (every anchor
+has its minimum context and full future, no anchor crosses a recording
+boundary).
 
 `${paths.reports}/model_ready/<dataset>/` holds `summary.parquet` (one row per
 recording) and `report.json` (the statistics plus the usual lineage:

@@ -123,7 +123,6 @@ class SourceIntegrityReport:
     temporal: TemporalIntegrityResult | None
     references: list[ReferenceIntegrityResult]
     anomalies: list[Anomaly]
-    known_limitations: tuple[str, ...]
     load_error: str | None = None
 
     @property
@@ -139,12 +138,9 @@ class SourceIntegrityReport:
         """Coarse verdict: ``usable``, ``usable_with_caveats`` or ``blocked``."""
         if not self.valid:
             return "blocked"
-        if (
-            any(
-                anomaly.severity == Severity.WARNING and anomaly.count > 0
-                for anomaly in self.anomalies
-            )
-            or self.known_limitations
+        if any(
+            anomaly.severity == Severity.WARNING and anomaly.count > 0
+            for anomaly in self.anomalies
         ):
             return "usable_with_caveats"
         return "usable"
@@ -168,7 +164,6 @@ class SourceIntegrityReport:
             "temporal": self.temporal.to_dict() if self.temporal else None,
             "references": [reference.to_dict() for reference in self.references],
             "anomalies": [anomaly.to_row() for anomaly in self.anomalies],
-            "known_limitations": list(self.known_limitations),
             "valid": self.valid,
             "downstream_suitability": self.downstream_suitability,
             "load_error": self.load_error,
@@ -556,7 +551,6 @@ def audit_source(
         temporal=temporal,
         references=references,
         anomalies=collector.anomalies,
-        known_limitations=spec.known_limitations,
     )
 
 
@@ -581,7 +575,6 @@ def failed_source(
         temporal=None,
         references=[],
         anomalies=[],
-        known_limitations=spec.known_limitations,
         load_error=f"{type(error).__name__}: {error}",
     )
 

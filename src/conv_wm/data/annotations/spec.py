@@ -167,7 +167,6 @@ class AnnotationSourceSpec:
     bounds: DurationBounds | None = None
     value_fields: tuple[str, ...] = ()
     """Payload columns preserved for downstream use, with their native meaning."""
-    known_limitations: tuple[str, ...] = ()
     confidence_field: str | None = None
     """Column carrying a per-row confidence when the source provides one."""
 
