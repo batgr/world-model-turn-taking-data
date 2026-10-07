@@ -1,42 +1,20 @@
 # world-model-turn-taking-data
 
-<p align="left">
-  <a href="https://github.com/batgr/world-model-turn-taking-data/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/batgr/world-model-turn-taking-data/ci.yml?branch=main&label=CI"></a>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.13%2B-3776AB?logo=python&logoColor=white">
-  <img alt="uv" src="https://img.shields.io/badge/uv-managed-DE5FE9?logo=uv&logoColor=white">
-  <img alt="Parquet" src="https://img.shields.io/badge/Parquet-PyArrow-4B8BBE">
-  <img alt="Ruff" src="https://img.shields.io/badge/lint-Ruff-D7FF64?logo=ruff&logoColor=111111">
-  <img alt="Pyright" src="https://img.shields.io/badge/types-Pyright-3178C6">
-  <img alt="pytest" src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white">
-</p>
+[![CI](https://img.shields.io/github/actions/workflow/status/batgr/world-model-turn-taking-data/ci.yml?branch=main&label=CI)](https://github.com/batgr/world-model-turn-taking-data/actions/workflows/ci.yml)
 
-A reproducible data pipeline that turns egocentric conversation corpora into a
-versioned, model-ready turn-taking dataset.
+A reproducible pipeline that turns egocentric conversation corpora (Ego4D AV,
+EgoCom) into one versioned, model-ready turn-taking dataset: a regular grid of
+the camera wearer's vocal state, the actions that changed it, and an index of
+the training windows the grid supports.
 
-**Start here:** [public EgoCom dataset on Hugging Face](https://huggingface.co/datasets/batgre/conversational-dynamics-egocom) · [pipeline guide](docs/data_pipeline/README.md) · [companion model repository](https://github.com/batgr/world-model-turn-taking-model)
+Raw data is never modified, every artifact records what produced it, and every
+stage refuses an input whose checksum no longer matches its report. Modelling
+lives in the [model repository](https://github.com/batgr/world-model-turn-taking-model).
 
-The public EgoCom release contains the action grid, model-ready indexes and
-optional speech/text label sidecars; it does not redistribute raw media. A
-separate access-controlled release covers EgoCom + Ego4D. The model study
-uses these artifacts to investigate turn-taking for social robots; observed
-vocal events are not controllable robot actions.
-
-## Overview
-
-Predicting when someone will start or stop speaking needs training data with
-exact temporal semantics: who was speaking, when, on which clock, and where the
-annotations can be trusted. Raw conversation corpora do not come that way —
-each has its own timestamps, its own idea of a "speech segment", and its own
-gaps.
-
-This repository takes two such corpora (Ego4D AV and EgoCom) and produces one
-dataset with a single contract: a 100 ms grid of the camera wearer's vocal
-state and the actions that changed it, plus an index of the training windows
-that grid supports. Raw data is never modified, every derived artifact records
-what produced it, and every stage refuses an input whose checksum no longer
-matches its own report.
-
-**Modelling lives in a separate repository.** This one stops at the dataset.
+Releases on Hugging Face (no raw media):
+[EgoCom, 10 Hz](https://huggingface.co/datasets/batgre/conversational-dynamics-egocom) ·
+[EgoCom, 12.5 Hz](https://huggingface.co/datasets/batgre/conversational-dynamics-egocom-12.5hz) ·
+EgoCom + Ego4D (`conversational-dynamics-full`, `-full-12.5hz`, access-controlled).
 
 ## Pipeline
 
@@ -45,290 +23,83 @@ raw corpora
    ↓  audit          inventory, structure, media timelines, annotation integrity
    ↓  clean          source-faithful interim tables
    ↓  native_state   annotations   -> SPEAKING / SILENT / UNKNOWN per recording
-   ↓  control_state  native state  -> the same, requantized at the 100 ms control step
+   ↓  control_state  native state  -> the same, requantized at the decision step Δ
    ↓  action_grid    control state -> NO_EVENT / ONSET / OFFSET per slot, or masked
-   ↓  media_manifest action grid ids -> corpus-relative raw video / audio paths
+   ↓  media_manifest action grid   -> corpus-relative raw video / audio paths
    ↓  model_ready    action grid   -> valid anchors, splits, dataset card
    ↓  labels         canonical facts + action grid -> optional label sidecars
-train / validation / test index (+ labels on request)  →  a modelling repository
 ```
 
-| Stage | Why it exists |
-| --- | --- |
-| **audit** | Decide whether the raw data and its annotations can be trusted at all. Audits classify; they never fix. |
-| **clean** | Derive interim tables with explicitly approved transformations, keeping the source's own values. |
-| **native_state** | One continuous, exhaustive vocal-state timeline per recording, from native annotations only — no detector, no model. |
-| **control_state** | Silences shorter than one control step cannot be represented by a controller running at that step, so they are bridged. A quantization, not a correction. |
-| **action_grid** | Sample the state on the regular 100 ms grid and log the one transition a slot may contain. Anything the vocabulary cannot express is masked, never relabelled. |
-| **media_manifest** | Resolve every canonical `recording_id` to its raw media, as paths relative to the corpus root, so a consumer never needs a corpus layout. |
-| **model_ready** | Index the anchors where a training window can be taken, classify each `event` or `background`, and assign splits to whole conversations. |
-| **labels** | Derive, from native annotations only by default, every label the corpora support — multi-participant activity, floor, events, overlap, timing, turns, next speaker, future targets, native social annotations, transcript cues — as optional versioned sidecars on the same grid ([`labels.md`](docs/data_pipeline/labels.md)). |
-
-Each stage has a page under [`docs/data_pipeline/`](docs/data_pipeline/README.md);
+The [pipeline guide](docs/data_pipeline/README.md) explains each stage, links
+one page per stage, and describes how to add a dataset;
 [`glossary.md`](docs/data_pipeline/glossary.md) fixes the vocabulary.
-
-## Repository structure
-
-The repository is `world-model-turn-taking-data`; the Python package it
-installs is `conv_wm` and its command is `conv-wm`.
-
-```text
-conf/config.yaml                 paths, per-dataset files, manifest options
-src/conv_wm/
-  cli.py                         the conv-wm command: parsing, config, exit codes
-  config.py                      configuration loading and typed stage paths
-  provenance.py                  git / ffmpeg / version stamp on every report
-  reports.py                     JSON summary and Parquet table writers
-  data/
-    pipeline/                    the canonical stages, in order
-      clean.py  native_state.py  control_state.py  action_grid.py  model_ready.py
-      labels.py                  the label sidecar build
-    labels/                      label registry, selection, storage and pure derivations
-    vocal/                       the pure semantics the stages apply (no I/O)
-    datasets/                    dataset adapters — the extension point
-    audits/                      population audits; they classify, never fix
-    media/                       ffprobe access, audio timelines
-    annotations/                 annotation-source specs and integrity checks
-    manifest.py                  raw inventory
-    pipeline_inputs.py           read an upstream artifact, refuse a stale one
-    validation.py                shared table checks
-docs/data_pipeline/              architecture, glossary, one page per stage
-notebooks/                       laboratory notebooks (evidence, not implementation)
-tests/                           mirrors src/; no test needs the corpus
-scripts/                         check.sh and fix.sh
-```
-
-## Tooling
-
-The maintained pipeline is built around:
-
-- **Python 3.13+** for the package and CLI
-- **uv** for environments and reproducible dependency locking
-- **pandas + PyArrow/Parquet** for columnar artifacts
-- **Pandera** for dataframe contracts
-- **OmegaConf** for configuration
-- **FFmpeg / ffprobe** for media inspection
-- **pytest, Ruff and Pyright** for testing, linting and static checks
-- **GitHub Actions** for continuous integration
+Observed vocal events are not controllable robot actions.
 
 ## Installation
 
 ```bash
-git clone <repository-url>
-cd world-model-turn-taking-data
-
-uv sync                          # implementation, tests and checks
-uv sync --extra notebooks        # plus the exploration libraries
-uv sync --extra labels-audio     # plus Parselmouth (Praat), for external prosody labels only
+uv sync                          # package, tests and checks
+uv sync --extra labels-audio     # plus Parselmouth, for the prosody labels only
 ```
 
-Python 3.13+. FFmpeg (`ffmpeg` and `ffprobe`) must be on `PATH` for the media
-audits; the build stages do not need it.
+Python 3.13+. `ffmpeg` and `ffprobe` must be on `PATH` for the media audits.
 
-Without `uv`: `python -m venv .venv && source .venv/bin/activate && pip install -e .`
-
-## Quick start
-
-The build stages read the previous stage's artifact, so the corpus is only
-needed for the audits and the cleaning. With a data root in place:
+## Usage
 
 ```bash
-export EGO_DATA_ROOT=/path/to/your/data      # defaults to ./data
+export EGO_DATA_ROOT=/path/to/data           # defaults to ./data
 
 uv run conv-wm audit manifest                # raw inventory
 uv run conv-wm audit media                   # container and stream metadata
 uv run conv-wm clean annotations             # interim tables
-uv run conv-wm build all --dataset all       # the build stages, in order (labels last)
-uv run conv-wm audit media-manifest          # optional: every media path exists locally
+uv run conv-wm build all --dataset all       # every build stage, in order
+uv run conv-wm release                       # Hugging Face release directories
 ```
 
-`build all` prints the final statistics and any split leakage. To rerun from
-one stage on, for instance after changing the control step:
+Every setting lives in [`conf/config.yaml`](conf/config.yaml) (paths, decision
+grid, release, label parameters). Override one with `--set`, or a whole file
+with `--config`. A 12.5 Hz dataset:
 
 ```bash
-uv run conv-wm build all --from control-focal-voice-state
+uv run conv-wm --set grid.decision_step_s=0.08 build all --from control-focal-voice-state
 ```
 
-Individual stages, for development:
-
-```bash
-uv run conv-wm build native-focal-voice-state --dataset ego4d
-uv run conv-wm build control-focal-voice-state --dataset ego4d
-uv run conv-wm build vocal-action-grid --dataset ego4d
-uv run conv-wm build media-manifest --dataset ego4d
-uv run conv-wm build model-ready --dataset ego4d
-```
-
-`uv run conv-wm --help` lists everything. Exit code `1` means a command could
-not run (a missing prerequisite names the command that produces it), `2` that a
-contract audit reported FAIL.
-
-## Configuration
-
-One mechanism: [`conf/config.yaml`](conf/config.yaml), resolved by OmegaConf,
-overridable with `--config`.
-
-| Setting | Where |
-| --- | --- |
-| data root | `root`, from `$EGO_DATA_ROOT` |
-| stage directories | `paths.{raw,interim,validated,processed,model_ready,reports}` |
-| per-dataset files | `datasets.<name>.{raw,interim,...}` and `datasets.<name>.files` |
-| manifest options | `manifest.compute_checksum`, `manifest.output` |
-
-Window geometry, validity thresholds and the split seed are code-level
-defaults, declared once as frozen dataclasses next to the logic that uses them
-(`WindowSpec` and `SplitSpec` in `data/pipeline/model_ready.py`, the control
-step in `data/vocal/action_grid.py`). They are recorded in every report, so a
-build is reproducible from its own artifact.
-
-## Data
-
-**Input.** Whatever the corpus publishes. Ego4D AV expects the v2 annotation
-JSONs and the clip videos; EgoCom expects `video_info.csv`,
-`ground_truth_transcriptions.csv` and the point-of-view videos. Paths come
-from `conf/config.yaml`; nothing is downloaded automatically.
-
-**Canonical internal schema.** After the adapter, every stage speaks the same
-language:
-
-| Field | Meaning |
-| --- | --- |
-| `dataset` | which corpus the row came from |
-| `recording_id` | one point-of-view recording — the session |
-| `conversation_id` / `sync_group_id` | the conversation several recordings may share |
-| `view_id`, `wearer_id` | the video and the person wearing the camera |
-| `decision_index`, `decision_time_s` | the 100 ms slot and its time on the recording's canonical clock |
-| `focal_state_before` | `SPEAKING` / `SILENT` / `UNKNOWN` just before the slot |
-| `action` | `NO_EVENT` / `ONSET` / `OFFSET`, or null when masked |
-| `action_valid`, `mask_reason` | whether the slot carries a usable label, and why not |
-| `video_path`, `audio_path`, `media_offset_s` | media manifest: the recording's raw files relative to the corpus root, and `media_time_s = decision_time_s + media_offset_s` |
-
-**Dataset adapters.** A dataset contributes a `DatasetSpec`
-(`data/datasets/<name>.py`) declaring its tables, annotation semantics,
-cleaning rules, the map from its annotations to focal voice recordings, and its
-release splits. Everything downstream of the adapter is shared: no core module
-branches on a dataset name.
+Window durations (`grid.min_context_s`, `max_context_s`, `future_s`) are in
+seconds and rounded up to whole steps: 10/50/10 steps at 10 Hz, 13/63/13 at
+12.5 Hz. `uv run conv-wm --help` lists every command. Exit code `1` means a
+command could not run (a missing prerequisite names the command that produces
+it), `2` that an audit reported FAIL.
 
 ## Outputs
 
-Everything is written below the configured stage roots, outside the repository.
-
 | Artifact | Path |
 | --- | --- |
-| cleaned annotation tables | `${paths.interim}/<dataset>/` |
-| native voice-state timeline | `${paths.processed}/native_focal_voice_state/<dataset>/` |
-| control voice-state timeline | `${paths.processed}/control_focal_voice_state/<dataset>/` |
+| model-ready index + dataset card | `${paths.model_ready}/<dataset>/{index.parquet,metadata.json}` |
+| media manifest | `${paths.model_ready}/<dataset>/media_manifest.parquet` |
 | action grid | `${paths.processed}/vocal_action_grid/<dataset>/vocal_action_grid.parquet` |
-| **model-ready index + dataset card** | `${paths.model_ready}/<dataset>/{index.parquet,metadata.json}` |
-| **media manifest** | `${paths.model_ready}/<dataset>/media_manifest.parquet` |
-| label sidecars | `${paths.processed}/labels/<dataset>/{registry.json,<extractor>/}` |
-| reports for every stage | `${paths.reports}/<stage>/<dataset>/report.json` |
+| label sidecars | `${paths.processed}/labels/<dataset>/` |
+| one report per stage | `${paths.reports}/<stage>/<dataset>/report.json` |
 
-## Model-ready format
+`index.parquet` has one row per **anchor**, a slot where a window can be taken:
+the context ends at the anchor and the future starts at the next slot. The
+consumer picks the context length at load time.
+[`model_ready.md`](docs/data_pipeline/model_ready.md) has the schema and the
+reconstruction recipe; [`labels.md`](docs/data_pipeline/labels.md) and the
+generated [`labels_registry.md`](docs/data_pipeline/labels_registry.md)
+describe the 116 labels.
 
-`index.parquet` is one row per valid **anchor** — a slot where a training
-window can be taken — not a materialized window:
+Splits are assigned to whole conversations, preferring each release's own
+split. The only seed is the split fallback; nothing else is stochastic.
 
-```text
-context = [anchor_idx - L + 1, ..., anchor_idx]   L ≤ max_context_steps
-future  = [anchor_idx + 1, ..., anchor_idx + future_steps]
-```
-
-The anchor belongs to the context; prediction starts at `anchor_idx + 1`. The
-consumer picks `L` at load time, so changing the context length needs no
-rebuild. Prototype geometry: 10–50 steps of context (1–5 s), a fixed 10-step
-horizon (1 s), at 10 Hz. The step is configurable (`grid.decision_step_s`, see
-[the pipeline guide](docs/data_pipeline/README.md#the-decision-step-δ)): at
-80 ms (12.5 Hz) the same durations are 13–63 steps and a 13-step horizon.
-
-Each row carries `recording_id`, `conversation_id`, `split`, `anchor_idx`,
-`max_context_steps`, `context_valid_ratio`, `future_valid_ratio`,
-`sample_class` (`event` / `background`) and `is_trainable`.
-[`docs/data_pipeline/model_ready.md`](docs/data_pipeline/model_ready.md) has
-the full schema and the reconstruction recipe.
-
-## Labels
-
-Beyond the action grid, `conv-wm build labels` writes optional label
-sidecars: 116 labels in 14 families, each with its modality, source kind
-(native / deterministic / external model), time reference and validity
-semantics; interpretations without a validated source (dialogue acts,
-addressee, dominance, ...) are not fabricated. They are plain Parquet tables;
-read only the columns you need. See
-[`labels.md`](docs/data_pipeline/labels.md) and the generated
-[`labels_registry.md`](docs/data_pipeline/labels_registry.md).
-
-## Reproducibility
-
-The same raw data, config, code revision and seed produce the same artifacts.
-
-- **Config** — one YAML file; its resolved checksum is recorded in every report.
-- **Seed** — one: `SplitSpec.seed`, used only when a dataset publishes no split
-  of its own. Nothing else in the pipeline is stochastic.
-- **Splits** — assigned to whole conversations, never to individual anchors,
-  preferring each release's own split; `split_source` records which applied.
-- **Ordering** — every stage sorts explicitly before writing; no output depends
-  on filesystem iteration order.
-- **Lineage** — each report records the input and output SHA-256 checksums, the
-  git commit and dirty flag, the exact command, `uv.lock`'s checksum, the
-  schema versions and the `lineage_chain`. A stage refuses an input whose
-  checksum no longer matches the report that produced it.
-- **Dataset card** — `metadata.json` next to the index is self-contained:
-  geometry, thresholds, counts per split and source checksums.
-
-## Validation and tests
+## Checks
 
 ```bash
 ./scripts/check.sh               # ruff format --check, ruff check, pyright, pytest
 ./scripts/fix.sh                 # format and autofix
-
-uv run pytest                    # none needs the corpus; real-corpus smoke tests are opt-in
-uv run pytest tests/test_pipeline_integration.py   # end-to-end on a synthetic fixture
-uv run ruff check .
-uv run pyright
 ```
 
-CI runs the same four checks on every push and pull request.
-
-Beyond the test suite, `build model-ready` re-verifies four contracts against
-the grid and prints the result: no recording in multiple splits, every anchor
-has its minimum context, every anchor has its full future, no anchor crosses a
-recording boundary.
-
-## Adding another dataset
-
-1. Write `src/conv_wm/data/datasets/<name>.py` with a `DatasetSpec`: the
-   structural schemas, the annotation-source specs, and the optional
-   `annotation_cleaner`, `native_focal_voice`, `media_records` and
-   `recording_splits` callables, and `label_facts` (the facts it provides
-   for the label sidecars).
-2. Put the dataset-specific parsing in `<name>_cleaning.py`,
-   `<name>_native_voice.py`, `<name>_media.py` and `<name>_splits.py` next to it.
-3. Register it in `data/datasets/__init__.py` and add its paths to
-   `conf/config.yaml`.
-4. Run `conv-wm clean annotations --dataset <name>`, `conv-wm audit structure`,
-   then `conv-wm build all --dataset <name>`.
-
-No core module changes. `tests/test_new_dataset_end_to_end.py` takes a
-synthetic dataset with its own raw format from raw annotations to the release
-through the CLI; the [pipeline guide](docs/data_pipeline/README.md#adding-a-dataset)
-lists every adapter and what each stage needs.
-
-Where code belongs:
-
-```text
-dataset-specific parsing   → data/datasets/
-pipeline stages            → data/pipeline/
-pure semantics, no I/O     → data/vocal/
-population audits          → data/audits/
-media primitives           → data/media/
-```
-
-## Project scope
-
-This repository produces datasets. Model architectures, training loops,
-samplers and evaluation live elsewhere and consume `index.parquet`, the
-action grid and `media_manifest.parquet`.
+No test needs the corpus; real-corpus smoke tests are opt-in. CI runs the same
+checks on every push and pull request.
 
 ## License
 

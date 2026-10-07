@@ -29,7 +29,7 @@ src/conv_wm/ maintained implementation (the only code the CLI and tests run)
              data/datasets/ the dataset adapters; data/audits/ the population audits
 docs/        current contracts, terminology and decisions
 reports/     generated population evidence (below ${paths.reports}, not versioned)
-conf/        configuration (paths, dataset files, manifest options)
+conf/        configuration (paths, dataset files, decision grid, release, labels)
 tests/       semantics of every reusable module; no test needs the corpus
 ```
 
@@ -47,8 +47,8 @@ vocal pipeline is ego-only and annotation-only:
 raw annotations
     -> structural / integrity validation      (audits, cleaning)
     -> native focal vocal state               SPEAKING / SILENT / UNKNOWN per wearer
-    -> control focal vocal state              the same, requantized at Δ = 100 ms
-    -> vocal action grid                      Δ = 100 ms, NO_EVENT / ONSET / OFFSET or masked
+    -> control focal vocal state              the same, requantized at the step Δ
+    -> vocal action grid                      one slot per Δ: NO_EVENT / ONSET / OFFSET or masked
     -> media manifest                         recording_id -> corpus-relative video/audio paths
     -> model ready                            valid anchors + train/validation/test
     -> label sidecars                         optional, versioned labels on the same grid
@@ -95,14 +95,14 @@ voice-activity audit, and Ego4D
 
 The native timeline is immutable. The control layer
 ([`control_focal_voice_state.md`](control_focal_voice_state.md)) requantizes it
-at Δ = 100 ms with one rule — sub-step silence bridging, `SPEAKING → SILENT
+at Δ with one rule — sub-step silence bridging, `SPEAKING → SILENT
 (g < Δ) → SPEAKING` becomes continuous `SPEAKING` — and keeps the provenance of
 every bridged gap. Short speech bursts are deliberately not filtered. This is a
 statement about the controller's resolution, not a correction of the
 annotations.
 
 The vocal action grid ([`vocal_action_grid.md`](vocal_action_grid.md)) samples
-the control state every Δ = 100 ms as `NO_EVENT` / `ONSET` / `OFFSET`, masking
+the control state every Δ as `NO_EVENT` / `ONSET` / `OFFSET`, masking
 any slot the vocabulary cannot express (unknown state or time, more than one
 transition) rather than inventing a label. It merges nothing itself and reports
 both grids: bridging takes EgoCom's compound slots from 34 495 to 2 083 (valid
@@ -187,7 +187,7 @@ registry (`conv_wm.data.datasets.get(name)`):
 | Part of the spec | Declares | Consumed by |
 | --- | --- | --- |
 | `structure: StructuralSpec` | tables with Pandera schemas and loaders, relations between them | structural validation |
-| `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field, known limitations) and cross-source comparisons | annotation integrity |
+| `annotations: AnnotationSpec` | annotation sources (scope, time unit and origin, media/entity references, bounds, value fields, provenance, confidence field) and cross-source comparisons | annotation integrity |
 | `annotation_cleaner` | dataset-specific, explicitly validated minimal transformations | annotation cleaning |
 | `native_focal_voice` | cleaned native annotations mapped to one focal voice recording per (view, wearer) | native focal voice-state build |
 | `media_records` | each canonical `recording_id` resolved to its raw video/audio files and media offset | media manifest |
@@ -241,7 +241,7 @@ annotation types (video-level mood ratings, confidence-scored model-inferred
 intervals) through the structural, annotation and audio audits.
 
 In the model repository, `turn_wm.data.source.DATASETS` lists the Hub releases a run
-can load; a new release, and its Mimi feature cache, are added there.
+can load; a new release, and its feature cache, are added there.
 
 ## Provenance
 

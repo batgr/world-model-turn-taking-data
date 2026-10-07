@@ -8,7 +8,7 @@ behaviour logged during it:
 
 ```text
 continuous control focal state  (SPEAKING / SILENT / UNKNOWN, exact seconds)
-      -> regular Δ = 100 ms control grid
+      -> regular control grid, one slot per Δ
       -> logged vocal action proxy   (NO_EVENT / ONSET / OFFSET, or masked)
 ```
 

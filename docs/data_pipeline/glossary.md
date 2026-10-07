@@ -88,7 +88,7 @@ report column and a term differ, the column name is given in code style.
 
 - **Annotation source** — one table of a dataset described by an
   `AnnotationSourceSpec`: scope, temporal coordinates, references, values,
-  provenance, known limitations.
+  provenance.
 - **Scope** — what a row describes: `point_event`, `temporal_interval`,
   `clip`, `video`, `interaction`, `participant`, `participant_interaction`,
   `sequence_global`.
@@ -103,7 +103,7 @@ report column and a term differ, the column name is given in code style.
   **severity**: `error` blocks downstream use, `warning` is a documented
   caveat, `info` records an expected property.
 - **Downstream suitability** — `usable`, `usable_with_caveats` or `blocked`,
-  derived from anomalies and known limitations.
+  derived from anomalies.
 - **Provenance (annotation)** — how values came to exist: `human_observed`,
   `deterministic_derived`, `transferred`, `pseudo_label`, `cluster_derived`,
   `model_inferred`. Carried forward, never inferred by the audit.

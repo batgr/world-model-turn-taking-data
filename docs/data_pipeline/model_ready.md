@@ -29,7 +29,8 @@ and lets the consumer pick `L` at load time. Nothing is duplicated: one row per
 anchor, no `context_1`, `context_2`, … arrays, so changing the context length
 later needs no rebuild.
 
-Prototype geometry, at 100 ms per grid slot (10 Hz):
+Prototype geometry at the default 100 ms step (10 Hz; durations are kept at
+another step, see `grid.*` in `conf/config.yaml`):
 
 | | steps | seconds |
 | --- | --- | --- |

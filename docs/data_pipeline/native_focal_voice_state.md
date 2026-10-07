@@ -14,7 +14,7 @@ native annotations  ->  canonical focal vocal-state intervals
 The prototype is ego-only: for every view, `actor_id = wearer_id`. Nothing
 acoustic is involved — no voice activity detector, no speaker model, no
 completion of the annotations. Timestamps are continuous seconds on the
-dataset's canonical timeline; the 100 ms decision grid and the
+dataset's canonical timeline; the decision grid and the
 `NO_EVENT` / `ONSET` / `OFFSET` actions are a later step that consumes this
 layer.
 
@@ -43,8 +43,7 @@ the wearer's state.
   include short internal pauses in one `SPEAKING` episode. No independent
   focal-specific completeness measurement exists for Ego4D.
 - **EgoCom token gaps**: consecutive wearer tokens usually abut, but the
-  union of word intervals produces many `SILENT` gaps shorter than the future
-  100 ms step (`short_silent_interval_count` in the report). Handling them is
+  union of word intervals produces many `SILENT` gaps shorter than 100 ms (`short_silent_interval_count` in the report). Handling them is
   the control layer's decision, not this layer's: they are bridged there
   ([`control_focal_voice_state.md`](control_focal_voice_state.md)) and this
   timeline keeps them.
@@ -111,12 +110,10 @@ No confidence, score or method column exists: there is nothing inferred.
   shorter than 100 ms);
 - `report.json` — per-dataset statistics (recording count, valid duration,
   state durations and ratios, native `SPEAKING` interval count, Ego4D clips
-  with invalid or missing regions, EgoCom speakers without a POV), the state
-  semantics and limitations, and the lineage: schema versions, `git_commit`,
+  with invalid or missing regions, EgoCom speakers without a POV) and the lineage: schema versions, `git_commit`,
   `git_dirty`, command, `created_at`, SHA-256 of the manifest, the media
   metadata table, every native annotation table, `uv.lock` and the output
-  Parquet files, the source release and cleaning-rule versions, and the
-  reference to the coverage audit artifact.
+  Parquet files, the source release and cleaning-rule versions.
 
 The report answers: which native annotations produced this timeline, with
 which code revision, which schema, and from which files.

@@ -4,7 +4,7 @@
 
 `conv-wm build control-focal-voice-state` sits between the native focal voice
 state and the action grid. It answers one question: **what can a controller
-running at Δ = 100 ms actually represent of this timeline?**
+running at the decision step Δ actually represent of this timeline?**
 
 ```text
 native annotation

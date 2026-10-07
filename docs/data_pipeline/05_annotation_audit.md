@@ -12,7 +12,7 @@ uv run conv-wm audit annotations
 
 Each dataset declares typed `AnnotationSourceSpec` objects: scope, temporal
 coordinates, identity, media/entity references, bounds, payload fields,
-provenance, and known limitations. Generic checks cover finite and ordered
+and provenance. Generic checks cover finite and ordered
 timestamps, bounds, duplicate identities, references, and declared
 cross-source comparisons. Exact interval identity and directional temporal
 overlap are both reported. A comparison can declaratively exclude a sentinel,
