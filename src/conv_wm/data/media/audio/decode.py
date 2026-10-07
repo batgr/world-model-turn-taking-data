@@ -113,10 +113,7 @@ def decoded_frame_continuity(
 
 
 def effective_audio_bounds(
-    frames: pd.DataFrame,
-    *,
-    sample_rate_hz: int,
-    time_base: str,
+    frames: pd.DataFrame, *, sample_rate_hz: int, time_base: str
 ) -> tuple[float, float]:
     """Return first start and last end (seconds) on the decoded audio PTS timeline."""
     pts = pd.to_numeric(frames.get("pts", pd.Series(dtype=float)), errors="coerce")
@@ -153,10 +150,7 @@ class DecodeValidationCase:
 
 
 def validate_decoded_window(
-    case: DecodeValidationCase,
-    *,
-    path: Path,
-    file_row: pd.Series,
+    case: DecodeValidationCase, *, path: Path, file_row: pd.Series
 ) -> DecodedValidationRecord:
     """Decode one window and compare its frame sizes with the packet-level reference.
 

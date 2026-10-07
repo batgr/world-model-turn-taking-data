@@ -100,7 +100,7 @@ def test_bounds_against_a_referenced_table_report_overshoot():
             target_key_columns=("clip",),
             start_column="clip_start",
             end_column="clip_end",
-        ),
+        )
     )
 
     report = audit_source(spec, table, tables={"clips": clips}, media=None)

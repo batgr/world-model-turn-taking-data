@@ -164,8 +164,7 @@ def final_drift_flags(
 
 
 def interpret_file(
-    record: AudioFileTimelineRecord,
-    events: list[InterpretedAudioEvent],
+    record: AudioFileTimelineRecord, events: list[InterpretedAudioEvent]
 ) -> AudioFileTimelineRecord:
     """Attach file-level interpretation flags derived from ``events``."""
     if record.pcm_clock is None:

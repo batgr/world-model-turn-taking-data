@@ -96,11 +96,7 @@ def test_overlapping_native_segments_keep_both_provenance_ids():
     assert [
         (r.canonical_start_s, r.canonical_end_s, r.source_annotation_id)
         for r in speaking
-    ] == [
-        (1.0, 2.0, "vs#1"),
-        (2.0, 3.0, "vs#1|vs#2"),
-        (3.0, 4.0, "vs#2"),
-    ]
+    ] == [(1.0, 2.0, "vs#1"), (2.0, 3.0, "vs#1|vs#2"), (3.0, 4.0, "vs#2")]
 
 
 def test_adjacent_identical_intervals_merge_and_word_gaps_stay_silent():

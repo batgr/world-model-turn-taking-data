@@ -15,11 +15,7 @@ from conv_wm.data.vocal.control_state import (
     build_control_timeline,
     resolved_transition_count,
 )
-from conv_wm.data.vocal.native_state import (
-    NativeStateInterval,
-    SourceKind,
-    VoiceState,
-)
+from conv_wm.data.vocal.native_state import NativeStateInterval, SourceKind, VoiceState
 
 STEP = DECISION_STEP_S
 
@@ -162,11 +158,7 @@ def test_successive_micro_gaps_chain_into_one_deterministic_interval():
 
 def test_bridged_gap_provenance_is_kept():
     control, gaps = _control(
-        [
-            (0.0, 0.5, "SPEAKING"),
-            (0.5, 0.52, "SILENT"),
-            (0.52, 0.9, "SPEAKING"),
-        ]
+        [(0.0, 0.5, "SPEAKING"), (0.5, 0.52, "SILENT"), (0.52, 0.9, "SPEAKING")]
     )
 
     [gap] = gaps

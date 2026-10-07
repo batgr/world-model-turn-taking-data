@@ -15,10 +15,7 @@ from invariants import check_action_grid
 from state_layers import build_control_state, config_for, write_native_state
 
 from conv_wm.data.audits.errors import MissingPrerequisiteError
-from conv_wm.data.pipeline.action_grid import (
-    GRID_TABLE,
-    run_vocal_action_grid_build,
-)
+from conv_wm.data.pipeline.action_grid import GRID_TABLE, run_vocal_action_grid_build
 from conv_wm.data.vocal.action_grid import (
     ACTION_SCHEMA_VERSION,
     ACTIONS,

@@ -90,11 +90,7 @@ EGO4D_TRACKING_PATHS_SCHEMA = pa.DataFrameSchema(
         "clip_uid": pa.Column(str, nullable=False),
         "person_id": pa.Column(str, nullable=False),
         "track_id": pa.Column(str, nullable=False),
-        "unmapped_frames_count": pa.Column(
-            int,
-            nullable=False,
-            checks=Check.ge(0),
-        ),
+        "unmapped_frames_count": pa.Column(int, nullable=False, checks=Check.ge(0)),
         "unmapped_frames": pa.Column(object, nullable=False),
     },
     unique=["clip_uid", "person_id", "track_id"],

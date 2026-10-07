@@ -59,11 +59,7 @@ def valid_ego4d_tables():
             }
         ),
         "persons_clean": pd.DataFrame(
-            {
-                "clip_uid": ["clip-1"],
-                "person_id": ["0"],
-                "is_camera_wearer": [True],
-            }
+            {"clip_uid": ["clip-1"], "person_id": ["0"], "is_camera_wearer": [True]}
         ),
         "missing_voice_segments_clean": pd.DataFrame(
             {

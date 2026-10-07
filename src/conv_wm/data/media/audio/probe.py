@@ -33,9 +33,7 @@ def probe_audio_packets(path: Path) -> list[dict[str, object]]:
 
 
 def probe_audio_frames(
-    path: Path,
-    *,
-    read_intervals: str | None = None,
+    path: Path, *, read_intervals: str | None = None
 ) -> pd.DataFrame:
     """Decode the first audio stream (optionally one interval) and return frames.
 

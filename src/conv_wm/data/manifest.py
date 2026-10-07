@@ -18,14 +18,9 @@ FILE_TYPE_BY_EXTENSION = {
     ".json": "structured_data",
 }
 
-IGNORED_NAMES = {
-    ".DS_Store",
-    "Thumbs.db",
-}
+IGNORED_NAMES = {".DS_Store", "Thumbs.db"}
 
-IGNORED_DIRS = {
-    "__MACOSX",
-}
+IGNORED_DIRS = {"__MACOSX"}
 MANIFEST_COLUMNS = [
     "dataset",
     "relative_path",
@@ -49,11 +44,7 @@ MANIFEST_DTYPES = {
 }
 
 
-def build_manifest(
-    raw_root: Path,
-    *,
-    compute_checksum: bool = False,
-) -> pd.DataFrame:
+def build_manifest(raw_root: Path, *, compute_checksum: bool = False) -> pd.DataFrame:
     """Build a deterministic manifest of all files under the raw data root.
 
     The first directory below ``raw_root`` is interpreted as the dataset name.
@@ -98,22 +89,15 @@ def build_manifest(
             }
         )
 
-    manifest = pd.DataFrame.from_records(
-        records,
-        columns=MANIFEST_COLUMNS,
-    ).astype(MANIFEST_DTYPES)
-
-    validate_manifest(manifest)
-    return manifest.sort_values(
-        ["dataset", "relative_path"],
-        ignore_index=True,
+    manifest = pd.DataFrame.from_records(records, columns=MANIFEST_COLUMNS).astype(
+        MANIFEST_DTYPES
     )
 
+    validate_manifest(manifest)
+    return manifest.sort_values(["dataset", "relative_path"], ignore_index=True)
 
-def save_manifest(
-    manifest: pd.DataFrame,
-    output_path: Path,
-) -> None:
+
+def save_manifest(manifest: pd.DataFrame, output_path: Path) -> None:
     """Persist a manifest as a Parquet file.
 
     Args:
@@ -165,10 +149,7 @@ def _iter_raw_files(root: Path) -> Iterator[Path]:
         and not any(part in IGNORED_DIRS for part in path.parts)
     ]
 
-    yield from sorted(
-        files,
-        key=lambda path: path.relative_to(root).as_posix(),
-    )
+    yield from sorted(files, key=lambda path: path.relative_to(root).as_posix())
 
 
 def _compute_sha256(path: Path, chunk_size: int = 1024 * 1024) -> str:

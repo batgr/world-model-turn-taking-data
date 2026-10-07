@@ -144,10 +144,7 @@ def _tables(cfg: DictConfig) -> tuple[pd.DataFrame, pd.DataFrame, tuple[Path, Pa
     return (
         require_table(speech_path),
         require_table(sessions_path),
-        (
-            speech_path,
-            sessions_path,
-        ),
+        (speech_path, sessions_path),
     )
 
 

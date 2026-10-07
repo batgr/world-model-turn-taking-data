@@ -195,10 +195,7 @@ class SegmentAnchors:
 
 
 def segment_anchors(
-    *,
-    action_valid: np.ndarray,
-    action_codes: np.ndarray,
-    spec: WindowSpec,
+    *, action_valid: np.ndarray, action_codes: np.ndarray, spec: WindowSpec
 ) -> SegmentAnchors:
     """Anchors of one segment that have enough context and a complete future.
 

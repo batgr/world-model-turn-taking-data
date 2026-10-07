@@ -31,12 +31,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from conv_wm.data.labels.catalog import REGISTRY
-from conv_wm.data.labels.registry import (
-    Extractor,
-    LabelSpec,
-    Table,
-    registry_document,
-)
+from conv_wm.data.labels.registry import Extractor, LabelSpec, Table, registry_document
 from conv_wm.data.pipeline_inputs import sha256_file
 
 MANIFEST_FILE = "manifest.json"
@@ -77,10 +72,7 @@ def write_extractor(
         for table, content in sorted(tables.items(), key=lambda item: str(item[0])):
             path = staging / table_file(table)
             pq.write_table(
-                content,
-                path,
-                row_group_size=ROW_GROUP_SIZE,
-                compression=COMPRESSION,
+                content, path, row_group_size=ROW_GROUP_SIZE, compression=COMPRESSION
             )
             entries[str(table)] = {
                 "file": table_file(table),

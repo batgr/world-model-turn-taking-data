@@ -55,9 +55,7 @@ def codec_boundary_metadata(packets: list[dict[str, object]]) -> CodecBoundaryMe
 
 
 def analyze_audio_packets(
-    packets: list[dict[str, object]],
-    *,
-    file: AudioFileTimelineRecord,
+    packets: list[dict[str, object]], *, file: AudioFileTimelineRecord
 ) -> AudioPacketAnalysis:
     """Measure the packet clock and the PCM-vs-PTS clock of one audio stream.
 
@@ -67,9 +65,7 @@ def analyze_audio_packets(
     """
     parameters = file.parameters
     timeline = PacketTimeline.from_packets(
-        packets,
-        sample_rate_hz=file.sample_rate_hz,
-        time_base=file.time_base,
+        packets, sample_rate_hz=file.sample_rate_hz, time_base=file.time_base
     )
     coverage = timeline.coverage()
     boundary = codec_boundary_metadata(packets)

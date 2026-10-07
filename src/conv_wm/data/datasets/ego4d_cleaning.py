@@ -456,7 +456,7 @@ def clean_annotation_tables(
         replace(
             clips,
             statistics={
-                "invalid_clip_rows": int((~clips.table["valid"].astype(bool)).sum()),
+                "invalid_clip_rows": int((~clips.table["valid"].astype(bool)).sum())
             },
         ),
         replace(
@@ -464,7 +464,7 @@ def clean_annotation_tables(
             statistics={
                 "camera_wearer_rows": int(
                     persons.table["is_camera_wearer"].astype(bool).sum()
-                ),
+                )
             },
         ),
         missing_voice,

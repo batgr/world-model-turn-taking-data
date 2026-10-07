@@ -11,12 +11,7 @@ def test_load_config():
 def test_get_raw_path():
     cfg = load_config()
 
-    path = get_path(
-        cfg,
-        dataset="egocom",
-        stage="raw",
-        key="ground_truth",
-    )
+    path = get_path(cfg, dataset="egocom", stage="raw", key="ground_truth")
 
     assert path.name == "ground_truth_transcriptions.csv"
 

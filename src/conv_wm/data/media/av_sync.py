@@ -5,9 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 
-def compute_av_sync_metadata(
-    media_metadata: pd.DataFrame,
-) -> pd.DataFrame:
+def compute_av_sync_metadata(media_metadata: pd.DataFrame) -> pd.DataFrame:
     """Derive container-timeline A/V offsets from the media metadata table.
 
     Adds ``av_start_offset_sec`` (audio minus video start), stream end times,

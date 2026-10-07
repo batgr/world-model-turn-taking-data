@@ -28,11 +28,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from conv_wm.data.labels.registry import (
-    FAMILIES,
-    LabelSpec,
-    Modality,
-)
+from conv_wm.data.labels.registry import FAMILIES, LabelSpec, Modality
 
 ALL = "all"
 WILDCARD = ".*"

@@ -46,9 +46,7 @@ def analyze_audio_packet_timeline(
 
 def test_empty_audio_timeline_is_insufficient():
     result = decoded_frame_continuity(
-        pd.DataFrame(),
-        sample_rate_hz=48000,
-        time_base="1/48000",
+        pd.DataFrame(), sample_rate_hz=48000, time_base="1/48000"
     )
 
     assert result["timeline_class"] == "insufficient_data"
@@ -57,10 +55,7 @@ def test_empty_audio_timeline_is_insufficient():
 
 def test_empty_packet_timeline_is_insufficient():
     summary, events = analyze_audio_packet_timeline(
-        [],
-        sample_rate_hz=48000,
-        time_base="1/48000",
-        reference_decoded_samples=1024,
+        [], sample_rate_hz=48000, time_base="1/48000", reference_decoded_samples=1024
     )
 
     assert summary["timeline_status"] == "insufficient_data"
@@ -70,26 +65,9 @@ def test_empty_packet_timeline_is_insufficient():
 
 
 def test_continuous_audio_timeline():
-    frames = pd.DataFrame(
-        {
-            "pts": [
-                0,
-                1024,
-                2048,
-            ],
-            "nb_samples": [
-                1024,
-                1024,
-                1024,
-            ],
-        }
-    )
+    frames = pd.DataFrame({"pts": [0, 1024, 2048], "nb_samples": [1024, 1024, 1024]})
 
-    result = decoded_frame_continuity(
-        frames,
-        sample_rate_hz=48000,
-        time_base="1/48000",
-    )
+    result = decoded_frame_continuity(frames, sample_rate_hz=48000, time_base="1/48000")
 
     assert result["timeline_class"] == "continuous"
     assert result["n_gaps"] == 0
@@ -97,26 +75,9 @@ def test_continuous_audio_timeline():
 
 
 def test_audio_gap_is_detected():
-    frames = pd.DataFrame(
-        {
-            "pts": [
-                0,
-                1024,
-                2050,
-            ],
-            "nb_samples": [
-                1024,
-                1024,
-                1024,
-            ],
-        }
-    )
+    frames = pd.DataFrame({"pts": [0, 1024, 2050], "nb_samples": [1024, 1024, 1024]})
 
-    result = decoded_frame_continuity(
-        frames,
-        sample_rate_hz=48000,
-        time_base="1/48000",
-    )
+    result = decoded_frame_continuity(frames, sample_rate_hz=48000, time_base="1/48000")
 
     assert result["timeline_class"] == "gap_or_overlap"
     assert result["n_gaps"] == 1
@@ -125,26 +86,9 @@ def test_audio_gap_is_detected():
 
 
 def test_audio_overlap_is_detected():
-    frames = pd.DataFrame(
-        {
-            "pts": [
-                0,
-                1024,
-                2046,
-            ],
-            "nb_samples": [
-                1024,
-                1024,
-                1024,
-            ],
-        }
-    )
+    frames = pd.DataFrame({"pts": [0, 1024, 2046], "nb_samples": [1024, 1024, 1024]})
 
-    result = decoded_frame_continuity(
-        frames,
-        sample_rate_hz=48000,
-        time_base="1/48000",
-    )
+    result = decoded_frame_continuity(frames, sample_rate_hz=48000, time_base="1/48000")
 
     assert result["n_gaps"] == 0
     assert result["n_overlaps"] == 1
@@ -176,23 +120,10 @@ def test_extract_skip_samples():
 
 
 def test_effective_audio_bounds():
-    frames = pd.DataFrame(
-        {
-            "pts": [
-                0,
-                1024,
-            ],
-            "nb_samples": [
-                1024,
-                1024,
-            ],
-        }
-    )
+    frames = pd.DataFrame({"pts": [0, 1024], "nb_samples": [1024, 1024]})
 
     start, end = effective_audio_bounds(
-        frames,
-        sample_rate_hz=48000,
-        time_base="1/48000",
+        frames, sample_rate_hz=48000, time_base="1/48000"
     )
 
     assert start == pytest.approx(0.0)
@@ -202,22 +133,10 @@ def test_effective_audio_bounds():
 
 def test_packet_jitter_without_persistent_pcm_drift():
     packets = [
-        {
-            "pts": 0,
-            "duration": 1021,
-        },
-        {
-            "pts": 1021,
-            "duration": 1027,
-        },
-        {
-            "pts": 2048,
-            "duration": 1024,
-        },
-        {
-            "pts": 3072,
-            "duration": 1024,
-        },
+        {"pts": 0, "duration": 1021},
+        {"pts": 1021, "duration": 1027},
+        {"pts": 2048, "duration": 1024},
+        {"pts": 3072, "duration": 1024},
     ]
 
     summary, events = analyze_audio_packet_timeline(
@@ -247,18 +166,9 @@ def test_packet_jitter_without_persistent_pcm_drift():
 
 def test_persistent_pcm_clock_offset_is_separate_from_packet_clock():
     packets = [
-        {
-            "pts": 0,
-            "duration": 1,
-        },
-        {
-            "pts": 1,
-            "duration": 1023,
-        },
-        {
-            "pts": 1024,
-            "duration": 1024,
-        },
+        {"pts": 0, "duration": 1},
+        {"pts": 1, "duration": 1023},
+        {"pts": 1024, "duration": 1024},
     ]
 
     summary, events = analyze_audio_packet_timeline(
@@ -400,18 +310,9 @@ def test_dropout_splits_surrounding_episode():
 
 def test_initial_pcm_clock_gap():
     packets = [
-        {
-            "pts": 0,
-            "duration": 1100,
-        },
-        {
-            "pts": 1100,
-            "duration": 1024,
-        },
-        {
-            "pts": 2124,
-            "duration": 1024,
-        },
+        {"pts": 0, "duration": 1100},
+        {"pts": 1100, "duration": 1024},
+        {"pts": 2124, "duration": 1024},
     ]
 
     summary, events = analyze_audio_packet_timeline(
@@ -474,10 +375,7 @@ def test_missing_packet_fields_reduce_coverage_without_bridging_steps():
 
 
 def test_last_packet_duration_does_not_create_a_false_timeline_gap():
-    packets = [
-        {"pts": 0, "duration": 1024},
-        {"pts": 1024, "duration": 17},
-    ]
+    packets = [{"pts": 0, "duration": 1024}, {"pts": 1024, "duration": 17}]
 
     summary, _ = analyze_audio_packet_timeline(
         packets,

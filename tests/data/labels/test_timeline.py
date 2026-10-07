@@ -158,9 +158,7 @@ def test_onset_after_silence_is_a_self_resumption():
 
 
 def test_three_speakers_floor_and_holders():
-    facts = recording(
-        {"w": [(1.0, 2.0)], "a": [(2.5, 3.5)], "b": [(3.2, 5.0)]},
-    )
+    facts = recording({"w": [(1.0, 2.0)], "a": [(2.5, 3.5)], "b": [(3.2, 5.0)]})
     structure = derive(facts, CONFIG)
     ids = structure.pieces.participant_ids
     assert ids == ("w", "a", "b")
@@ -175,8 +173,7 @@ def test_three_speakers_floor_and_holders():
 
 def test_unknown_region_blocks_events_and_resets_the_floor():
     facts = recording(
-        {"w": [(1.0, 2.0), (4.5, 5.0)], "x": [(2.5, 3.5)]},
-        unknown=[(3.0, 4.0)],
+        {"w": [(1.0, 2.0), (4.5, 5.0)], "x": [(2.5, 3.5)]}, unknown=[(3.0, 4.0)]
     )
     structure = derive(facts, CONFIG)
     states = structure.pieces.states

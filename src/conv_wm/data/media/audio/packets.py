@@ -41,11 +41,7 @@ class PacketTimeline:
 
     @classmethod
     def from_packets(
-        cls,
-        packets: list[dict[str, object]],
-        *,
-        sample_rate_hz: int,
-        time_base: str,
+        cls, packets: list[dict[str, object]], *, sample_rate_hz: int, time_base: str
     ) -> PacketTimeline:
         """Normalize raw ffprobe packet dictionaries."""
         if sample_rate_hz <= 0:

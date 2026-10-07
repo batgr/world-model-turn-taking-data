@@ -224,7 +224,7 @@ ANNOTATIONS = AnnotationSpec(
             identity=("source_row",),
             value_fields=("word",),
         ),
-    ),
+    )
 )
 
 EGOCOM = DatasetSpec(

@@ -668,11 +668,7 @@ def _covered_mask(
         starts = other["_start"].to_numpy()[order]
         maximum_ends = np.maximum.accumulate(other["_end"].to_numpy()[order])
         positions = (
-            np.searchsorted(
-                starts,
-                group["_end"].to_numpy() + tolerance,
-                side="left",
-            )
+            np.searchsorted(starts, group["_end"].to_numpy() + tolerance, side="left")
             - 1
         )
         candidates = positions >= 0

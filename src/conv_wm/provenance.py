@@ -54,12 +54,7 @@ def _run(command: list[str], cwd: Path | None = None) -> str | None:
     """Run ``command`` and return its stripped stdout, or ``None`` on any failure."""
     try:
         result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=cwd,
-            timeout=30,
+            command, capture_output=True, text=True, check=False, cwd=cwd, timeout=30
         )
     except (OSError, subprocess.SubprocessError):
         return None

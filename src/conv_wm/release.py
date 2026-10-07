@@ -109,9 +109,7 @@ def write_release_dataset(
     )
     media = _require_checksum(source_dir / MEDIA_FILE, card["media"]["sha256"], dataset)
     index_path = _require_checksum(
-        source_dir / INDEX_TABLE,
-        report["output_artifacts"]["index"]["sha256"],
-        dataset,
+        source_dir / INDEX_TABLE, report["output_artifacts"]["index"]["sha256"], dataset
     )
 
     data_dir.mkdir(parents=True, exist_ok=True)

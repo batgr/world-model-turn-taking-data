@@ -29,18 +29,10 @@ from conv_wm.data.pipeline.control_state import (
     selected_datasets,
     supported_datasets,
 )
-from conv_wm.data.pipeline.control_state import (
-    PROCESSED_ROOT as CONTROL_PROCESSED_ROOT,
-)
-from conv_wm.data.pipeline.control_state import (
-    REPORT_FILE as CONTROL_REPORT_FILE,
-)
-from conv_wm.data.pipeline.control_state import (
-    REPORT_ROOT as CONTROL_REPORT_ROOT,
-)
-from conv_wm.data.pipeline.control_state import (
-    TIMELINE_TABLE as CONTROL_TIMELINE_TABLE,
-)
+from conv_wm.data.pipeline.control_state import PROCESSED_ROOT as CONTROL_PROCESSED_ROOT
+from conv_wm.data.pipeline.control_state import REPORT_FILE as CONTROL_REPORT_FILE
+from conv_wm.data.pipeline.control_state import REPORT_ROOT as CONTROL_REPORT_ROOT
+from conv_wm.data.pipeline.control_state import TIMELINE_TABLE as CONTROL_TIMELINE_TABLE
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
@@ -750,10 +742,7 @@ def _build_dataset(
 
 
 def run_vocal_action_grid_build(
-    cfg: DictConfig,
-    *,
-    dataset: str = "all",
-    command: str | None = None,
+    cfg: DictConfig, *, dataset: str = "all", command: str | None = None
 ) -> list[VocalActionGridOutputs]:
     """Build the vocal action grid of every selected dataset."""
     manifest_path = Path(cfg.manifest.output)

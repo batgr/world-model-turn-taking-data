@@ -109,13 +109,7 @@ def _write_audio_timeline(cfg, *, measured=("video-1",), dropouts=()):
 
 
 def _write_ego4d(
-    cfg,
-    *,
-    valid=True,
-    missing=(),
-    media_start=10.0,
-    media_duration=20.0,
-    dropouts=(),
+    cfg, *, valid=True, missing=(), media_start=10.0, media_duration=20.0, dropouts=()
 ):
     _write_audio_timeline(cfg, dropouts=dropouts)
     root = Path(cfg.datasets.ego4d.interim)

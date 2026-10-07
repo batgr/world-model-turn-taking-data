@@ -24,22 +24,11 @@ import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
-from conv_wm.data.pipeline.native_state import (
-    PROCESSED_ROOT as NATIVE_PROCESSED_ROOT,
-)
-from conv_wm.data.pipeline.native_state import (
-    REPORT_FILE as NATIVE_REPORT_FILE,
-)
-from conv_wm.data.pipeline.native_state import (
-    REPORT_ROOT as NATIVE_REPORT_ROOT,
-)
-from conv_wm.data.pipeline.native_state import (
-    TIMELINE_TABLE as NATIVE_TIMELINE_TABLE,
-)
-from conv_wm.data.pipeline.native_state import (
-    selected_datasets,
-    supported_datasets,
-)
+from conv_wm.data.pipeline.native_state import PROCESSED_ROOT as NATIVE_PROCESSED_ROOT
+from conv_wm.data.pipeline.native_state import REPORT_FILE as NATIVE_REPORT_FILE
+from conv_wm.data.pipeline.native_state import REPORT_ROOT as NATIVE_REPORT_ROOT
+from conv_wm.data.pipeline.native_state import TIMELINE_TABLE as NATIVE_TIMELINE_TABLE
+from conv_wm.data.pipeline.native_state import selected_datasets, supported_datasets
 from conv_wm.data.pipeline_inputs import (
     CheckedArtifact,
     artifact_reference,
@@ -421,10 +410,7 @@ def _build_dataset(
 
 
 def run_control_focal_voice_state_build(
-    cfg: DictConfig,
-    *,
-    dataset: str = "all",
-    command: str | None = None,
+    cfg: DictConfig, *, dataset: str = "all", command: str | None = None
 ) -> list[ControlFocalVoiceStateOutputs]:
     """Build the control focal voice-state artifact of every selected dataset."""
     invoked = command or f"conv-wm build control-focal-voice-state --dataset {dataset}"

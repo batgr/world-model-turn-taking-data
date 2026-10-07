@@ -203,8 +203,14 @@ import pyarrow.parquet as pq
 
 grid = pq.read_table(
     "data/processed/labels/egocom/speech/grid.parquet",
-    columns=["recording_id", "decision_index", "participant_ids",
-             "speaker_activity", "time_to_next_ego_onset", "time_to_next_ego_onset_valid"],
+    columns=[
+        "recording_id",
+        "decision_index",
+        "participant_ids",
+        "speaker_activity",
+        "time_to_next_ego_onset",
+        "time_to_next_ego_onset_valid",
+    ],
 )
 ```
 

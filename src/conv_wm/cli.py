@@ -506,8 +506,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_all.set_defaults(handler=_build_all)
     release = subparsers.add_parser(
-        "release",
-        help="assemble the Hugging Face release directories (no raw media)",
+        "release", help="assemble the Hugging Face release directories (no raw media)"
     )
     release.add_argument(
         "--output",

@@ -14,11 +14,7 @@ from collections.abc import Sequence
 import pandas as pd
 from omegaconf import DictConfig
 
-from conv_wm.data.media.media_manifest import (
-    MediaFileIndex,
-    MediaRecord,
-    MediaSource,
-)
+from conv_wm.data.media.media_manifest import MediaFileIndex, MediaRecord, MediaSource
 
 
 def load_egocom_media(

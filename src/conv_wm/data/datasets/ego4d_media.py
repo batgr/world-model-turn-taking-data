@@ -24,11 +24,7 @@ import pandas as pd
 from omegaconf import DictConfig
 
 from conv_wm.config import get_path
-from conv_wm.data.media.media_manifest import (
-    MediaFileIndex,
-    MediaRecord,
-    MediaSource,
-)
+from conv_wm.data.media.media_manifest import MediaFileIndex, MediaRecord, MediaSource
 from conv_wm.data.vocal.native_source import require_table
 
 EGO4D_FPS = 30.0

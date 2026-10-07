@@ -20,22 +20,9 @@ def get_ffprobe_path() -> str:
 
 def probe_json(path: Path, arguments: list[str]) -> dict:
     """Run ffprobe arguments for one path and return its JSON payload."""
-    command = [
-        get_ffprobe_path(),
-        "-v",
-        "error",
-        *arguments,
-        "-of",
-        "json",
-        str(path),
-    ]
+    command = [get_ffprobe_path(), "-v", "error", *arguments, "-of", "json", str(path)]
 
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
 
     if result.returncode != 0:
         raise FFprobeError(f"ffprobe failed for {path}: {result.stderr.strip()}")

@@ -122,10 +122,7 @@ def test_build_manifest_with_checksums(tmp_path: Path):
 
     (raw_root / "file.csv").write_text("hello")
 
-    manifest = build_manifest(
-        raw_root,
-        compute_checksum=True,
-    )
+    manifest = build_manifest(raw_root, compute_checksum=True)
 
     assert manifest.loc[0, "checksum"] is not None
     assert manifest.loc[0, "checksum_algorithm"] == "sha256"
@@ -147,11 +144,7 @@ def test_save_manifest(tmp_path: Path):
 
     loaded = pd.read_parquet(output_path)
 
-    pd.testing.assert_frame_equal(
-        loaded,
-        manifest,
-        check_dtype=True,
-    )
+    pd.testing.assert_frame_equal(loaded, manifest, check_dtype=True)
 
 
 def test_iter_raw_files_ignores_appledouble_files(tmp_path: Path):
@@ -195,10 +188,7 @@ def test_validate_manifest_rejects_missing_columns():
 
 
 def test_validate_manifest_rejects_duplicates():
-    manifest = pd.concat(
-        [_valid_manifest(), _valid_manifest()],
-        ignore_index=True,
-    )
+    manifest = pd.concat([_valid_manifest(), _valid_manifest()], ignore_index=True)
 
     with pytest.raises(ValueError, match="duplicate"):
         validate_manifest(manifest)

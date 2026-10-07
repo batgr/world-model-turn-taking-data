@@ -32,14 +32,7 @@ def test_help_lists_every_audit(capsys):
 
     assert exit_info.value.code == 0
     out = capsys.readouterr().out
-    for name in (
-        "manifest",
-        "structure",
-        "media",
-        "audio",
-        "sync",
-        "annotations",
-    ):
+    for name in ("manifest", "structure", "media", "audio", "sync", "annotations"):
         assert name in out
 
 

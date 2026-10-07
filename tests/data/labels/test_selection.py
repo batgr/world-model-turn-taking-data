@@ -6,11 +6,7 @@ import pytest
 
 from conv_wm.data.labels.catalog import REGISTRY
 from conv_wm.data.labels.registry import Modality
-from conv_wm.data.labels.selection import (
-    LabelSelection,
-    LabelSelectionError,
-    resolve,
-)
+from conv_wm.data.labels.selection import LabelSelection, LabelSelectionError, resolve
 
 
 def names(include, modalities=()):

@@ -25,9 +25,6 @@ def check_foreign_key(
         .rename(columns=dict(zip(parent_columns, child_columns, strict=True)))
     )
     merged = child_df[child_columns].merge(
-        parent_keys,
-        on=child_columns,
-        how="left",
-        indicator=True,
+        parent_keys, on=child_columns, how="left", indicator=True
     )
     return int(merged["_merge"].eq("left_only").sum())

@@ -218,10 +218,7 @@ def _build_dataset(
 
 
 def run_native_focal_voice_state_build(
-    cfg: DictConfig,
-    *,
-    dataset: str = "all",
-    command: str | None = None,
+    cfg: DictConfig, *, dataset: str = "all", command: str | None = None
 ) -> list[NativeFocalVoiceStateOutputs]:
     """Build the native focal voice-state artifact of every selected dataset."""
     paths = pipeline_paths(cfg)

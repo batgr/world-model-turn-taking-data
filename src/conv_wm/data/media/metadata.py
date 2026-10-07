@@ -73,20 +73,11 @@ def media_files(metadata: pd.DataFrame) -> list[MediaFileInfo]:
     ]
 
 
-def extract_media_metadata(
-    *,
-    dataset: str,
-    relative_path: str,
-    path: Path,
-) -> dict:
+def extract_media_metadata(*, dataset: str, relative_path: str, path: Path) -> dict:
     """Probe one file and return its normalized metadata row plus stream counts."""
     probe = probe_media(path)
 
-    record = normalize_probe(
-        dataset=dataset,
-        relative_path=relative_path,
-        probe=probe,
-    )
+    record = normalize_probe(dataset=dataset, relative_path=relative_path, probe=probe)
 
     streams = probe.get("streams", [])
 
@@ -133,10 +124,7 @@ def parse_fraction(value: str | None) -> float | None:
     return float(Fraction(value))
 
 
-def get_stream(
-    probe: dict,
-    codec_type: str,
-) -> dict | None:
+def get_stream(probe: dict, codec_type: str) -> dict | None:
     """First stream of ``codec_type`` (``"video"``/``"audio"``) in a probe payload."""
     return next(
         (
@@ -148,11 +136,7 @@ def get_stream(
     )
 
 
-def normalize_probe(
-    dataset: str,
-    relative_path: str,
-    probe: dict,
-) -> dict:
+def normalize_probe(dataset: str, relative_path: str, probe: dict) -> dict:
     """Flatten container, first-video and first-audio stream facts into one row."""
     format_info = probe["format"]
 

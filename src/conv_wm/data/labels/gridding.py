@@ -169,9 +169,7 @@ def fixed(
 ) -> pa.Array:
     """``fixed_size_list<kind, size>`` from a ``(rows, size)`` array."""
     flat = pa.array(
-        values.reshape(-1),
-        type=kind,
-        mask=None if null is None else null.reshape(-1),
+        values.reshape(-1), type=kind, mask=None if null is None else null.reshape(-1)
     )
     return pa.FixedSizeListArray.from_arrays(flat, size)
 
@@ -444,11 +442,7 @@ def _onset_context_subframes(
     rows, subs, inside = (
         frame.locate(events.time_s[ego_onsets])
         if ego_onsets
-        else (
-            np.empty(0, int),
-            np.empty(0, int),
-            np.empty(0, bool),
-        )
+        else (np.empty(0, int), np.empty(0, int), np.empty(0, bool))
     )
     for index, r, s, ok in zip(ego_onsets, rows, subs, inside, strict=True):
         if not ok or has[r, s]:

@@ -111,12 +111,7 @@ def clean_video_info(
 ) -> CleanedAnnotationTable:
     """Derive the split label while retaining the source's POV identifier wording."""
     split_columns = ("train", "val", "test")
-    require_source_columns(
-        source,
-        split_columns,
-        dataset="egocom",
-        name="video_info",
-    )
+    require_source_columns(source, split_columns, dataset="egocom", name="video_info")
     selected = cast(
         pd.DataFrame,
         source.loc[

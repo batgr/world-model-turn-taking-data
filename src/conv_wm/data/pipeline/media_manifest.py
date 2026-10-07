@@ -236,10 +236,7 @@ def _build_dataset(
 
 
 def run_media_manifest_build(
-    cfg: DictConfig,
-    *,
-    dataset: str = "all",
-    command: str | None = None,
+    cfg: DictConfig, *, dataset: str = "all", command: str | None = None
 ) -> list[MediaManifestOutputs]:
     """Build the media manifest of every selected dataset."""
     media_path = require_file(

@@ -20,10 +20,7 @@ from conv_wm.config import get_path, pipeline_paths
 from conv_wm.reports import JsonDict, write_summary, write_table
 
 CleaningDecision = Literal[
-    "KEEP CURRENT FILTER",
-    "CHANGE FILTER",
-    "NO FILTER NEEDED",
-    "UNRESOLVED",
+    "KEEP CURRENT FILTER", "CHANGE FILTER", "NO FILTER NEEDED", "UNRESOLVED"
 ]
 
 REPORT_PATH = Path("cleaning") / "annotations" / "summary.json"
@@ -196,11 +193,7 @@ def run_annotation_cleaning(
             if name not in names
         }
         payload["datasets"] = dict(sorted({**kept, **payload["datasets"]}.items()))
-    summary = write_summary(
-        summary_path,
-        payload,
-        parameters={"datasets": names},
-    )
+    summary = write_summary(summary_path, payload, parameters={"datasets": names})
     return AnnotationCleaningOutputs(tuple(results), summary, summary_path)
 
 

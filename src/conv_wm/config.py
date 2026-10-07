@@ -12,14 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "conf" / "config.yaml"
 
-Stage = Literal[
-    "raw",
-    "interim",
-    "validated",
-    "processed",
-    "model_ready",
-    "reports",
-]
+Stage = Literal["raw", "interim", "validated", "processed", "model_ready", "reports"]
 
 
 def get_path(cfg: DictConfig, dataset: str, stage: Stage, key: str) -> Path:

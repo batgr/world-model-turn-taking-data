@@ -133,7 +133,7 @@ def moodlab_spec() -> DatasetSpec:
                     value_fields=("affect",),
                     confidence_field="confidence",
                 ),
-            ),
+            )
         ),
         audio=AudioInterpretation(
             known_boundary_grid=KnownBoundaryGrid(period_sec=120.0)

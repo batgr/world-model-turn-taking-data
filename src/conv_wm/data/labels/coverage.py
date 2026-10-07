@@ -27,11 +27,7 @@ import pyarrow.parquet as pq
 
 from conv_wm.data.labels import store
 from conv_wm.data.labels.catalog import REGISTRY
-from conv_wm.data.labels.registry import (
-    LabelSpec,
-    Modality,
-    Table,
-)
+from conv_wm.data.labels.registry import LabelSpec, Modality, Table
 
 QUANTILES = (0.0, 0.05, 0.25, 0.5, 0.75, 0.95, 1.0)
 VALIDITY_COLUMNS = (

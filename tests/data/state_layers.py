@@ -15,9 +15,7 @@ import pandas as pd
 from omegaconf import OmegaConf
 
 from conv_wm.data.pipeline.action_grid import run_vocal_action_grid_build
-from conv_wm.data.pipeline.control_state import (
-    run_control_focal_voice_state_build,
-)
+from conv_wm.data.pipeline.control_state import run_control_focal_voice_state_build
 from conv_wm.data.vocal.native_state import (
     NATIVE_STATE_SCHEMA_VERSION,
     NativeStateInterval,

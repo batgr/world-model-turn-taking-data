@@ -40,6 +40,11 @@ dev = [
     "ruff>=0.16.6",
 ]
 
+[tool.ruff.format]
+# Short calls fit on one line: a trailing comma does not force one argument
+# per line.
+skip-magic-trailing-comma = true
+
 [tool.ruff.lint]
 # Public functions and methods of the maintained implementation document
 # their semantics, units and return values.

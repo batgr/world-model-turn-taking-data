@@ -46,7 +46,7 @@ OUTPUT_DIR = Path("temporal") / "audio_timeline"
 MAX_WORKERS = 4
 
 DECODED_SAMPLE_REFERENCES: dict[str, tuple[int, str]] = {
-    "aac": (1024, "targeted_show_frames_mode"),
+    "aac": (1024, "targeted_show_frames_mode")
 }
 """Decoded samples per packet by codec, with the provenance of that number.
 
@@ -84,10 +84,7 @@ def parameters_for(codec: str) -> tuple[AudioTimelineParameters, str]:
 
 
 def audit_audio_file(
-    info: MediaFileInfo,
-    *,
-    raw_root: Path,
-    spec: DatasetSpec,
+    info: MediaFileInfo, *, raw_root: Path, spec: DatasetSpec
 ) -> tuple[AudioFileTimelineRecord, list[InterpretedAudioEvent]]:
     """Scan, analyse and interpret one file's audio stream."""
     parameters, source = parameters_for(info.audio_codec)
@@ -165,9 +162,7 @@ def load_media_files(reports_root: Path) -> list[MediaFileInfo]:
 
 
 def run_audio_timeline_audit(
-    cfg: DictConfig,
-    *,
-    max_workers: int = MAX_WORKERS,
+    cfg: DictConfig, *, max_workers: int = MAX_WORKERS
 ) -> AudioTimelineOutputs:
     """Run the audit on the configured corpus and write its artifacts."""
     paths = pipeline_paths(cfg)

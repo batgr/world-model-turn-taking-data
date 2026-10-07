@@ -388,10 +388,7 @@ class Overlap:
 
 
 def overlaps(
-    pieces: Pieces,
-    runs: list[Run],
-    last_unique: np.ndarray,
-    config: LabelConfig,
+    pieces: Pieces, runs: list[Run], last_unique: np.ndarray, config: LabelConfig
 ) -> list[Overlap]:
     """Pairwise overlaps between runs of different participants.
 

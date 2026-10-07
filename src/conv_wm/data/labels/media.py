@@ -659,13 +659,7 @@ def _praat(
     f0[f0 == 0] = np.nan
     mask = ego_solo_mask(structure, times)
     return pitch_cells(
-        times,
-        f0,
-        mask,
-        fraction,
-        starts,
-        step,
-        config.audio_min_mask_fraction,
+        times, f0, mask, fraction, starts, step, config.audio_min_mask_fraction
     )
 
 

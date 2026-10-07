@@ -63,10 +63,7 @@ def dropout_section(valid: pd.DataFrame, dropouts: pd.DataFrame) -> JsonDict:
 
 
 def by_dataset_and_sample_rate(
-    files: pd.DataFrame,
-    events: pd.DataFrame,
-    *,
-    threshold_comparison: str,
+    files: pd.DataFrame, events: pd.DataFrame, *, threshold_comparison: str
 ) -> dict[str, dict[str, Any]]:
     """Final-drift distributions and dropout burden per dataset and sample rate."""
     result: dict[str, dict[str, Any]] = {}

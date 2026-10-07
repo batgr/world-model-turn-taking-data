@@ -23,9 +23,7 @@ from omegaconf import DictConfig
 
 from conv_wm.config import PROJECT_ROOT, pipeline_paths
 from conv_wm.data import datasets
-from conv_wm.data.pipeline.action_grid import (
-    load_action_grid,
-)
+from conv_wm.data.pipeline.action_grid import load_action_grid
 from conv_wm.data.pipeline.control_state import config_checksum
 from conv_wm.data.pipeline.media_manifest import (
     media_manifest_for_grid,
@@ -306,10 +304,7 @@ def assign_conversations(groups: Sequence[str], spec: SplitSpec) -> dict[str, st
 
 
 def apply_splits(
-    index: pd.DataFrame,
-    splits: pd.Series | None,
-    *,
-    spec: SplitSpec | None = None,
+    index: pd.DataFrame, splits: pd.Series | None, *, spec: SplitSpec | None = None
 ) -> pd.DataFrame:
     """Give every sample the split of its recording, normalised to canonical names.
 
@@ -785,11 +780,7 @@ def run_model_ready_build(
         logger.info("%s: %d grid slots", name, len(source.table))
         outputs.append(
             _build_dataset(
-                source,
-                cfg=cfg,
-                spec=geometry,
-                split_spec=splits,
-                command=invoked,
+                source, cfg=cfg, spec=geometry, split_spec=splits, command=invoked
             )
         )
     return outputs
