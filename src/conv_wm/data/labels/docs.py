@@ -57,9 +57,8 @@ def registry_markdown() -> str:
         "",
         (
             f"Registry version {REGISTRY_VERSION}, label schema version "
-            f"{LABEL_SCHEMA_VERSION}. {len(REGISTRY)} labels, "
-            f"{sum(s.extractor is not None for s in REGISTRY)} materializable. "
-            "How to read, build and request them: [`labels.md`](labels.md)."
+            f"{LABEL_SCHEMA_VERSION}. {len(REGISTRY)} labels. How to read, build and "
+            "request them: [`labels.md`](labels.md)."
         ),
         "",
         "## Support matrix",
@@ -90,12 +89,6 @@ def registry_markdown() -> str:
                 "",
                 _cell(spec.description),
                 "",
-                f"- **availability**: {spec.availability}"
-                + (
-                    f" — {_cell(spec.unsupported_reason)}"
-                    if spec.unsupported_reason
-                    else ""
-                ),
                 f"- **source kind**: {spec.source_kind}; **role**: {spec.role}",
                 f"- **modalities**: {', '.join(map(str, spec.modalities))}",
                 f"- **level**: {spec.level}; **dtype**: `{spec.dtype}`; **shape**: `{spec.shape}`",

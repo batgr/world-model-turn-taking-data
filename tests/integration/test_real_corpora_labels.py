@@ -29,7 +29,6 @@ from omegaconf import DictConfig, OmegaConf
 from conv_wm import cli
 from conv_wm.config import load_config
 from conv_wm.data.labels import store
-from conv_wm.data.labels.selection import LabelSelection
 from conv_wm.data.pipeline.clean import run_annotation_cleaning
 from conv_wm.data.pipeline.labels import dataset_dir
 
@@ -95,20 +94,12 @@ def _check_label_contract(cfg, dataset: str) -> dict:
         .time_s.apply(lambda t: t.is_monotonic_increasing)
         .all()
     )
-    bundle = store.load_labels(
-        root,
-        LabelSelection(
-            True, ("timing.time_to_next_ego_onset", "instantaneous.ego_speaking")
-        ),
+    grid = pq.read_table(
+        root / "speech" / "grid.parquet",
+        columns=["time_to_next_ego_onset", "time_to_next_ego_onset_valid"],
     )
-    values = (
-        bundle["grid"].column("time_to_next_ego_onset").to_numpy(zero_copy_only=False)
-    )
-    valid = (
-        bundle["grid"]
-        .column("time_to_next_ego_onset_valid")
-        .to_numpy(zero_copy_only=False)
-    )
+    values = grid.column("time_to_next_ego_onset").to_numpy(zero_copy_only=False)
+    valid = grid.column("time_to_next_ego_onset_valid").to_numpy(zero_copy_only=False)
     assert np.isnan(values.astype(float)[~valid]).all()  # censored stays null, never 0
     assert (values.astype(float)[valid] >= 0).all()
     assert (

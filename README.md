@@ -250,12 +250,11 @@ the full schema and the reconstruction recipe.
 ## Labels
 
 Beyond the action grid, `conv-wm build labels` writes optional label
-sidecars: 164 registered labels in 18 families, each with its modality, source
-kind (native / deterministic / external model / human annotation), time
-reference and validity semantics. Unavailable concepts (dialogue acts,
-addressee, dominance, ...) are registered as `unsupported`, never fabricated.
-A consumer asks for none (the default, no I/O), exact labels, `family.*` or
-`all`, optionally filtered by modality, and reads only those columns. See
+sidecars: 116 labels in 14 families, each with its modality, source kind
+(native / deterministic / external model), time reference and validity
+semantics; interpretations without a validated source (dialogue acts,
+addressee, dominance, ...) are not fabricated. They are plain Parquet tables;
+read only the columns you need. See
 [`labels.md`](docs/data_pipeline/labels.md) and the generated
 [`labels_registry.md`](docs/data_pipeline/labels_registry.md).
 

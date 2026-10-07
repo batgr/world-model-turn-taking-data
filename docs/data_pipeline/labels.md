@@ -14,26 +14,24 @@ path. Every label is described once, in the registry
 "A overlaps B" is a derived observation; "A interrupts B" or "A competes for
 the floor" are interpretations. The pipeline materializes observations and
 deterministic derivations of them; interpretations (overlap function,
-dialogue acts, addressee, backchannels, dominance, engagement, ...) are
-registered but `unsupported` until a validated annotation or model exists.
-They are never fabricated from timing.
+dialogue acts, addressee, backchannels, dominance, engagement, ...) are not
+labels until a validated annotation or model exists, and are never fabricated
+from timing.
 
-**Four source kinds**, recorded on every label:
+**Three source kinds**, recorded on every label:
 
 | `source_kind` | meaning | built by default |
 | --- | --- | --- |
 | `native_annotation` | provided by the corpus, at most resampled onto the grid | yes |
 | `deterministic` | derived by a deterministic rule from canonical facts | yes (annotation-only extractors) |
 | `external_model` | estimated by an external model or tool — never ground truth | only with `--external` |
-| `human_annotation` | needs an annotation no supported corpus provides | never (always `unsupported`) |
 
 **Modalities** describe the information a label carries, not the file it was
 read from: EgoCom speaker activity comes from transcript timestamps but is a
 vocal phenomenon (`audio`); Talking-To-Me is `[audio, video]`.
 
-**Native data first.** Native annotations are never replaced by a model:
-diarization (pyannote) and ASR (WhisperX) are registered for future corpora
-without annotations, and are unsupported for EgoCom and Ego4D.
+**Native data first.** Native annotations are never replaced by a model
+(no diarization or ASR output stands in for EgoCom or Ego4D annotations).
 
 ## Where labels come from
 
@@ -195,99 +193,30 @@ statistics (speaking and overlap shares, onset/offset counts, onset types,
 floor transfers and FTO distribution, turn durations, time-to-next
 distributions, labels per modality). It never modifies a label.
 
-## Requesting labels
+## Reading labels
+
+Each extractor directory holds plain Parquet tables; `registry.json` names
+each label's table and columns. Read only what you need:
 
 ```python
-from pathlib import Path
-from conv_wm.data.labels.selection import LabelSelection
-from conv_wm.data.labels.store import load_labels
+import pyarrow.parquet as pq
 
-store = Path("data/processed/labels/egocom")
-
-# No labels during training (the default): nothing is opened.
-load_labels(store, LabelSelection())
-
-# Only speaker activity and time to the next wearer onset.
-bundle = load_labels(
-    store,
-    LabelSelection(
-        True, ("instantaneous.speaker_activity", "timing.time_to_next_ego_onset")
-    ),
+grid = pq.read_table(
+    "data/processed/labels/egocom/speech/grid.parquet",
+    columns=["recording_id", "decision_index", "participant_ids",
+             "speaker_activity", "time_to_next_ego_onset", "time_to_next_ego_onset_valid"],
 )
-bundle["grid"]  # recording_id, decision_index, decision_time_s, participant_ids,
-# speaker_activity, time_to_next_ego_onset(_valid)
-
-# All audio labels.
-load_labels(store, LabelSelection(True, ("all",), ("audio",)))
-
-# All available labels of one recording window, for analysis.
-bundle = load_labels(
-    store, LabelSelection.everything(), recording_ids=["rec"], start_s=10.0, end_s=20.0
-)
-bundle.skipped  # labels left out of 'all', with the reason
 ```
 
-Selection rules: `enabled: false` loads nothing; `include` takes exact names,
-`family.*` and `all`, unioned; `modalities` (empty = no filter) keeps a label
-only when all of its modalities are listed, so `[audio, video]` keeps audio,
-video and audio+video labels. An unknown name or family is an error. A label
-that exists but is unavailable (unsupported, not supported by the dataset,
-extractor not built, external not requested) is an error when named exactly
-and is reported in `skipped` when reached through a wildcard. Only the
-requested columns and rows are read (Parquet projection and row-group
-filters). Window semantics: grid cells whose `t_k` is in `[start, end)`;
-events whose time is in it; segments intersecting it, with their full bounds;
-participant and recording rows unwindowed.
-
-The modelling repository reads the published sidecars with
-`turn_wm.data.labels` (same rules, driven by the `registry.json` shipped with
-the labels, `labels.enabled: false` by default); it never derives a label.
-Grid labels have the action grid's rows in the same order, so a sample's
-`anchor_row` indexes them too.
-
-## Dataset notes
-
-**EgoCom** (`speech`, `words`, `transcript`, `meta.background`,
-`meta.native_speaker`, `meta.host`, media). Every speaker of a conversation
-part is a participant of each of its point-of-view recordings, by EgoCom
-speaker id; speaker 3 of seven two-speaker conversations (no recording) is
-kept under its own id. Speech is the union of a speaker's timed words, so
-gaps between words are silences and untimed tokens create no speech. Audit
-finding: EgoCom's word timings almost never overlap across speakers (27
-overlapping word pairs in 157 603 timed words), so overlap labels are near
-empty for EgoCom — a property of the transcription, reported, not corrected.
-
-**Ego4D** (`speech`, `transcript`, `social.looking`, `social.talking`,
-`face_tracks`, `meta.source_offset`, media). Participants are the clip's
-annotated persons; speech is each person's `voice_segments` (which may absorb
-short pauses). Looking-At-Me and Talking-To-Me follow the Ego4D Social
-benchmark: LAM is frame-level over tracked faces (untracked = not annotated,
-never negative), TTM is utterance-level inside talking segments. Persons that
-do not resolve (`-1`) are kept in `social_native.social_segments` with
-`resolved = false`. The raw `target` field is preserved as
-`annotation_target` and never interpreted as an addressee. Transcripts are
-timed per utterance only, so word-level labels (speech rate) are unsupported.
-
-## Adding a dataset
-
-1. Write the adapter `data/datasets/<name>_labels.py` returning a
-   `LabelSource` of `RecordingFacts` (plus optional token, social and track
-   frames with the canonical columns of `data/labels/facts.py`).
-2. Declare `label_facts=LabelFactsSpec(provides=..., load=...)` on its
-   `DatasetSpec`; `provides` decides which labels it supports.
-3. Make sure the wearer's speech equals what its `native_focal_voice` adapter
-   produces (the build checks it).
-4. `conv-wm build all --dataset <name>`; `conv-wm audit labels --dataset <name>`.
-
-`tests/data/labels/test_third_dataset_labels.py` does exactly this with a
-synthetic three-person corpus.
+`conv-wm labels list --include "timing.*" --modalities audio` lists the
+labels a selection resolves to: `include` takes exact names, `family.*` and
+`all`; `modalities` keeps a label only when all of its modalities are listed.
 
 ## Adding a label or a family
 
 1. Add the `LabelSpec` to `data/labels/catalog.py` (and the family to
    `FAMILIES` in `registry.py` if new): meaning, level, modalities, dtype and
    shape, time reference, source kind, role, validity, `requires`, storage.
-   An interpretation without validated source stays `unsupported` with a reason.
 2. Compute its columns in the extractor that owns it (pure functions in
    `data/labels/`), with explicit validity.
 3. Bump `REGISTRY_VERSION` (and the extractor's rule version if a derivation
@@ -310,12 +239,11 @@ weights (MediaPipe, MMPose, WhisperX, pyannote) are never packaged here.
 * interpretations without a validated source: overlap function, dialogue
   acts, adjacency pairs, agreement, repair, relevance, common ground, semantic
   completion, addressee, backchannels, engagement, dominance and the other
-  social states (`unsupported`, `human_annotation`);
+  social states;
 * lexical and syntactic completion (need a validated model);
 * video model features — face landmarks, head pose, gaze, mouth, body and hand
-  pose, gestures, geometry, camera motion (MediaPipe / MMPose): the contract is
-  registered, no extractor is implemented or validated on these egocentric
-  frames; head pose is never relabelled gaze and orientation never addressee;
+  pose, gestures, geometry, camera motion (MediaPipe / MMPose): no extractor
+  is implemented or validated on these egocentric frames;
 * other participants' prosody (far-field on the wearer's microphone, no
   validated attribution), eGeMAPS (licence), MFCC (no use yet), voice quality
   (unreliable on these recordings), final lengthening (needs phone alignment),

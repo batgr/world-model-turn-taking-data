@@ -37,7 +37,7 @@ class Level(StrEnum):
     """The unit one value of a label describes."""
 
     GRID = "grid"
-    """One 100 ms decision cell of the action grid."""
+    """One decision cell of the action grid."""
     SUBFRAME = "subframe"
     """One of the ``subframes_per_step`` equal parts of a decision cell."""
     EVENT = "event"
@@ -68,8 +68,6 @@ class SourceKind(StrEnum):
     """Derived by a deterministic rule from canonical facts."""
     EXTERNAL_MODEL = "external_model"
     """Estimated by an external model or tool; never ground truth."""
-    HUMAN_ANNOTATION = "human_annotation"
-    """Needs a human annotation that does not exist in the supported corpora."""
 
 
 class Role(StrEnum):
@@ -83,13 +81,6 @@ class Role(StrEnum):
     """Audit, probing and nuisance control; not a social truth."""
     METADATA = "metadata"
     """Identity and native descriptive fields."""
-
-
-class Availability(StrEnum):
-    """Whether the data layer can materialize a label at all."""
-
-    AVAILABLE = "available"
-    UNSUPPORTED = "unsupported"
 
 
 class Extractor(StrEnum):
@@ -196,25 +187,14 @@ class LabelSpec:
     requires: tuple[str, ...] = ()
     """Facts a dataset adapter must declare (``LabelFactsSpec.provides``) to support it."""
     extractor: Extractor | None = None
-    """``None`` exactly when the label is unsupported."""
+    """The extractor that writes it (required; the default only orders fields)."""
     table: Table | None = None
     columns: tuple[str, ...] = ()
     """Physical columns (value first, then validity/companion columns)."""
     row_filter: tuple[str, str] | None = None
     """``(column, value)`` selecting this label's rows in an events/segments table."""
     external: ExternalTool | None = None
-    unsupported_reason: str | None = None
-    """Why the label cannot be materialized; required when unsupported."""
     notes: str = ""
-
-    @property
-    def availability(self) -> Availability:
-        """``available`` when an extractor materializes the label."""
-        return (
-            Availability.AVAILABLE
-            if self.extractor is not None
-            else Availability.UNSUPPORTED
-        )
 
     @property
     def participant_axis(self) -> bool:
@@ -223,9 +203,7 @@ class LabelSpec:
 
     def supported_by(self, provides: Iterable[str]) -> bool:
         """Whether a dataset declaring ``provides`` can materialize this label."""
-        return self.availability is Availability.AVAILABLE and set(
-            self.requires
-        ).issubset(set(provides))
+        return set(self.requires).issubset(set(provides))
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-serializable description, stable key order."""
@@ -242,14 +220,12 @@ class LabelSpec:
             "role": str(self.role),
             "validity": self.validity,
             "version": self.version,
-            "availability": str(self.availability),
             "requires": list(self.requires),
             "extractor": str(self.extractor) if self.extractor else None,
             "table": str(self.table) if self.table else None,
             "columns": list(self.columns),
             "row_filter": list(self.row_filter) if self.row_filter else None,
             "external": _external_dict(self.external),
-            "unsupported_reason": self.unsupported_reason,
             "notes": self.notes,
         }
 
@@ -280,12 +256,8 @@ FAMILIES: Mapping[str, str] = {
     "future": "Supervision over configurable future horizons.",
     "prosody": "Per-speaker acoustic features under a reliable speaker mask.",
     "text": "Native transcript tokens and the cues derivable from them.",
-    "video": "Physical visual observations (faces, bodies, motion).",
     "social_native": "Native Ego4D Looking-At-Me / Talking-To-Me and face tracks.",
-    "addressee": "Who an utterance is addressed to.",
-    "backchannel": "Short feedback responses.",
     "profiles": "Per-participant interaction statistics over a recording.",
-    "social_states": "Higher-level social constructs (engagement, dominance, ...).",
     "nuisance": "Audio/video diagnostic controls; not social truths.",
     "metadata": "Native identity and descriptive fields.",
 }
@@ -302,8 +274,7 @@ def validate(specs: Sequence[LabelSpec]) -> None:
     """Raise :class:`RegistryError` on the first contract violation found.
 
     Checks: unique well-formed names; the family prefix matches a declared
-    family; at least one modality; unsupported entries carry a reason and no
-    storage; available entries name an extractor, a table allowed for their
+    family; at least one modality; an extractor, a table allowed for the
     level and at least one column; external entries document their tool;
     row filters only on events/segments tables; two labels never own the same
     physical column of the same extractor table unless they select rows.
@@ -334,26 +305,17 @@ def validate(specs: Sequence[LabelSpec]) -> None:
                 raise RegistryError(f"{where}: empty {label}")
         if spec.source_kind is SourceKind.EXTERNAL_MODEL and spec.external is None:
             raise RegistryError(f"{where}: external_model label without tool record")
-        if spec.availability is Availability.UNSUPPORTED:
-            if not spec.unsupported_reason:
-                raise RegistryError(f"{where}: unsupported label without a reason")
-            if spec.table is not None or spec.columns or spec.row_filter:
-                raise RegistryError(f"{where}: unsupported label with storage")
-            continue
-        if spec.unsupported_reason:
-            raise RegistryError(f"{where}: available label with unsupported_reason")
-        if spec.source_kind is SourceKind.HUMAN_ANNOTATION:
-            raise RegistryError(f"{where}: human_annotation labels cannot be built")
+        if spec.extractor is None:
+            raise RegistryError(f"{where}: no extractor")
         if spec.table is None or spec.table not in LEVEL_TABLES[spec.level]:
             raise RegistryError(f"{where}: table not allowed for level {spec.level}")
         if not spec.columns:
-            raise RegistryError(f"{where}: available label without columns")
+            raise RegistryError(f"{where}: label without columns")
         if spec.row_filter and spec.table not in (Table.EVENTS, Table.SEGMENTS):
             raise RegistryError(f"{where}: row_filter on a {spec.table} table")
         if set(spec.columns) & set(TABLE_KEYS[spec.table]):
             raise RegistryError(f"{where}: key columns are implicit")
         if spec.row_filter is None:
-            assert spec.extractor is not None
             for column in spec.columns:
                 key = (str(spec.extractor), str(spec.table), column)
                 if key in owners:
@@ -414,7 +376,6 @@ __all__ = [
     "PARTICIPANT_AXIS_COLUMN",
     "REGISTRY_VERSION",
     "TABLE_KEYS",
-    "Availability",
     "ExternalTool",
     "Extractor",
     "LabelSpec",

@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+import pyarrow.parquet as pq
 import pytest
 from label_helpers import recording
 from omegaconf import OmegaConf
@@ -23,7 +24,6 @@ from conv_wm.data.labels import facts, store
 from conv_wm.data.labels.catalog import REGISTRY
 from conv_wm.data.labels.facts import LabelFactsSpec, LabelSource
 from conv_wm.data.labels.registry import support_matrix
-from conv_wm.data.labels.selection import LabelSelection
 from conv_wm.data.pipeline.action_grid import run_vocal_action_grid_build
 from conv_wm.data.pipeline.control_state import run_control_focal_voice_state_build
 from conv_wm.data.pipeline.labels import run_label_build
@@ -153,24 +153,13 @@ def test_the_third_dataset_flows_through_the_unchanged_label_build(triad):
     outputs = run_label_build(cfg, dataset="triad")
     assert {str(o.extractor) for o in outputs} == {"speech", "social", "text"}
     root = Path(cfg.paths.processed) / "labels" / "triad"
-    bundle = store.load_labels(
-        root,
-        LabelSelection(
-            True,
-            (
-                "instantaneous.speaker_activity",
-                "next_speaker.*",
-                "text.interrogative_cue",
-            ),
-        ),
-    )
-    grid = bundle["grid"].to_pandas()
+    grid = pq.read_table(root / "speech" / "grid.parquet").to_pandas()
     assert grid["participant_ids"].iloc[0].tolist() == ["A", "B", "C"]
     first = grid.decision_index.min()
     assert first == 100  # the clock starts at 10 s, the grid keeps it
     at_13 = grid.loc[grid.decision_index == 130].iloc[0]
     assert at_13.next_speaker == 1 and at_13.next_speaker_valid
-    units = bundle["segments"].to_pandas()
+    units = pq.read_table(root / "text" / "segments.parquet").to_pandas()
     assert units.interrogative_cue.tolist() == [True, True]
     social = store.read_manifest(root, "social")
     assert social is not None

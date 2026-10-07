@@ -30,7 +30,6 @@ from typing import Any
 
 from conv_wm.data.labels.registry import (
     FAMILIES,
-    Availability,
     LabelSpec,
     Modality,
 )
@@ -41,10 +40,6 @@ WILDCARD = ".*"
 
 class LabelSelectionError(ValueError):
     """The selection names a label, family or modality that does not exist."""
-
-
-class LabelUnavailableError(LookupError):
-    """An explicitly requested label exists but cannot be provided."""
 
 
 @dataclass(frozen=True)
@@ -152,12 +147,6 @@ def resolve(
                     f"labels.modalities {sorted(str(m) for m in modalities)}"
                 )
             continue
-        if spec.availability is Availability.UNSUPPORTED:
-            reason = f"unsupported ({spec.source_kind}): {spec.unsupported_reason}"
-            if spec.name in explicit:
-                raise LabelUnavailableError(f"{spec.name} is {reason}")
-            skipped[spec.name] = reason
-            continue
         chosen.append(spec)
     return ResolvedSelection(tuple(chosen), skipped)
 
@@ -178,7 +167,6 @@ __all__ = [
     "ALL",
     "LabelSelection",
     "LabelSelectionError",
-    "LabelUnavailableError",
     "ResolvedSelection",
     "resolve",
 ]

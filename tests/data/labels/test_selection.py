@@ -5,11 +5,10 @@ from __future__ import annotations
 import pytest
 
 from conv_wm.data.labels.catalog import REGISTRY
-from conv_wm.data.labels.registry import Availability, Modality
+from conv_wm.data.labels.registry import Modality
 from conv_wm.data.labels.selection import (
     LabelSelection,
     LabelSelectionError,
-    LabelUnavailableError,
     resolve,
 )
 
@@ -19,7 +18,7 @@ def names(include, modalities=()):
     return set(resolve(selection, REGISTRY).names)
 
 
-AVAILABLE = {s.name for s in REGISTRY if s.availability is Availability.AVAILABLE}
+ALL = {s.name for s in REGISTRY}
 
 
 def test_disabled_selection_resolves_to_nothing():
@@ -33,11 +32,10 @@ def test_the_default_mapping_is_disabled():
     assert LabelSelection.from_mapping({"enabled": False}).enabled is False
 
 
-def test_all_selects_every_available_label_and_reports_the_others():
+def test_all_selects_every_label():
     resolved = resolve(LabelSelection.everything(), REGISTRY)
-    assert set(resolved.names) == AVAILABLE
-    assert set(resolved.skipped) == {s.name for s in REGISTRY} - AVAILABLE
-    assert all(reason.startswith("unsupported") for reason in resolved.skipped.values())
+    assert set(resolved.names) == ALL
+    assert not resolved.skipped
 
 
 def test_one_exact_label():
@@ -98,19 +96,6 @@ def test_an_unknown_family_is_an_error():
 def test_an_unknown_modality_is_an_error():
     with pytest.raises(LabelSelectionError, match="unknown modalities"):
         names(["all"], ["smell"])
-
-
-def test_an_explicitly_named_unsupported_label_is_unavailable():
-    with pytest.raises(LabelUnavailableError, match="unsupported"):
-        names(["social_states.dominance"])
-
-
-def test_a_wildcard_over_unsupported_labels_skips_them():
-    resolved = resolve(LabelSelection(True, ("social_states.*",)), REGISTRY)
-    assert not resolved.names
-    assert set(resolved.skipped) == {
-        s.name for s in REGISTRY if s.family == "social_states"
-    }
 
 
 def test_an_exact_label_outside_the_modalities_is_an_error():

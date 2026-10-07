@@ -14,7 +14,6 @@ from conv_wm.data.labels.registry import (
     LABEL_SCHEMA_VERSION,
     REGISTRY_VERSION,
     TABLE_KEYS,
-    Availability,
     Extractor,
     LabelSpec,
     Level,
@@ -41,14 +40,12 @@ DOCUMENTED_FIELDS = {
     "role",
     "validity",
     "version",
-    "availability",
     "requires",
     "extractor",
     "table",
     "columns",
     "row_filter",
     "external",
-    "unsupported_reason",
     "notes",
 }
 
@@ -78,28 +75,6 @@ def test_external_labels_document_their_tool_and_licence():
         if spec.source_kind is SourceKind.EXTERNAL_MODEL:
             assert spec.external is not None
             assert spec.external.license and spec.external.determinism
-
-
-def test_unsupported_labels_explain_why_and_have_no_storage():
-    unsupported = [s for s in REGISTRY if s.availability is Availability.UNSUPPORTED]
-    assert unsupported
-    for spec in unsupported:
-        assert spec.unsupported_reason
-        assert spec.table is None and not spec.columns
-
-
-def test_human_annotation_labels_are_never_buildable():
-    for spec in REGISTRY:
-        if spec.source_kind is SourceKind.HUMAN_ANNOTATION:
-            assert spec.availability is Availability.UNSUPPORTED
-
-
-def test_higher_level_constructs_are_known_but_never_fabricated():
-    for family in ("social_states", "addressee", "backchannel"):
-        specs = [spec for spec in REGISTRY if spec.family == family]
-        assert specs and all(s.availability is Availability.UNSUPPORTED for s in specs)
-    for name in ("text.dialogue_act", "overlap.overlap_function", "video.gaze_proxy"):
-        assert next(s for s in REGISTRY if s.name == name).extractor is None
 
 
 def test_available_labels_never_claim_a_key_column():
@@ -137,12 +112,6 @@ def test_validation_rejects_an_unknown_family():
         validate((spec,))
 
 
-def test_validation_rejects_an_unsupported_label_without_reason():
-    spec = next(s for s in REGISTRY if s.extractor is None)
-    with pytest.raises(RegistryError, match="reason"):
-        validate((replace(spec, unsupported_reason=None),))
-
-
 def test_validation_rejects_an_external_label_without_tool():
     spec = next(s for s in REGISTRY if s.name == "prosody.ego_f0_hz")
     with pytest.raises(RegistryError, match="tool"):
@@ -164,13 +133,6 @@ def test_support_is_computed_from_declared_facts_not_dataset_names():
         r for r in rows if r.label == "social_native.looking_at_wearer_subframes"
     )
     assert lam.missing_facts == (facts.FACE_TRACKS, facts.SOCIAL_LOOKING)
-
-
-def test_unsupported_labels_are_supported_by_no_dataset():
-    every_fact = facts.KNOWN_FACTS
-    for spec in REGISTRY:
-        if spec.extractor is None:
-            assert not spec.supported_by(every_fact)
 
 
 def test_counts_cover_every_source_kind():

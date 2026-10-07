@@ -28,7 +28,6 @@ import pyarrow.parquet as pq
 from conv_wm.data.labels import store
 from conv_wm.data.labels.catalog import REGISTRY
 from conv_wm.data.labels.registry import (
-    Availability,
     LabelSpec,
     Modality,
     Table,
@@ -161,14 +160,11 @@ def dataset_coverage(
             "modalities": [str(m) for m in spec.modalities],
             "level": str(spec.level),
             "time_reference": spec.time_reference,
-            "availability": str(spec.availability),
             "supported": spec.supported_by(provides),
             "materialized": False,
         }
-        manifest = manifests.get(str(spec.extractor)) if spec.extractor else None
-        if spec.availability is Availability.UNSUPPORTED:
-            entry["reason"] = spec.unsupported_reason
-        elif manifest is None:
+        manifest = manifests.get(str(spec.extractor))
+        if manifest is None:
             entry["reason"] = "extractor not built"
         elif spec.name not in manifest.get("materialized_labels", ()):
             entry["reason"] = manifest.get("unavailable_labels", {}).get(
@@ -321,7 +317,7 @@ def coverage_report(
     }
     counts: dict[str, int] = {}
     for spec in REGISTRY:
-        key = str(spec.source_kind) if spec.extractor else "unsupported"
+        key = str(spec.source_kind)
         counts[key] = counts.get(key, 0) + 1
     return {
         "label_count": len(REGISTRY),

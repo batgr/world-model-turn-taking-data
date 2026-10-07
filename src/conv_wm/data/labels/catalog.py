@@ -7,9 +7,9 @@ and the selection API all read :data:`REGISTRY`.
 
 Conventions used by the descriptions (see ``docs/data_pipeline/labels.md``):
 
-* ``Δ`` is the action-grid decision step (0.1 s) and ``S`` the configured
-  ``subframes_per_step`` (default 3, i.e. 30 Hz subframes, one per video frame
-  at 30 fps); ``H`` is the number of configured future horizons.
+* ``Δ`` is the action-grid decision step (``grid.decision_step_s``) and ``S``
+  the configured ``subframes_per_step``; ``H`` is the number of configured
+  future horizons.
 * ``participant_index`` indexes the recording's ``participant_ids``; index 0
   is always the camera wearer ("ego").
 * Floor-holder codes: ``>= 0`` a participant index, ``-1`` NONE (nobody
@@ -37,7 +37,6 @@ A, T, V, M = Modality.AUDIO, Modality.TEXT, Modality.VIDEO, Modality.METADATA
 NATIVE = SourceKind.NATIVE_ANNOTATION
 DET = SourceKind.DETERMINISTIC
 EXT = SourceKind.EXTERNAL_MODEL
-HUMAN = SourceKind.HUMAN_ANNOTATION
 
 SUBFRAME_REF = (
     "subframe j of cell k: [t_k + j·Δ/S, t_k + (j+1)·Δ/S), t_k = k·Δ on the "
@@ -94,73 +93,6 @@ PRAAT = ExternalTool(
     ),
     determinism="Deterministic signal processing: identical PCM gives identical output.",
 )
-OPENSMILE = ExternalTool(
-    tool="openSMILE eGeMAPSv02 low-level descriptors",
-    package="opensmile",
-    extra=None,
-    checkpoint="eGeMAPSv02",
-    config={"feature_level": "LowLevelDescriptors"},
-    license=(
-        "audEERING openSMILE licence: free for private, research and educational "
-        "use only; commercial use needs a separate licence. Check before any "
-        "redistribution of derived features."
-    ),
-    reference=(
-        "Eyben et al. (2016), The Geneva Minimalistic Acoustic Parameter Set "
-        "(GeMAPS), IEEE TAC. https://audeering.github.io/opensmile-python/"
-    ),
-    determinism="Deterministic signal processing.",
-)
-MEDIAPIPE = ExternalTool(
-    tool="MediaPipe Face Landmarker",
-    package="mediapipe",
-    extra="labels-video",
-    checkpoint="face_landmarker.task (float16, user-supplied path, sha256 recorded)",
-    config={"running_mode": "VIDEO", "num_faces": 4},
-    license="Apache-2.0 (library and published model bundle).",
-    reference="https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker",
-    determinism="Deterministic on CPU for a fixed model file; GPU delegates may differ.",
-)
-MMPOSE = ExternalTool(
-    tool="MMPose whole-body (COCO-WholeBody) pose estimation",
-    package="mmpose",
-    extra="labels-video",
-    checkpoint="a COCO-WholeBody checkpoint (user-supplied, sha256 recorded)",
-    config={"keypoints": "COCO-WholeBody 133"},
-    license="Apache-2.0 (library); checkpoint terms follow their training data.",
-    reference="https://mmpose.readthedocs.io (whole-body demos)",
-    determinism="Deterministic on CPU for a fixed checkpoint; GPU kernels may differ.",
-)
-WHISPERX = ExternalTool(
-    tool="WhisperX ASR + word alignment",
-    package="whisperx",
-    extra="labels-text",
-    checkpoint="a Whisper checkpoint and a wav2vec2 alignment model",
-    config={"language": "en"},
-    license="BSD-2-Clause (WhisperX); Whisper weights MIT; alignment models vary.",
-    reference="Bain et al. (2023), WhisperX. https://github.com/m-bain/whisperX",
-    determinism="Beam search on fixed weights is deterministic on CPU; GPU may differ.",
-)
-PYANNOTE = ExternalTool(
-    tool="pyannote.audio speaker diarization",
-    package="pyannote.audio",
-    extra="labels-audio",
-    checkpoint="a pyannote diarization pipeline (gated on Hugging Face)",
-    config={},
-    license="MIT (library); pretrained pipelines carry gated user conditions.",
-    reference="Bredin et al., pyannote.audio. https://github.com/pyannote/pyannote-audio",
-    determinism="Deterministic on CPU for a fixed pipeline; clustering may vary on GPU.",
-)
-ANNOTATION_NEEDED = ExternalTool(
-    tool="none validated",
-    package=None,
-    extra=None,
-    checkpoint=None,
-    config={},
-    license="n/a",
-    reference="n/a",
-    determinism="n/a",
-)
 
 
 def _available(
@@ -201,41 +133,6 @@ def _available(
         columns=columns if columns is not None else (name.split(".", 1)[1],),
         row_filter=row_filter,
         external=external,
-        notes=notes,
-    )
-
-
-def _unsupported(
-    name: str,
-    description: str,
-    *,
-    level: Level,
-    modalities: tuple[Modality, ...],
-    source_kind: SourceKind,
-    reason: str,
-    role: Role = Role.CONTEXT,
-    external: ExternalTool | None = None,
-    dtype: str = "n/a",
-    shape: str = "n/a",
-    time_reference: str = "n/a (not materialized)",
-    notes: str = "",
-) -> LabelSpec:
-    if source_kind is EXT and external is None:
-        external = ANNOTATION_NEEDED
-    return LabelSpec(
-        name=name,
-        family=name.split(".", 1)[0],
-        description=description,
-        level=level,
-        modalities=modalities,
-        dtype=dtype,
-        shape=shape,
-        time_reference=time_reference,
-        source_kind=source_kind,
-        role=role,
-        validity="not materialized: requesting it explicitly is an error",
-        external=external,
-        unsupported_reason=reason,
         notes=notes,
     )
 
@@ -502,17 +399,6 @@ def _social_grid(
     )
 
 
-_NOT_IMPLEMENTED_VIDEO = (
-    "The video model extractor is not implemented: no model has been validated "
-    "on egocentric frames of these corpora. The registry entry fixes the contract "
-    "so an extractor can be added without changing consumers."
-)
-_NEEDS_OPERATIONAL_DEFINITION = (
-    "Needs an operational definition and an independently validated annotation or "
-    "model; no supported corpus provides one, and it is never inferred from "
-    "timing alone."
-)
-
 INSTANTANEOUS = (
     _speech_grid(
         "instantaneous.speaker_activity_subframes",
@@ -602,19 +488,6 @@ INSTANTANEOUS = (
         dtype=INT16_S,
         shape=SF,
         validity="null = UNKNOWN; -1 and -2 are documented categories, not missing values.",
-    ),
-    _unsupported(
-        "instantaneous.diarized_speech_activity",
-        "Speaker activity estimated by an automatic diarization model.",
-        level=Level.SUBFRAME,
-        modalities=(A,),
-        source_kind=EXT,
-        external=PYANNOTE,
-        reason=(
-            "Not implemented: EgoCom and Ego4D provide native speaker-attributed "
-            "speech, which a diarization model must never silently replace. Intended "
-            "for future corpora without speaker annotations."
-        ),
     ),
 )
 
@@ -834,18 +707,6 @@ OVERLAP = (
             "is censored by UNKNOWN or the recording edge."
         ),
         notes="Heldner & Edlund (2010) within/between overlap typing, pairwise as in mpc-wm.",
-    ),
-    _unsupported(
-        "overlap.overlap_function",
-        "Pragmatic function of an overlap: competitive, collaborative or "
-        "backchannel-like.",
-        level=Level.SEGMENT,
-        modalities=(A, T),
-        source_kind=HUMAN,
-        reason=(
-            "A pragmatic interpretation; never a consequence of timing. Needs human "
-            "annotation or a validated model with recorded provenance."
-        ),
     ),
 )
 
@@ -1214,71 +1075,6 @@ PROSODY = (
         table=Table.GRID,
         requires=(facts.SPEECH, facts.MEDIA_AUDIO),
     ),
-    _unsupported(
-        "prosody.others_f0",
-        "F0 of participants other than the wearer.",
-        level=Level.GRID,
-        modalities=(A,),
-        source_kind=EXT,
-        external=PRAAT,
-        reason=(
-            "No validated attribution: other participants are far-field on the "
-            "wearer's microphone, and cross-recording use of their own camera "
-            "microphone is not validated."
-        ),
-    ),
-    _unsupported(
-        "prosody.egemaps",
-        "eGeMAPS low-level descriptors (loudness, spectral flux, MFCC 1-4, jitter, "
-        "shimmer, HNR, formants, voiced segments).",
-        level=Level.GRID,
-        modalities=(A,),
-        source_kind=EXT,
-        external=OPENSMILE,
-        reason=(
-            "Not implemented: openSMILE's licence restricts use to research and "
-            "education and needs review before redistributing derived features."
-        ),
-    ),
-    _unsupported(
-        "prosody.mfcc",
-        "Mel-frequency cepstral coefficients.",
-        level=Level.GRID,
-        modalities=(A,),
-        source_kind=DET,
-        reason=(
-            "Not implemented: no downstream use justifies it yet; learned audio "
-            "encoders already consume the waveform."
-        ),
-    ),
-    _unsupported(
-        "prosody.voice_quality",
-        "Jitter, shimmer and harmonics-to-noise ratio of the wearer's voice.",
-        level=Level.GRID,
-        modalities=(A,),
-        source_kind=EXT,
-        external=PRAAT,
-        reason=(
-            "Not validated: these measures are unreliable on far-field, noisy "
-            "egocentric recordings without sustained vowels."
-        ),
-    ),
-    _unsupported(
-        "prosody.final_lengthening",
-        "Lengthening of the last syllable/phone of a turn.",
-        level=Level.SEGMENT,
-        modalities=(A, T),
-        source_kind=EXT,
-        reason="Needs phone-level forced alignment, which no supported corpus provides.",
-    ),
-    _unsupported(
-        "prosody.perceptual_loudness",
-        "Perceptual loudness (e.g. EBU R128 / Zwicker).",
-        level=Level.GRID,
-        modalities=(A,),
-        source_kind=DET,
-        reason="Not implemented: prosody.ego_rms_db covers energy/intensity.",
-    ),
 )
 
 _TEXT_UNIT_VALIDITY = (
@@ -1371,140 +1167,8 @@ TEXT = (
         modalities=(T,),
         requires=(facts.SPEECH, facts.TRANSCRIPT),
     ),
-    *(
-        _unsupported(
-            f"text.{name}",
-            description,
-            level=Level.SEGMENT,
-            modalities=(T,),
-            source_kind=kind,
-            reason=reason,
-        )
-        for name, description, kind, reason in (
-            (
-                "lexical_completion",
-                "Whether the words so far form a lexically complete unit.",
-                EXT,
-                "Needs a validated language model; not inferred from punctuation.",
-            ),
-            (
-                "syntactic_completion",
-                "Whether the words so far form a syntactically complete unit.",
-                EXT,
-                "Needs a validated parser/model; not inferred from punctuation.",
-            ),
-            (
-                "semantic_completion",
-                "Whether the utterance is semantically complete.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            (
-                "dialogue_act",
-                "Dialogue act of the utterance.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            (
-                "adjacency_pair_role",
-                "First/second pair part role of the utterance.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            (
-                "agreement",
-                "Agreement / disagreement expressed by the utterance.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            (
-                "repair",
-                "Self- or other-initiated repair.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            (
-                "relevance",
-                "Relevance of the utterance to the previous one.",
-                HUMAN,
-                _NEEDS_OPERATIONAL_DEFINITION,
-            ),
-            ("common_ground", "Grounding acts.", HUMAN, _NEEDS_OPERATIONAL_DEFINITION),
-        )
-    ),
-    _unsupported(
-        "text.asr_transcript",
-        "Automatic transcript with word-level alignment and diarization.",
-        level=Level.EVENT,
-        modalities=(A, T),
-        source_kind=EXT,
-        external=WHISPERX,
-        reason=(
-            "Not implemented: EgoCom and Ego4D ship native transcripts that ASR must "
-            "never silently replace. Intended for future corpora without transcripts."
-        ),
-    ),
 )
 
-VIDEO = tuple(
-    _unsupported(
-        f"video.{name}",
-        description,
-        level=Level.SUBFRAME,
-        modalities=(V,),
-        source_kind=EXT,
-        external=tool,
-        reason=_NOT_IMPLEMENTED_VIDEO + extra,
-    )
-    for name, description, tool, extra in (
-        ("face_visible", "Whether a face is detected in the frame.", MEDIAPIPE, ""),
-        (
-            "face_bbox",
-            "Detected face bounding boxes.",
-            MEDIAPIPE,
-            " Ego4D's native boxes are social_native.face_track_bbox.",
-        ),
-        ("face_landmarks", "Dense facial landmarks.", MEDIAPIPE, ""),
-        (
-            "head_pose",
-            "Head yaw/pitch/roll from the facial transformation.",
-            MEDIAPIPE,
-            "",
-        ),
-        (
-            "gaze_proxy",
-            "Gaze direction estimate.",
-            MEDIAPIPE,
-            " A head pose is never relabelled as gaze.",
-        ),
-        (
-            "gaze_target",
-            "Which participant a person looks at.",
-            MEDIAPIPE,
-            " Ego4D's native Looking-At-Me is social_native.looking_at_wearer_subframes.",
-        ),
-        ("mouth_openness", "Lip distance normalized by face size.", MEDIAPIPE, ""),
-        ("nod_shake", "Head nod / shake gestures.", MEDIAPIPE, ""),
-        ("facial_movement", "Facial motion energy.", MEDIAPIPE, ""),
-        ("upper_body_pose", "Upper-body keypoints.", MMPOSE, ""),
-        (
-            "body_orientation",
-            "Torso orientation.",
-            MMPOSE,
-            " An orientation is never relabelled as an addressee.",
-        ),
-        ("hand_pose", "Hand and arm keypoints.", MMPOSE, ""),
-        ("gesture_activity", "Gesture motion energy.", MMPOSE, ""),
-        ("pre_speech_movement", "Body movement preceding an onset.", MMPOSE, ""),
-        ("participant_geometry", "Relative positions of participants.", MMPOSE, ""),
-        (
-            "camera_motion",
-            "Estimated ego-motion of the head-mounted camera.",
-            MEDIAPIPE,
-            " A frame-difference proxy is nuisance.frame_difference.",
-        ),
-    )
-)
 
 _LAM = (
     "Ego4D Social Looking-At-Me: frame-level label of a tracked, identified face "
@@ -1642,44 +1306,6 @@ SOCIAL_NATIVE = (
     ),
 )
 
-ADDRESSEE = (
-    _unsupported(
-        "addressee.addressee",
-        "Participant(s) an utterance is addressed to, 'broadcast' or 'unknown', "
-        "with validity and source kind.",
-        level=Level.SEGMENT,
-        modalities=(A, V, T),
-        source_kind=HUMAN,
-        reason=(
-            "No supported corpus annotates addressees. Ego4D TTM only states whether "
-            "the wearer is addressed (social_native.talking_to_wearer_subframes); it "
-            "is never generalized. A future model may provide it as external_model."
-        ),
-    ),
-    _unsupported(
-        "addressee.broadcast",
-        "Whether an utterance addresses the whole group.",
-        level=Level.SEGMENT,
-        modalities=(A, V, T),
-        source_kind=HUMAN,
-        reason="No supported corpus annotates it.",
-    ),
-)
-
-BACKCHANNEL = (
-    _unsupported(
-        "backchannel.events",
-        "Backchannel events: speaker, recipient, onset/end, vocal/non-vocal, "
-        "latency, validity.",
-        level=Level.EVENT,
-        modalities=(A, V, T),
-        source_kind=HUMAN,
-        reason=(
-            "Never inferred from duration: a short utterance is not a backchannel by "
-            "definition. Needs annotation or a validated method."
-        ),
-    ),
-)
 
 PROFILES = (
     _profile(
@@ -1759,29 +1385,6 @@ PROFILES = (
     ),
 )
 
-SOCIAL_STATES = tuple(
-    _unsupported(
-        f"social_states.{name}",
-        description,
-        level=Level.SEGMENT,
-        modalities=(A, V, T),
-        source_kind=HUMAN,
-        reason=_NEEDS_OPERATIONAL_DEFINITION,
-    )
-    for name, description in (
-        ("engagement", "Participant engagement."),
-        ("dominance", "Conversational dominance."),
-        ("leadership", "Emergent leadership."),
-        ("rapport", "Rapport between participants."),
-        ("cohesion", "Group cohesion."),
-        ("tension", "Interpersonal tension."),
-        ("awkwardness", "Perceived awkwardness."),
-        ("stance", "Stance taken by a participant."),
-        ("affect_emotion", "Affect or emotion expressed."),
-        ("agreement_conflict", "Agreement or conflict between participants."),
-        ("floor_partition", "Subgroups holding separate floors (schisming)."),
-    )
-)
 
 _AUDIO_NUISANCE = (
     ("global_audio_rms", "RMS amplitude of the mixed audio in the cell.", None),
@@ -1932,12 +1535,8 @@ REGISTRY: tuple[LabelSpec, ...] = (
     *FUTURE,
     *PROSODY,
     *TEXT,
-    *VIDEO,
     *SOCIAL_NATIVE,
-    *ADDRESSEE,
-    *BACKCHANNEL,
     *PROFILES,
-    *SOCIAL_STATES,
     *NUISANCE,
     *METADATA,
 )

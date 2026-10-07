@@ -22,7 +22,6 @@ from state_layers import config_for, long_timeline, write_egocom_interim
 
 from conv_wm import cli
 from conv_wm.data.labels import store
-from conv_wm.data.labels.selection import LabelSelection, LabelUnavailableError
 from conv_wm.data.pipeline.labels import dataset_dir, label_status
 
 DATASET = "egocom"
@@ -121,43 +120,6 @@ def test_the_wearer_agrees_with_the_native_focal_voice_state(built):
     assert report["lineage_chain"][-1] == "label sidecars"
 
 
-def test_selections_load_only_what_they_ask_for(built):
-    cfg, _ = built
-    root = dataset_dir(cfg, DATASET)
-    assert not store.load_labels(root, LabelSelection())
-    exact = store.load_labels(
-        root,
-        LabelSelection(
-            True,
-            (
-                "instantaneous.speaker_activity",
-                "timing.time_to_next_ego_onset",
-                "turns.floor_transfers",
-            ),
-        ),
-    )
-    assert set(exact.tables) == {"grid", "events"}
-    assert set(exact["grid"].column_names) == {
-        "recording_id",
-        "decision_index",
-        "decision_time_s",
-        "participant_ids",
-        "speaker_activity",
-        "time_to_next_ego_onset",
-        "time_to_next_ego_onset_valid",
-    }
-    assert set(exact["events"].column("event_type").to_pylist()) == {"floor_change"}
-    audio = store.load_labels(root, LabelSelection(True, ("all",), ("audio",)))
-    assert not any(name.startswith("text.") for name in audio.labels)
-    assert "nuisance.global_audio_rms" in audio.skipped  # audio extractor not built
-    families = store.load_labels(root, LabelSelection(True, ("timing.*", "events.*")))
-    assert all(name.split(".")[0] in {"timing", "events"} for name in families.labels)
-    with pytest.raises(LabelUnavailableError):
-        store.load_labels(
-            root, LabelSelection(True, ("social_native.face_tracked_subframes",))
-        )
-
-
 def test_a_rebuild_is_byte_identical(built):
     cfg, config_path = built
     root = dataset_dir(cfg, DATASET)
@@ -221,7 +183,7 @@ def test_the_coverage_audit_reports_every_label(built):
     entry = report["datasets"][DATASET]["labels"]
     assert entry["instantaneous.ego_speaking"]["materialized"]
     assert entry["instantaneous.ego_speaking"]["valid"] == pytest.approx(1.0)
-    assert entry["social_states.dominance"]["supported"] is False
+    assert entry["social_native.face_tracked_subframes"]["supported"] is False
     sanity = report["datasets"][DATASET]["sanity"]
     assert sanity["ego_onset_count"] > 0 and sanity["floor_transfer_count"] > 0
     assert (
@@ -299,20 +261,18 @@ def test_media_extractors_decode_real_files(built, capsys):
     audio = store.read_manifest(root, "audio")
     assert audio is not None and "prosody.ego_f0_hz" in audio["materialized_labels"]
     assert audio["external_tools"]["praat"]["package_version"]
-    bundle = store.load_labels(
-        root,
-        LabelSelection(
-            True,
-            (
-                "prosody.ego_f0_hz",
-                "nuisance.audio_valid",
-                "nuisance.brightness",
-                "nuisance.frame_valid",
-            ),
-        ),
-        recording_ids=["rec-a"],
+    keys = ["recording_id", "decision_index"]
+    audio_grid = pq.read_table(
+        root / "audio" / "grid.parquet", columns=[*keys, "ego_f0_hz", "audio_valid"]
+    ).to_pandas()
+    video_grid = pq.read_table(
+        root / "video" / "grid.parquet", columns=[*keys, "brightness", "frame_valid"]
+    ).to_pandas()
+    grid = (
+        audio_grid.merge(video_grid, on=keys)
+        .query("recording_id == 'rec-a'")
+        .set_index("decision_index")
     )
-    grid = bundle["grid"].to_pandas().set_index("decision_index")
     # 3.0-3.1 s: the wearer speaks alone (timeline 2.5-4.0 s, other speaker from 3.8 s)
     assert grid.loc[30, "ego_f0_hz"] == pytest.approx(150.0, rel=0.03)
     assert pd.isna(grid.loc[39, "ego_f0_hz"])  # 3.9 s: overlap with speaker 1, masked
