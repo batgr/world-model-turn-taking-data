@@ -45,6 +45,9 @@ dev = [
 # per line.
 skip-magic-trailing-comma = true
 
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
 [tool.ruff.lint]
 # Public functions and methods of the maintained implementation document
 # their semantics, units and return values.
