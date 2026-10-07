@@ -9,7 +9,6 @@ annotation tables and the media metadata audit.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,7 +39,6 @@ REPORT_ROOT = Path("native_focal_voice_state")
 TIMELINE_TABLE = "focal_voice_intervals.parquet"
 SUMMARY_TABLE = "summary.parquet"
 REPORT_FILE = "report.json"
-COVERAGE_AUDIT_REPORT = Path("vocal_annotation_coverage") / "report.json"
 SHORT_SILENCE_S = 0.1
 """Silent gaps shorter than the future 100 ms decision step are counted."""
 
@@ -149,30 +147,6 @@ def _unknown_source_counts(timeline: pd.DataFrame) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
-def _coverage_audit_reference(
-    reports_root: Path, dataset: str
-) -> dict[str, object] | None:
-    """Point at the vocal annotation coverage audit without recomputing it."""
-    path = reports_root / COVERAGE_AUDIT_REPORT
-    if not path.exists():
-        return None
-    report = json.loads(path.read_text(encoding="utf-8"))
-    by_dataset = report.get("coverage_statistics_by_dataset", {})
-    statistics = by_dataset.get(dataset, {}) if isinstance(by_dataset, dict) else {}
-    return {
-        **artifact_reference(path),
-        "created_at": report.get("created_at"),
-        "git_commit": report.get("git_commit"),
-        "focal_annotation_coverage_ratio": statistics.get(
-            "focal_annotation_coverage_ratio"
-        ),
-        "focal_measurable_recording_count": statistics.get(
-            "focal_measurable_recording_count"
-        ),
-        "focal_specific_status": statistics.get("focal_specific_status"),
-    }
-
-
 def _build_dataset(
     source: NativeFocalVoiceSource,
     *,
@@ -236,9 +210,6 @@ def _build_dataset(
             "UNKNOWN": "invalid clip, explicitly missing annotation, or media not covering the window",
         },
         "limitations": list(source.limitations),
-        "vocal_annotation_coverage_audit": _coverage_audit_reference(
-            paths.reports, source.dataset
-        ),
     }
     report = write_summary(report_dir / REPORT_FILE, payload, provenance=provenance)
     return NativeFocalVoiceStateOutputs(

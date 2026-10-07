@@ -34,12 +34,11 @@ the wearer's state.
 
 ## Accepted limitations (documented, not corrected in v0)
 
-- **EgoCom**: absence of annotation is `SILENT`, although the vocal
-  annotation coverage audit measured a conditional focal-specific annotation
-  coverage of **83.49 %** on the 150/175 recordings where it could be measured
-  ([`vocal_annotation_coverage.md`](vocal_annotation_coverage.md)). The
-  report references that audit's artifact, version and checksum; it does not
-  recompute it.
+- **EgoCom**: absence of annotation is `SILENT`, although a voice-activity
+  audit measured a conditional focal-specific annotation coverage of
+  **83.49 %** on the 150/175 recordings where it could be measured (that
+  diagnostic audit was removed on 2026-10-07; recover it from commit
+  `d11938a`).
 - **Ego4D**: `voice_segments` follow the native AV3 convention and can
   include short internal pauses in one `SPEAKING` episode. No independent
   focal-specific completeness measurement exists for Ego4D.

@@ -46,7 +46,6 @@ class AuditCommand:
     run: Callable[[DictConfig, argparse.Namespace], int]
     supports_workers: bool = False
     supports_dataset: bool = False
-    supports_coverage_config: bool = False
 
 
 def _audit_manifest(cfg: DictConfig, _: argparse.Namespace) -> int:
@@ -75,19 +74,6 @@ def _audit_media(cfg: DictConfig, args: argparse.Namespace) -> int:
     outputs = run_media_metadata_audit(cfg, max_workers=args.max_workers)
     summary = outputs.summary
     print(f"files: {summary['n_files']}  probe ok: {summary['n_probe_ok']}")
-    print(f"summary: {outputs.summary_path}")
-    return EXIT_OK
-
-
-def _audit_video(cfg: DictConfig, args: argparse.Namespace) -> int:
-    from conv_wm.data.audits.video_timeline import run_video_timeline_audit
-
-    outputs = run_video_timeline_audit(cfg, max_workers=args.max_workers)
-    summary = outputs.summary
-    print(
-        f"files: {summary['n_files']}  sampled consistent: "
-        f"{summary['n_files_sampled_consistent']}  suspects: {summary['n_sampled_suspects']}"
-    )
     print(f"summary: {outputs.summary_path}")
     return EXIT_OK
 
@@ -121,37 +107,6 @@ def _audit_annotations(cfg: DictConfig, _: argparse.Namespace) -> int:
     outputs = run_annotation_audit(cfg)
     print(format_annotation_summary(outputs))
     return EXIT_OK if outputs.valid else EXIT_AUDIT_FAILED
-
-
-def _audit_vocal_annotation_coverage(cfg: DictConfig, args: argparse.Namespace) -> int:
-    from conv_wm.data.audits.vocal_annotation_coverage import (
-        run_vocal_annotation_coverage_audit,
-    )
-
-    command = ["conv-wm", *_config_arguments(args)]
-    command += [
-        "audit",
-        "vocal-annotation-coverage",
-        "--dataset",
-        args.dataset,
-    ]
-    if args.coverage_config is not None:
-        command += ["--coverage-config", str(args.coverage_config)]
-    outputs = run_vocal_annotation_coverage_audit(
-        cfg,
-        dataset=args.dataset,
-        coverage_config_path=args.coverage_config,
-        command=" ".join(command),
-    )
-    statistics = outputs.report["coverage_statistics"]
-    assert isinstance(statistics, dict)
-    print(
-        f"recordings: {statistics['successful_recording_count']}/"
-        f"{statistics['recording_count']}  unresolved ratio: "
-        f"{statistics['unresolved_identity_ratio']}"
-    )
-    print(f"report: {outputs.report_path}")
-    return EXIT_OK
 
 
 def _audit_media_manifest(cfg: DictConfig, args: argparse.Namespace) -> int:
@@ -362,7 +317,6 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         _audit_media,
         True,
     ),
-    AuditCommand("video", "video timeline cadence (needs media)", _audit_video, True),
     AuditCommand(
         "audio",
         "audio packet and PCM-vs-PTS timelines (needs media)",
@@ -378,13 +332,6 @@ AUDIT_COMMANDS: tuple[AuditCommand, ...] = (
         "annotations",
         "annotation integrity of registered datasets (needs media)",
         _audit_annotations,
-    ),
-    AuditCommand(
-        "vocal-annotation-coverage",
-        "measure acoustic and defensible focal voice annotation coverage",
-        _audit_vocal_annotation_coverage,
-        supports_dataset=True,
-        supports_coverage_config=True,
     ),
     AuditCommand(
         "media-manifest",
@@ -510,13 +457,6 @@ def build_parser() -> argparse.ArgumentParser:
                 choices=dataset_choices,
                 default="all",
                 help="dataset population to audit (default all)",
-            )
-        if command.supports_coverage_config:
-            sub.add_argument(
-                "--coverage-config",
-                type=Path,
-                default=None,
-                help="versioned VAD, identity and overlap configuration",
             )
         sub.set_defaults(handler=command.run)
     clean = subparsers.add_parser(

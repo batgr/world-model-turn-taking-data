@@ -87,7 +87,7 @@ src/conv_wm/
     vocal/                       the pure semantics the stages apply (no I/O)
     datasets/                    dataset adapters — the extension point
     audits/                      population audits; they classify, never fix
-    media/                       ffprobe access, audio and video timelines
+    media/                       ffprobe access, audio timelines
     annotations/                 annotation-source specs and integrity checks
     manifest.py                  raw inventory
     pipeline_inputs.py           read an upstream artifact, refuse a stale one
@@ -119,7 +119,6 @@ cd world-model-turn-taking-data
 
 uv sync                          # implementation, tests and checks
 uv sync --extra notebooks        # plus the exploration libraries
-uv sync --extra coverage-audit   # plus Silero VAD, for the diagnostic coverage audit only
 uv sync --extra labels-audio     # plus Parselmouth (Praat), for external prosody labels only
 ```
 
@@ -175,7 +174,6 @@ overridable with `--config`.
 | stage directories | `paths.{raw,interim,validated,processed,model_ready,reports}` |
 | per-dataset files | `datasets.<name>.{raw,interim,...}` and `datasets.<name>.files` |
 | manifest options | `manifest.compute_checksum`, `manifest.output` |
-| VAD / identity settings (diagnostic audit only) | [`conf/vocal_annotation_coverage.yaml`](conf/vocal_annotation_coverage.yaml) |
 
 Window geometry, validity thresholds and the split seed are code-level
 defaults, declared once as frozen dataclasses next to the logic that uses them

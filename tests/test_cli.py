@@ -36,11 +36,9 @@ def test_help_lists_every_audit(capsys):
         "manifest",
         "structure",
         "media",
-        "video",
         "audio",
         "sync",
         "annotations",
-        "vocal-annotation-coverage",
     ):
         assert name in out
 

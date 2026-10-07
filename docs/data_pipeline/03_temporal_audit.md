@@ -2,7 +2,7 @@
 
 ## Objective and scope
 
-The media metadata, video timeline and audio timeline audits establish the
+The media metadata and audio timeline audits establish the
 timestamp semantics needed for annotation integrity and multimodal sampling.
 They measure media structure and record quality-control flags; they do not
 alter raw media, resample streams or correct timestamps. The technical A/V
@@ -12,9 +12,9 @@ The audits cover all 369 media files: 194 Ego4D and 175 EgoCom. Cross-view
 synchronization is deferred because the initial architecture does not consume
 multiple camera views simultaneously.
 
-Run them with `conv-wm audit media`, `conv-wm audit video` and
-`conv-wm audit audio` (implementation: `conv_wm.data.audits.media_metadata`,
-`conv_wm.data.audits.video_timeline`, `conv_wm.data.audits.audio_timeline`;
+Run them with `conv-wm audit media` and `conv-wm audit audio`
+(implementation: `conv_wm.data.audits.media_metadata`,
+`conv_wm.data.audits.audio_timeline`;
 measurements: `conv_wm.data.media`).
 
 ## Downstream temporal constraint
@@ -50,32 +50,14 @@ Reports:
 - `${paths.reports}/temporal/media_metadata/media_metadata.parquet`
 - `${paths.reports}/temporal/media_metadata/summary.json`
 
-## Video timeline audit
+## Video timeline (former audit)
 
-The population audit samples the start, middle and end of every stream plus
-one 10-second window centred on each boundary the dataset declares (Ego4D:
-every 300 s), so deterministic joins cannot escape a start/middle/end sample.
-All 369 files and all 2,186 probed windows (1,083 of them boundary windows)
-were compatible with constant-frame-rate timing; there were no sampled
-suspects. The 300 s stitch grid that shapes the Ego4D audio timeline leaves
-no trace on the video timeline. A targeted full-frame validation covered 18 files:
-14 Ego4D files, including all 12 uncommon 544-pixel-wide files, and four EgoCom
-files, including both 60 FPS files. All 18 full scans were also CFR-compatible.
-That validation took 17 minutes 23 seconds.
-
-This evidence permits FPS to describe cadence, but not to replace timestamps.
-Native video PTS remains the temporal source of truth; downstream code must not
-reconstruct video time as `frame_index / FPS`.
-
-Reports:
-
-- `${paths.reports}/temporal/video_timeline/sampled_timeline.parquet`
-- `${paths.reports}/temporal/video_timeline/file_summary.parquet`
-- `${paths.reports}/temporal/video_timeline/summary.json`
-
-The targeted full-scan evidence is retained in
-`notebooks/02_temporal_media_audit.ipynb` and was not repeated because the stable
-source and tests revealed no video timeline defect.
+A video timeline audit, removed on 2026-10-07 (recoverable from commit
+`d11938a`), found all 369 files and all 2,186 probed windows compatible with
+constant-frame-rate timing, including every Ego4D 300 s boundary and a full
+scan of 18 files. FPS may describe cadence but never replaces timestamps:
+native video PTS remains the temporal source of truth, and downstream code
+must not reconstruct video time as `frame_index / FPS`.
 
 ## Audio timeline audit
 
@@ -287,7 +269,6 @@ From the repository root:
 
 ```bash
 uv run conv-wm audit media
-uv run conv-wm audit video
 uv run conv-wm audit audio
 ```
 

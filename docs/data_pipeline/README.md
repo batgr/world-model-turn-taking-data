@@ -59,7 +59,6 @@ raw annotations
 | Raw dataset inventory | `conv-wm audit manifest` | `manifest/raw_manifest.parquet`, `manifest/summary.json` |
 | Structural validation | `conv-wm audit structure` | `structural/structural_audit.json` |
 | Media metadata audit | `conv-wm audit media` | `temporal/media_metadata/` |
-| Video timeline audit | `conv-wm audit video` | `temporal/video_timeline/` |
 | Audio timeline audit | `conv-wm audit audio` | `temporal/audio_timeline/` |
 | A/V technical alignment | `conv-wm audit sync` | `temporal/av_sync/` |
 | Annotation integrity | `conv-wm audit annotations` | `annotations/` |
@@ -90,7 +89,8 @@ The native state is derived from native annotations only
 ([`native_focal_voice_state.md`](native_focal_voice_state.md)): Ego4D
 camera-wearer `voice_segments` and EgoCom speaker-attributed word timings.
 Its two documented limitations — EgoCom absence of annotation is `SILENT`
-despite a measured focal-specific coverage of 83.49 %, and Ego4D
+despite a focal-specific coverage of 83.49 % measured by a former diagnostic
+voice-activity audit, and Ego4D
 `voice_segments` may absorb short internal pauses — are not corrected in v0.
 
 The native timeline is immutable. The control layer
@@ -132,19 +132,6 @@ conv-wm --set grid.decision_step_s=0.08 --set labels.subframes_per_step=2 build 
 Each label cell is divided into `labels.subframes_per_step` equal subframes
 (default 3: 33.3 ms at 100 ms, one per frame of a 30 fps video; 26.7 ms at
 80 ms, which no longer falls on video frames).
-
-## Diagnostic audit (not part of v0)
-
-| Capability | Command | Report |
-| --- | --- | --- |
-| Vocal annotation coverage | `conv-wm audit vocal-annotation-coverage --dataset all` | `vocal_annotation_coverage/` |
-
-The coverage audit runs a voice activity detector on the audio to measure
-how much acoustically detected wearer speech the native annotations cover
-([`vocal_annotation_coverage.md`](vocal_annotation_coverage.md)). It is
-informative — it revealed the EgoCom incompleteness above — and needs the
-`coverage-audit` extra; it never modifies v0 and nothing in the v0 pipeline
-depends on it beyond the reference recorded in the build report.
 
 The model-ready stage ([`model_ready.md`](model_ready.md)) closes the pipeline:
 it indexes the valid training anchors of the grid — enough context, a complete
@@ -253,9 +240,7 @@ raw format from raw annotations to the release through the CLI, and
 annotation types (video-level mood ratings, confidence-scored model-inferred
 intervals) through the structural, annotation and audio audits.
 
-Still specific to EgoCom and Ego4D: the diagnostic vocal annotation coverage
-audit (`conv-wm audit vocal-annotation-coverage`, outside the build). In the
-model repository, `turn_wm.data.source.DATASETS` lists the Hub releases a run
+In the model repository, `turn_wm.data.source.DATASETS` lists the Hub releases a run
 can load; a new release, and its Mimi feature cache, are added there.
 
 ## Provenance
